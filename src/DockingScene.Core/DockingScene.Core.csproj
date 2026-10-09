@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>true</IsPackable><Description>UI-independent transactional docking and MDI model, policies, and commands.</Description></PropertyGroup></Project>
