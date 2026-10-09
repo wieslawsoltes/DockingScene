@@ -1,0 +1,4 @@
+<Solution>
+ <Folder Name="/src/"><Project Path="src/DockingScene.Core/DockingScene.Core.csproj" /><Project Path="src/DockingScene.Layout/DockingScene.Layout.csproj" /><Project Path="src/DockingScene.Serialization/DockingScene.Serialization.csproj" /><Project Path="src/DockingScene.Themes/DockingScene.Themes.csproj" /><Project Path="src/DockingScene.Controls/DockingScene.Controls.csproj" /><Project Path="src/DockingScene.App/DockingScene.App.csproj" /></Folder>
+ <Folder Name="/tests/"><Project Path="tests/DockingScene.Specs/DockingScene.Specs.csproj" /><Project Path="tests/DockingScene.LayoutSpecs/DockingScene.LayoutSpecs.csproj" /></Folder>
+</Solution>

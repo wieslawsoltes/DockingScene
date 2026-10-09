@@ -1,0 +1,196 @@
+using System.Collections.Immutable;
+using DockingScene.Core;
+using DockingScene.Layout;
+using DockingScene.Themes;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Windows.Foundation;
+using Windows.System;
+
+namespace DockingScene.Controls;
+
+public partial class DockSite
+{
+    private ImmutableArray<string> _dragIds = [];
+    private Point _dragStart;
+    private DockRect _dragBounds;
+    private long _dragRevision;
+    private bool _dragging;
+    private DockDragPreview? _preview;
+    private SplitterGeometry? _splitDrag;
+    private double _splitRatio;
+    private long _splitRevision;
+    private StandardSwitcher? _switcher;
+    private void ConfigureInput()
+    {
+        _canvas.PointerMoved += (_, e) => MoveInteraction(e);
+        _canvas.PointerReleased += (_, e) => EndInteraction(e);
+        _canvas.PointerCanceled += (_, _) => CancelInteraction();
+        _canvas.PointerCaptureLost += (_, _) => { if (_dragging || _splitDrag is not null) CancelInteraction(); };
+        AddHandler(KeyDownEvent, new KeyEventHandler((_, e) =>
+        {
+            if (e.Handled) return;
+            if (e.Key == VirtualKey.Escape) { CancelInteraction(); CloseSwitcher(false); CloseAutoHide(); e.Handled = true; }
+            else if (_switcher is not null && e.Key == VirtualKey.Enter) { CloseSwitcher(true); e.Handled = true; }
+            else if (_switcher is not null && e.Key is VirtualKey.Up or VirtualKey.Down) { _switcher.Move(e.Key == VirtualKey.Up ? -1 : 1); e.Handled = true; }
+        }), true);
+        AddHandler(KeyUpEvent, new KeyEventHandler((_, e) => { if (e.Key == VirtualKey.Control && _switcher is not null) { CloseSwitcher(true); e.Handled = true; } }), true);
+        void Shortcut(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
+        {
+            var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
+            accelerator.Invoked += (_, e) => { action(); e.Handled = true; }; KeyboardAccelerators.Add(accelerator);
+        }
+        Shortcut(VirtualKey.Tab, VirtualKeyModifiers.Control, () => ShowSwitcher(1));
+        Shortcut(VirtualKey.Tab, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => ShowSwitcher(-1));
+        Shortcut(VirtualKey.F8, VirtualKeyModifiers.None, () => ShowSwitcher(1));
+        Shortcut(VirtualKey.W, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
+        Shortcut(VirtualKey.F4, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
+    }
+
+    private void BeginDockDrag(ImmutableArray<string> ids, PointerRoutedEventArgs e)
+    {
+        if (Manager.Layout.IsLayoutLocked || ids.IsEmpty || ids.Any(id => !Manager.Allows(id, DockCapabilities.Drag))) return;
+        if (!e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
+        _dragStart = e.GetCurrentPoint(_canvas).Position; _dragIds = ids; _dragRevision = Manager.Layout.Revision; _dragging = false;
+        var group = DockTree.GroupOf(Manager.Layout, ids[0]);
+        var rect = group is not null && _geometry?.Nodes.TryGetValue(group.Id, out var r) == true ? r : Manager.Layout.Windows[ids[0]].FloatingBounds;
+        _dragBounds = new(_dragStart.X - Math.Min(100, rect.Width / 2), _dragStart.Y - 12, Math.Max(240, Math.Min(600, rect.Width)), Math.Max(180, Math.Min(460, rect.Height)));
+        _canvas.CapturePointer(e.Pointer); e.Handled = true;
+    }
+    private void BeginSplitDrag(SplitterGeometry split, PointerRoutedEventArgs e)
+    {
+        if (Manager.Layout.IsLayoutLocked || !e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
+        _splitDrag = split; _splitRatio = split.Ratio; _splitRevision = Manager.Layout.Revision;
+        _canvas.CapturePointer(e.Pointer); e.Handled = true;
+    }
+    private void MoveInteraction(PointerRoutedEventArgs e)
+    {
+        var p = e.GetCurrentPoint(_canvas).Position;
+        if (_splitDrag is { } split)
+        {
+            _splitRatio = DockLayoutEngine.RatioAt(split, p.X, p.Y, Theme.SplitterSize);
+            var temp = DockTree.Map(Manager.Layout, n => n.Id == split.Id && n is DockSplit s ? s with { Ratio = _splitRatio } : n);
+            var geometry = DockLayoutEngine.Arrange(temp, new(0, 0, ActualWidth, ActualHeight), new() { Splitter = Theme.SplitterSize, TabHeight = Theme.TabHeight, TitleHeight = Theme.TitleHeight });
+            foreach (var (id, group) in _groups) if (geometry.Nodes.TryGetValue(id, out var rect)) { Canvas.SetLeft(group, rect.X); Canvas.SetTop(group, rect.Y); group.Width = rect.Width; group.Height = rect.Height; }
+            _overlay.Children.Clear();
+            var bar = geometry.Splitters.First(s => s.Id == split.Id);
+            var visual = new Border { Background = DockChrome.Brush(Theme.Accent), Opacity = .6 }; DockChrome.Position(visual, bar.Bounds); _overlay.Children.Add(visual);
+            e.Handled = true; return;
+        }
+        if (_dragIds.IsEmpty || _geometry is null) return;
+        double dx = p.X - _dragStart.X, dy = p.Y - _dragStart.Y;
+        if (!_dragging && dx * dx + dy * dy < 25) return;
+        _dragging = true;
+        bool suppress = e.KeyModifiers.HasFlag(VirtualKeyModifiers.Control);
+        var floating = _dragBounds with { X = _dragBounds.X + dx, Y = _dragBounds.Y + dy };
+        if (!suppress) floating = WindowGeometry.Snap(floating, Manager.Layout.FloatingHosts.Select(h => h.Bounds));
+        _preview = DockGuides.HitTest(Manager.Layout, _geometry, _dragIds, p.X, p.Y, floating, suppress);
+        RenderDragPreview(_preview);
+        e.Handled = true;
+    }
+    private void RenderDragPreview(DockDragPreview preview)
+    {
+        _overlay.Children.Clear();
+        var rect = preview.Target?.Preview ?? preview.FloatingBounds;
+        var fill = new Border { Background = DockChrome.Brush(Theme.Accent), BorderBrush = DockChrome.Brush(Theme.Accent), BorderThickness = new(2), Opacity = .28 };
+        DockChrome.Position(fill, rect); _overlay.Children.Add(fill);
+        foreach (var guide in preview.Guides)
+        {
+            var grid = new Grid { Background = DockChrome.Brush(Theme.GuideBackground) };
+            var outline = new Border { BorderBrush = DockChrome.Brush(Theme.Border), BorderThickness = new(1), Margin = new(5) }; grid.Children.Add(outline);
+            var area = DockGuides.Preview(new(5, 7, 18, 16), guide.Side);
+            var icon = new Border { Background = DockChrome.Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new(area.X, area.Y, 0, 0), Width = Math.Max(4, area.Width), Height = Math.Max(4, area.Height) }; grid.Children.Add(icon);
+            var border = new Border { Child = grid, BorderBrush = DockChrome.Brush(guide == preview.Target ? Theme.Accent : Theme.Border), BorderThickness = new(guide == preview.Target ? 2 : 1) };
+            DockChrome.Position(border, guide.Bounds, 2); _overlay.Children.Add(border);
+        }
+    }
+    private void EndInteraction(PointerRoutedEventArgs e)
+    {
+        if (_splitDrag is not null)
+        {
+            var split = _splitDrag; _splitDrag = null;
+            _canvas.ReleasePointerCapture(e.Pointer); _overlay.Children.Clear();
+            Submit(Manager.ResizeSplit(split.Id, _splitRatio, _splitRevision)); QueueRender(); e.Handled = true; return;
+        }
+        if (_dragIds.IsEmpty) return;
+        var ids = _dragIds; var preview = _preview; bool dragged = _dragging; long revision = _dragRevision;
+        _dragIds = []; _dragging = false; _preview = null; _canvas.ReleasePointerCapture(e.Pointer); _overlay.Children.Clear();
+        if (dragged && preview is not null)
+        {
+            if (Manager.Layout.Revision != revision) Submit(new(false, Manager.Layout.Revision, "The layout changed while dragging. Please drag again."));
+            else if (preview.Target is { } target) Submit(Manager.DockMany(ids, target.TargetId, target.Side, expectedRevision: revision));
+            else if (ids.All(id => Manager.Allows(id, DockCapabilities.Float))) Submit(Manager.FloatMany(ids, preview.FloatingBounds));
+        }
+        QueueRender(); e.Handled = true;
+    }
+    private void CancelInteraction()
+    {
+        _dragIds = []; _dragging = false; _preview = null; _splitDrag = null;
+        _canvas.ReleasePointerCaptures(); _overlay.Children.Clear();
+        foreach (var window in _floats.Values) window.CancelMovement();
+        QueueRender();
+    }
+
+    public void ShowSwitcher(int direction = 1)
+    {
+        if (_switcher is not null) { _switcher.Move(direction); return; }
+        _switcher = new(Manager.Layout, Theme, Strings) { Width = Math.Min(620, Math.Max(240, ActualWidth - 30)), Height = Math.Min(370, Math.Max(180, ActualHeight - 30)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        _switcher.Committed += id => { var current = _switcher; _switcher = null; if (current is not null) _root.Children.Remove(current); Submit(Manager.Activate(id)); };
+        if (direction < 0) _switcher.Move(-2);
+        _root.Children.Add(_switcher);
+    }
+    private void CloseSwitcher(bool commit)
+    {
+        if (_switcher is null) return;
+        if (commit) _switcher.Commit();
+        else { _root.Children.Remove(_switcher); _switcher = null; }
+    }
+
+    public void ShowWindowMenu(string id, FrameworkElement source)
+    {
+        var layout = Manager.Layout;
+        if (!layout.Windows.TryGetValue(id, out var window)) return;
+        var group = DockTree.GroupOf(layout, id);
+        var location = DockTree.Locate(layout, id);
+        var menu = new MenuFlyout();
+        void Item(string text, Action action, bool enabled = true)
+        {
+            var item = DockChrome.Identify(new MenuFlyoutItem { Text = text, IsEnabled = enabled, FontSize = Theme.FontSize, MinHeight = 24, Padding = new(8, 3, 8, 3) }, "menu:" + text, text);
+            item.Click += (_, _) => action(); menu.Items.Add(item);
+        }
+        bool Can(DockCapabilities ability) => Manager.Allows(id, ability) && !layout.IsLayoutLocked;
+        Item(Strings.Float, () => Submit(Manager.Float(id)), Can(DockCapabilities.Float));
+        Item(Strings.Dock, () => Submit(Manager.Dock(id)), Can(DockCapabilities.Dock));
+        if (window.Kind == WindowKind.Tool)
+        {
+            Item(location.Placement == WindowPlacement.AutoHidden ? Strings.Pin : Strings.AutoHide,
+                () => Submit(location.Placement == WindowPlacement.AutoHidden ? Manager.PinAutoHide(id) : Manager.AutoHide(id, group is null ? DockSide.Left : NearestEdge(group.Id))), Can(DockCapabilities.AutoHide));
+            Item(Strings.MoveToWorkspace, () => Submit(Manager.MoveToWorkspace(id)), Can(DockCapabilities.EnterWorkspace));
+        }
+        else
+        {
+            Item(window.DisplayMode == TabDisplayMode.Pinned ? Strings.Unpin : Strings.Pin, () => Submit(Manager.UpdateWindow(id, w => w with { DisplayMode = w.DisplayMode == TabDisplayMode.Pinned ? TabDisplayMode.Normal : TabDisplayMode.Pinned })));
+            Item(Strings.NewHorizontalGroup, () => Submit(Manager.Dock(id, group!.Id, DockSide.Bottom)), group?.Windows.Length > 1 && Can(DockCapabilities.Dock));
+            Item(Strings.NewVerticalGroup, () => Submit(Manager.Dock(id, group!.Id, DockSide.Right)), group?.Windows.Length > 1 && Can(DockCapabilities.Dock));
+            if (group is not null)
+            {
+                var placement = new MenuFlyoutSubItem { Text = "Tab placement", FontSize = Theme.FontSize };
+                foreach (var side in Enum.GetValues<TabPlacement>())
+                {
+                    var option = new MenuFlyoutItem { Text = side.ToString(), FontSize = Theme.FontSize, MinHeight = 24 };
+                    option.Click += (_, _) => Submit(Manager.SetTabPlacement(group.Id, side)); placement.Items.Add(option);
+                }
+                menu.Items.Add(placement);
+            }
+        }
+        menu.Items.Add(new MenuFlyoutSeparator());
+        Item(Strings.Close, () => Submit(Manager.Close(id)), Manager.Allows(id, DockCapabilities.Close));
+        if (group is not null)
+        {
+            Item(Strings.CloseOthers, () => Submit(Manager.CloseMany(group.Windows.Where(key => key != id))), group.Windows.Length > 1);
+            Item(Strings.CloseAll, () => Submit(Manager.CloseMany(group.Windows)));
+        }
+        menu.ShowAt(source);
+    }
+}

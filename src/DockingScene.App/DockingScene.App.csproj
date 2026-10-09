@@ -1,0 +1,15 @@
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-browserwasm;net10.0-desktop</TargetFrameworks>
+    <OutputType>Exe</OutputType><UnoSingleProject>true</UnoSingleProject>
+    <UnoFeatures>Skia;SkiaRenderer</UnoFeatures>
+    <ApplicationTitle>DockingScene</ApplicationTitle><ApplicationId>org.dockingscene.app</ApplicationId>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion><ApplicationVersion>1</ApplicationVersion>
+    <ApplicationPublisher>DockingScene</ApplicationPublisher><IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmShellILLinkerEnabled>false</WasmShellILLinkerEnabled>
+    <WasmShellWebAppBasePath>/DockingScene/</WasmShellWebAppBasePath>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+  <PropertyGroup Condition="$(TargetFramework.Contains('browserwasm'))"><DefineConstants>$(DefineConstants);BROWSER_WASM</DefineConstants></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../DockingScene.Controls/DockingScene.Controls.csproj" /><ProjectReference Include="../DockingScene.Serialization/DockingScene.Serialization.csproj" /><PackageReference Include="Uno.Fonts.OpenSans" Version="2.4.0" /></ItemGroup>
+</Project>

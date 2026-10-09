@@ -1,0 +1,38 @@
+name: Uno application
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: uno-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore browser toolchain
+        run: dotnet workload install wasm-tools --skip-manifest-update
+      - name: Build desktop application
+        run: dotnet build src/DockingScene.App/DockingScene.App.csproj -f net10.0-desktop -c Release
+      - name: Publish browser application
+        run: dotnet publish src/DockingScene.App/DockingScene.App.csproj -f net10.0-browserwasm -c Release -o artifacts/browser
+      - name: Pack reusable controls
+        run: dotnet pack src/DockingScene.Controls/DockingScene.Controls.csproj -c Release -o artifacts/packages
+      - name: Inspect browser output
+        run: find artifacts/browser -maxdepth 5 -name index.html -o -name uno-config.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: browser-application
+          path: artifacts/browser
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-controls
+          path: artifacts/packages
