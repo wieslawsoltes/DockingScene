@@ -19,6 +19,8 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Transaction and state-machine specifications
         run: dotnet run --project tests/DockingScene.Specs -c Release
+      - name: Geometry and persistence specifications
+        run: dotnet run --project tests/DockingScene.LayoutSpecs -c Release
       - name: Package UI-independent libraries
         run: |
           mkdir -p artifacts/packages

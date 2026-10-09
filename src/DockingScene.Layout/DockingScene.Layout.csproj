@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>true</IsPackable><Description>Deterministic constrained docking layout, MDI arrangement, docking guides and magnetism.</Description></PropertyGroup><ItemGroup><ProjectReference Include="../DockingScene.Core/DockingScene.Core.csproj" /></ItemGroup></Project>
