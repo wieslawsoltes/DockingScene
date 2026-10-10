@@ -10,7 +10,7 @@ using Windows.Foundation;
 
 namespace DockingScene.Controls;
 
-public static class DockChrome
+public static partial class DockChrome
 {
     public static SolidColorBrush Brush(string hex)
     {
@@ -19,48 +19,36 @@ public static class DockChrome
     }
     public static T Identify<T>(T element, string id, string? name = null) where T : FrameworkElement
     {
-        AutomationProperties.SetAutomationId(element, id);
-        AutomationProperties.SetName(element, name ?? id);
-        return element;
+        AutomationProperties.SetAutomationId(element, id); AutomationProperties.SetName(element, name ?? id); return element;
     }
     public static TextBlock Text(string text, DockTheme theme, double? size = null) => new()
     {
-        Text = text, FontSize = size ?? theme.FontSize, Foreground = Brush(theme.Text),
-        VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis
+        Text = text, FontSize = size ?? theme.FontSize, Foreground = Brush(theme.Text), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis
     };
     public static Button Button(string text, string id, DockTheme theme, Action action, string? glyph = null)
     {
         var button = Identify(new Button
         {
-            Content = glyph is null ? Text(text, theme) : Glyph(glyph, theme.Text),
-            MinWidth = 0, MinHeight = 0, Padding = new(7, 2, 7, 2), Height = 24,
-            Background = Brush(theme.Background), Foreground = Brush(theme.Text),
-            BorderThickness = new(0), CornerRadius = new(0), FontSize = theme.FontSize
+            Content = glyph is null ? Text(text, theme) : Glyph(glyph, theme.Text), MinWidth = 0, MinHeight = 0, Padding = new(7, 2, 7, 2), Height = 24,
+            Background = Brush(theme.Background), Foreground = Brush(theme.Text), BorderThickness = new(0), CornerRadius = new(0), FontSize = theme.FontSize
         }, id, text);
-        ToolTipService.SetToolTip(button, text);
-        button.Click += (_, _) => action();
-        return button;
+        ToolTipService.SetToolTip(button, text); button.Click += (_, _) => action(); return button;
     }
-    public static FrameworkElement Glyph(string path, string color, double size = 14)
+    public static FrameworkElement Glyph(string path, string color, double size = 14) => new Microsoft.UI.Xaml.Shapes.Path
     {
-        var geometry = (Geometry)Microsoft.UI.Xaml.Markup.XamlReader.Load("<PathGeometry xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Figures=\"" + path + "\" />");
-        return new Microsoft.UI.Xaml.Shapes.Path { Data = geometry, Stroke = Brush(color), StrokeThickness = 1, Width = size, Height = size, Stretch = Stretch.Uniform };
-    }
+        Data = BuildGlyphGeometry(path), Stroke = Brush(color), StrokeThickness = 1, Width = size, Height = size, Stretch = Stretch.Uniform
+    };
     public static void Position(FrameworkElement element, DockRect rect, int z = 0)
     {
         Canvas.SetLeft(element, rect.X); Canvas.SetTop(element, rect.Y);
-        element.Width = Math.Max(0, rect.Width); element.Height = Math.Max(0, rect.Height);
-        Canvas.SetZIndex(element, z);
+        element.Width = Math.Max(0, rect.Width); element.Height = Math.Max(0, rect.Height); Canvas.SetZIndex(element, z);
     }
-
-    /// <summary>Read-only hit-test diagnostics. Popup coordinates share the root coordinate space.
-    /// Collapsed ancestors are pruned so retained but non-painted controls never become test targets.</summary>
+    /// <summary>Read-only, popup-aware hit-test diagnostics; excludes collapsed/non-painted controls.</summary>
     public static Dictionary<string, DockRect> AutomationBounds(FrameworkElement root)
     {
         var result = new Dictionary<string, DockRect>(StringComparer.Ordinal);
         var visited = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
-        var stack = new Stack<DependencyObject>();
-        stack.Push(root);
+        var stack = new Stack<DependencyObject>(); stack.Push(root);
         if (root.XamlRoot is { } xamlRoot)
             foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
                 if (popup.IsOpen && popup.Child is { } child) stack.Push(child);
@@ -74,8 +62,7 @@ public static class DockChrome
                 if (!string.IsNullOrEmpty(id) && element.ActualWidth > 0 && element.ActualHeight > 0)
                 {
                     var rect = element.TransformToVisual(root).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
-                    double left = Math.Max(0, rect.X), top = Math.Max(0, rect.Y);
-                    double right = Math.Min(root.ActualWidth, rect.Right), bottom = Math.Min(root.ActualHeight, rect.Bottom);
+                    double left = Math.Max(0, rect.X), top = Math.Max(0, rect.Y), right = Math.Min(root.ActualWidth, rect.Right), bottom = Math.Min(root.ActualHeight, rect.Bottom);
                     if (right > left && bottom > top) result[id] = new(left, top, right - left, bottom - top);
                 }
             }
@@ -98,8 +85,7 @@ internal static class ContentLease
         if (content is UIElement visual)
         {
             if (Owners.TryGetValue(visual, out var reference) && reference.TryGetTarget(out var previous)) previous.Content = null;
-            Owners.Remove(visual);
-            Owners.Add(visual, new(presenter));
+            Owners.Remove(visual); Owners.Add(visual, new(presenter));
         }
         presenter.Content = content;
     }
