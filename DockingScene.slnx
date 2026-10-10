@@ -14,5 +14,7 @@
   <Project Path="tests/DockingScene.ParitySpecs/DockingScene.ParitySpecs.csproj" />
   <Project Path="tests/DockingScene.TransactionSpecs/DockingScene.TransactionSpecs.csproj" />
   <Project Path="tests/DockingScene.MvvmSpecs/DockingScene.MvvmSpecs.csproj" />
+  <Project Path="tests/DockingScene.VectorSpecs/DockingScene.VectorSpecs.csproj" />
+  <Project Path="tests/DockingScene.TabSpecs/DockingScene.TabSpecs.csproj" />
  </Folder>
 </Solution>
