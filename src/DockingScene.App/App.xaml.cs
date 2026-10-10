@@ -33,8 +33,8 @@ public sealed partial class App : Application
     {
         Console.WriteLine("DockingScene: " + stage + (error is null ? "" : "\n" + error));
 #if BROWSER_WASM
-        string json = JsonSerializer.Serialize(new { stage, error = error?.ToString() });
-        Uno.Foundation.WebAssemblyRuntime.InvokeJS("globalThis.dockingSceneStartup = " + json + "; console.info('DockingScene startup', globalThis.dockingSceneStartup);");
+        // Primitive JSON converters do not depend on constructor parameter metadata removed by trimming.
+        Uno.Foundation.WebAssemblyRuntime.InvokeJS("globalThis.dockingSceneStartup = {stage:" + JsonSerializer.Serialize(stage) + ",error:" + JsonSerializer.Serialize(error?.ToString()) + "}; console.info('DockingScene startup', globalThis.dockingSceneStartup);");
 #endif
     }
 }

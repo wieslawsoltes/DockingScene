@@ -11,5 +11,5 @@
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
   </PropertyGroup>
   <PropertyGroup Condition="$(TargetFramework.Contains('browserwasm'))"><DefineConstants>$(DefineConstants);BROWSER_WASM</DefineConstants></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../DockingScene.Controls/DockingScene.Controls.csproj" /><ProjectReference Include="../DockingScene.Serialization/DockingScene.Serialization.csproj" /><PackageReference Include="Uno.Fonts.OpenSans" Version="2.4.0" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../DockingScene.Controls/DockingScene.Controls.csproj" /><ProjectReference Include="../DockingScene.Serialization/DockingScene.Serialization.csproj" /><ProjectReference Include="../DockingScene.Mvvm/DockingScene.Mvvm.csproj" /><PackageReference Include="Uno.Fonts.OpenSans" Version="2.4.0" /></ItemGroup>
 </Project>

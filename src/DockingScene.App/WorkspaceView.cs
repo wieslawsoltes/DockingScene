@@ -1,13 +1,13 @@
-using System.Collections.Immutable;
 using System.Text.Json;
 using DockingScene.Controls;
 using DockingScene.Core;
 using DockingScene.Layout;
+using DockingScene.Mvvm;
 using DockingScene.Serialization;
 using DockingScene.Themes;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Data;
 
 namespace DockingScene.App;
 
@@ -21,13 +21,13 @@ public sealed partial class WorkspaceView : UserControl
     private readonly DispatcherTimer _diagnostics = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private readonly Queue<string> _events = new();
     private TextBox? _output;
+    private DockWorkspaceViewModel? _models;
     private DockTheme _theme = DockTheme.MetroLight;
     private DockLayout? _saved;
     private int _nextDocument = 1;
     private string _lastMessage = "Ready";
     private bool _modified;
     private readonly Dictionary<string, string> _documents = new(StringComparer.Ordinal);
-    private readonly JsonSerializerOptions _json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     public WorkspaceView()
     {
         Content = _root;
@@ -38,7 +38,13 @@ public sealed partial class WorkspaceView : UserControl
         _root.Children.Add(_menu); _root.Children.Add(_toolbar); _root.Children.Add(_site); _root.Children.Add(_status);
         Grid.SetRow(_toolbar, 1); Grid.SetRow(_site, 2); Grid.SetRow(_status, 3);
         DockChrome.Identify(_site, "dock-site", "Docking workspace");
-        _site.ContentFactory = CreateWindowContent;
+        _site.ContentFactory = window =>
+        {
+            var content = CreateWindowContent(window);
+            if (content is TextBox editor && window.Kind == WindowKind.Document && _models?.Find(window.Id) is { } model)
+                editor.SetBinding(TextBox.IsReadOnlyProperty, new Binding { Source = model, Path = new PropertyPath(nameof(DockWindowViewModel.IsReadOnly)), Mode = BindingMode.OneWay });
+            return content;
+        };
         _site.NewDocumentRequested += NewDocument;
         _site.OperationRejected += message => Log(message);
         _site.LayoutChanged += (_, e) => { _modified = true; Log(e.Command + " · revision " + e.After.Revision); };
@@ -49,8 +55,7 @@ public sealed partial class WorkspaceView : UserControl
     }
     private void Log(string message)
     {
-        _lastMessage = message;
-        _events.Enqueue(DateTime.Now.ToString("HH:mm:ss") + "  " + message);
+        _lastMessage = message; _events.Enqueue(DateTime.Now.ToString("HH:mm:ss") + "  " + message);
         while (_events.Count > 150) _events.Dequeue();
         if (_output is not null) _output.Text = string.Join('\n', _events.Reverse());
         _status.Text = message + "     |     " + _theme.Name + "     |     Uno · Skia renderer     |     F8: window switcher";
@@ -67,26 +72,24 @@ public sealed partial class WorkspaceView : UserControl
         manager.Register(new("preview", "Preview.cs", WindowKind.Document) { DisplayMode = TabDisplayMode.Preview, Description = "Editing this preview promotes it to a normal tab" }).ThrowIfFailed();
         manager.Register(new("explorer", "Solution Explorer", WindowKind.Tool) { MinimumSize = new(150, 80), Description = "Browse the reusable packages" }, targetId: "workspace", side: DockSide.Right).ThrowIfFailed();
         manager.Register(new("outline", "Class View", WindowKind.Tool), targetId: "explorer").ThrowIfFailed();
-        manager.Register(new("properties", "Properties", WindowKind.Tool) { MinimumSize = new(150, 100), Description = "Edit active window metadata and behavior" }, targetId: "explorer", side: DockSide.Bottom).ThrowIfFailed();
+        manager.Register(new("properties", "Properties", WindowKind.Tool) { MinimumSize = new(150, 100), Description = "Edit window metadata and behavior" }, targetId: "explorer", side: DockSide.Bottom).ThrowIfFailed();
         manager.Register(new("output", "Output", WindowKind.Tool) { MinimumSize = new(100, 60) }, targetId: "workspace", side: DockSide.Bottom).ThrowIfFailed();
         manager.Register(new("errors", "Error List", WindowKind.Tool), targetId: "output").ThrowIfFailed();
         manager.Register(new("find", "Find Results", WindowKind.Tool), targetId: "output").ThrowIfFailed();
         manager.Register(new("toolbox", "Toolbox", WindowKind.Tool), open: false).ThrowIfFailed();
         manager.AutoHide("toolbox", DockSide.Left, false).ThrowIfFailed();
         manager.Activate("explorer").ThrowIfFailed(); manager.Activate("output").ThrowIfFailed(); manager.Activate("welcome").ThrowIfFailed();
+        _models?.Dispose();
+        _models = new DockWorkspaceViewModel(manager, action => { if (DispatcherQueue.HasThreadAccess) action(); else DispatcherQueue.TryEnqueue(() => action()); });
         _site.Manager = manager;
-        SetTheme(_theme);
-        Log("Ready — drag a document tab or tool-window title to rearrange the workspace");
+        SetTheme(_theme); Log("Ready — drag a document tab or tool-window title to rearrange the workspace");
     }
     private void SetTheme(DockTheme theme)
     {
         _theme = theme; _site.Theme = theme;
         RequestedTheme = theme.IsDark ? ElementTheme.Dark : ElementTheme.Light;
-        _root.Background = DockChrome.Brush(theme.Background);
-        _status.Foreground = DockChrome.Brush(theme.Text);
-        BuildMenu();
-        _site.Refresh();
-        Log("Theme: " + theme.Name);
+        _root.Background = DockChrome.Brush(theme.Background); _status.Foreground = DockChrome.Brush(theme.Text);
+        BuildMenu(); _site.Refresh(); Log("Theme: " + theme.Name);
     }
     private void NewDocument()
     {
@@ -98,8 +101,7 @@ public sealed partial class WorkspaceView : UserControl
     {
         try
         {
-            _saved = _site.Manager.Layout;
-            string json = DockLayoutSerializer.Serialize(_saved);
+            _saved = _site.Manager.Layout; string json = DockLayoutSerializer.Serialize(_saved);
 #if BROWSER_WASM
             Uno.Foundation.WebAssemblyRuntime.InvokeJS("localStorage.setItem('dockingscene.layout.v1', " + JsonSerializer.Serialize(json) + ");");
 #else
@@ -144,10 +146,7 @@ public sealed partial class WorkspaceView : UserControl
         }
         Menu("File", m => { Item(m, "New document", NewDocument); Item(m, "Save layout", SaveLayout); Item(m, "Load layout", LoadLayout); m.Items.Add(new MenuFlyoutSeparator()); Item(m, "Reset workspace", Reset); Item(m, "Close active window", () => { if (_site.Manager.Layout.ActiveWindowId is { } id) Execute(_site.Manager.Close(id)); }); });
         Menu("Edit", m => { Item(m, "Undo layout change", () => Execute(_site.Manager.Undo()), _site.Manager.CanUndo); Item(m, "Redo layout change", () => Execute(_site.Manager.Redo()), _site.Manager.CanRedo); });
-        Menu("View", m =>
-        {
-            foreach (var window in _site.Manager.Layout.Windows.Values.OrderBy(w => w.Kind).ThenBy(w => w.Title)) { string id = window.Id; Item(m, window.Title, () => Execute(_site.Manager.Open(id))); }
-        });
+        Menu("View", m => { foreach (var window in _site.Manager.Layout.Windows.Values.OrderBy(w => w.Kind).ThenBy(w => w.Title)) { string id = window.Id; Item(m, window.Title, () => Execute(_site.Manager.Open(id))); } });
         Menu("Theme", m => { foreach (var theme in DockTheme.BuiltIn) Item(m, theme.Name, () => SetTheme(theme)); });
         Menu("Window", m =>
         {
@@ -167,10 +166,17 @@ public sealed partial class WorkspaceView : UserControl
         Tool("Redo", "M10,3 L14,7 L10,11 M14,7 L7,7 Q1,7 3,13", () => Execute(_site.Manager.Redo()));
         var mode = new ComboBox { MinHeight = 25, Height = 26, Width = 135, FontSize = 12, Padding = new(7, 1, 20, 1), ItemsSource = new[] { "Tabbed MDI", "Standard MDI" }, SelectedIndex = _site.Manager.Layout.MdiMode == MdiMode.Tabbed ? 0 : 1 };
         DockChrome.Identify(mode, "toolbar:mdi", "MDI mode");
-        mode.SelectionChanged += (_, _) => { if (mode.SelectedIndex >= 0) { Execute(_site.Manager.SetMdiMode((MdiMode)mode.SelectedIndex)); if (mode.SelectedIndex == 1) Arrange(MdiArrangement.Cascade); } };
+        mode.SelectionChanged += (_, _) =>
+        {
+            if (mode.SelectedIndex >= 0 && mode.SelectedIndex != (int)_site.Manager.Layout.MdiMode)
+            { Execute(_site.Manager.SetMdiMode((MdiMode)mode.SelectedIndex)); if (mode.SelectedIndex == 1) Arrange(MdiArrangement.Cascade); }
+        };
         _toolbar.Children.Add(mode);
         var themePicker = new ComboBox { MinHeight = 25, Height = 26, Width = 146, FontSize = 12, Padding = new(7, 1, 20, 1), ItemsSource = DockTheme.BuiltIn.Select(t => t.Name).ToArray(), SelectedItem = _theme.Name };
-        DockChrome.Identify(themePicker, "toolbar:theme", "Theme"); themePicker.SelectionChanged += (_, _) => { if (themePicker.SelectedIndex >= 0) SetTheme(DockTheme.BuiltIn[themePicker.SelectedIndex]); }; _toolbar.Children.Add(themePicker);
+        DockChrome.Identify(themePicker, "toolbar:theme", "Theme");
+        // Loading a ComboBox can deliver its initial selection asynchronously. Never rebuild it for that same selection.
+        themePicker.SelectionChanged += (_, _) => { if (themePicker.SelectedIndex >= 0 && DockTheme.BuiltIn[themePicker.SelectedIndex].Name != _theme.Name) SetTheme(DockTheme.BuiltIn[themePicker.SelectedIndex]); };
+        _toolbar.Children.Add(themePicker);
         _toolbar.Children.Add(DockChrome.Button("Reset layout", "toolbar:Reset", _theme, Reset));
         _toolbar.Children.Add(DockChrome.Button("Windows", "toolbar:Windows", _theme, () => _site.ShowSwitcher()));
         var brand = DockChrome.Text("DOCKINGSCENE", _theme, 11); brand.Margin = new(24, 0, 0, 0); brand.Foreground = DockChrome.Brush(_theme.MutedText); _toolbar.Children.Add(brand);
@@ -180,33 +186,5 @@ public sealed partial class WorkspaceView : UserControl
         var workspace = DockTree.Descendants(_site.Manager.Layout.Root).OfType<DockWorkspace>().FirstOrDefault();
         var bounds = workspace is not null && _site.Geometry?.Nodes.TryGetValue(workspace.Id, out var rect) == true ? rect : new DockRect(0, 0, 800, 500);
         Execute(WindowGeometry.ArrangeMdi(_site.Manager, new(0, 0, Math.Max(1, bounds.Width), Math.Max(1, bounds.Height)), arrangement));
-    }
-    private void PublishDiagnostics()
-    {
-#if BROWSER_WASM
-        try
-        {
-            var layout = _site.Manager.Layout;
-            var payload = new
-            {
-                ready = true, version = "0.1.0", renderer = "Uno Skia", revision = layout.Revision,
-                activeWindowId = layout.ActiveWindowId, mdiMode = layout.MdiMode.ToString(), theme = _theme.Name,
-                locked = layout.IsLayoutLocked, canUndo = _site.Manager.CanUndo, canRedo = _site.Manager.CanRedo,
-                modified = _modified, cachedContentCount = _site.CachedContentCount, lastMessage = _lastMessage,
-                windows = layout.Windows.Values.Select(w => new { w.Id, w.Title, kind = w.Kind.ToString(), w.IsModified, w.IsReadOnly, displayMode = w.DisplayMode.ToString(), placement = DockTree.Locate(layout, w.Id).Placement.ToString(), w.MdiBounds, mdiState = w.MdiState.ToString() }).ToArray(),
-                groups = DockTree.Groups(layout).Select(g => new { g.Id, kind = g.Kind.ToString(), g.Windows, g.SelectedId, tabPlacement = g.TabPlacement.ToString() }).ToArray(),
-                floatingHosts = layout.FloatingHosts.Select(h => new { h.Id, h.Bounds, h.IsMaximized }).ToArray(),
-                autoHideGroups = layout.AutoHideGroups.Select(g => new { g.Id, side = g.Side.ToString(), g.Windows }).ToArray(),
-                bounds = DockChrome.AutomationBounds(_root),
-                errors = _site.Geometry?.ConstraintWarnings.ToArray() ?? []
-            };
-            string json = JsonSerializer.Serialize(payload, _json);
-            Uno.Foundation.WebAssemblyRuntime.InvokeJS("globalThis.dockingScene = JSON.parse(" + JsonSerializer.Serialize(json) + ");");
-        }
-        catch (Exception e)
-        {
-            Uno.Foundation.WebAssemblyRuntime.InvokeJS("globalThis.dockingSceneDiagnosticError = " + JsonSerializer.Serialize(e.ToString()) + ";");
-        }
-#endif
     }
 }

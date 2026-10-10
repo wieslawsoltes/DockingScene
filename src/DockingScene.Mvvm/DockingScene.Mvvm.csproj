@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><Description>UI-independent observable docking view models, commands and collection synchronization.</Description></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../DockingScene.Core/DockingScene.Core.csproj" /></ItemGroup>
+</Project>
