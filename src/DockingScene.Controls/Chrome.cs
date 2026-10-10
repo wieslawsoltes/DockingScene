@@ -43,7 +43,6 @@ public static class DockChrome
     }
     public static FrameworkElement Glyph(string path, string color, double size = 14)
     {
-        // Parsing a fixed authored path does not involve user markup or script execution.
         var geometry = (Geometry)Microsoft.UI.Xaml.Markup.XamlReader.Load("<PathGeometry xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" Figures=\"" + path + "\" />");
         return new Microsoft.UI.Xaml.Shapes.Path { Data = geometry, Stroke = Brush(color), StrokeThickness = 1, Width = size, Height = size, Stretch = Stretch.Uniform };
     }
@@ -53,19 +52,31 @@ public static class DockChrome
         element.Width = Math.Max(0, rect.Width); element.Height = Math.Max(0, rect.Height);
         Canvas.SetZIndex(element, z);
     }
+
+    /// <summary>Read-only hit-test diagnostics. Popup coordinates share the root coordinate space.
+    /// Collapsed ancestors are pruned so retained but non-painted controls never become test targets.</summary>
     public static Dictionary<string, DockRect> AutomationBounds(FrameworkElement root)
     {
         var result = new Dictionary<string, DockRect>(StringComparer.Ordinal);
-        var stack = new Stack<DependencyObject>(); stack.Push(root);
+        var visited = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
+        var stack = new Stack<DependencyObject>();
+        stack.Push(root);
+        if (root.XamlRoot is { } xamlRoot)
+            foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
+                if (popup.IsOpen && popup.Child is { } child) stack.Push(child);
         while (stack.TryPop(out var node))
         {
-            if (node is FrameworkElement element && element.Visibility == Visibility.Visible && element.ActualWidth > 0 && element.ActualHeight > 0)
+            if (!visited.Add(node)) continue;
+            if (node is FrameworkElement element)
             {
+                if (element.Visibility != Visibility.Visible || element.Opacity <= 0) continue;
                 var id = AutomationProperties.GetAutomationId(element);
-                if (!string.IsNullOrEmpty(id))
+                if (!string.IsNullOrEmpty(id) && element.ActualWidth > 0 && element.ActualHeight > 0)
                 {
                     var rect = element.TransformToVisual(root).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
-                    result[id] = new(rect.X, rect.Y, rect.Width, rect.Height);
+                    double left = Math.Max(0, rect.X), top = Math.Max(0, rect.Y);
+                    double right = Math.Min(root.ActualWidth, rect.Right), bottom = Math.Min(root.ActualHeight, rect.Bottom);
+                    if (right > left && bottom > top) result[id] = new(left, top, right - left, bottom - top);
                 }
             }
             int count = VisualTreeHelper.GetChildrenCount(node);

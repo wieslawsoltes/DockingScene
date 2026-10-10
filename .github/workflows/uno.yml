@@ -18,6 +18,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Restore browser toolchain
         run: dotnet workload install wasm-tools --skip-manifest-update
       - name: Build desktop application
@@ -26,13 +29,64 @@ jobs:
         run: dotnet publish src/DockingScene.App/DockingScene.App.csproj -f net10.0-browserwasm -c Release -o artifacts/browser
       - name: Pack reusable controls
         run: dotnet pack src/DockingScene.Controls/DockingScene.Controls.csproj -c Release -o artifacts/packages
-      - name: Inspect browser output
-        run: find artifacts/browser -maxdepth 5 -name index.html -o -name uno-config.js
+      - name: Prepare browser distribution and source snapshot
+        run: |
+          set -euo pipefail
+          test -f artifacts/browser/wwwroot/index.html
+          mkdir -p artifacts/site/DockingScene
+          cp -a artifacts/browser/wwwroot/. artifacts/site/DockingScene/
+          touch artifacts/site/DockingScene/.nojekyll
+          git archive --format=zip HEAD -o artifacts/DockingScene-source.zip
+      - name: Install browser test dependencies
+        run: |
+          npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
+          cd tests/browser
+          npx playwright install --with-deps chromium
+      - name: Validate the real Uno browser application
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory artifacts/site > artifacts/server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          node tests/browser/run.mjs
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-validation
+          path: |
+            artifacts/browser-results
+            artifacts/server.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-snapshot
+          path: artifacts/DockingScene-source.zip
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: browser-application
           path: artifacts/browser
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: packages-controls
           path: artifacts/packages
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: artifacts/site/DockingScene
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy validated Uno browser build
+        id: deployment
+        uses: actions/deploy-pages@v4
