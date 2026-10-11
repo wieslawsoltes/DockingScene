@@ -2,46 +2,53 @@
 
 ## Executable specifications
 
-All `tests/*Specs/*.csproj` applications are dependency-light assertion suites returning a nonzero exit code on failure. CI runs every matching project with shell `pipefail`; a failed process cannot be hidden by `tee`.
+Every `tests/*Specs/*.csproj` program returns a nonzero exit code on failure. CI runs all matching projects with shell `pipefail`; a failed test process cannot be hidden by `tee`.
 
 | Suite | Coverage |
 | --- | --- |
-| DockingScene.Specs | Baseline engine, docking, capabilities, lifecycle, serialization and history contracts |
-| DockingScene.LayoutSpecs | Split constraints, geometry, guide targeting and MDI arrangements |
-| DockingScene.ParitySpecs | Malformed/null/deep/cyclic layouts, geometry overflow, metadata and serialization rejection |
-| DockingScene.TransactionSpecs | Batches, rollback, stale revisions, close cancellation, observer reentrancy/order, preview replacement, directional closing |
-| DockingScene.MvvmSpecs | Stable proxies, commands, metadata, content lifetime, dispatch, disposal, source collections and cancellation |
-| DockingScene.VectorSpecs | Every built-in icon, SVG command grammar, smooth curves, arcs, numeric syntax, locale independence and input budgets |
-| DockingScene.TabSpecs | Measured offsets, binary visible ranges, insertion positions, scrolling, large strips and drag index correction |
+| DockingScene.Specs | Engine, docking, capabilities, lifecycle, serialization and history |
+| DockingScene.LayoutSpecs | Split constraints, geometry, guide targeting, MDI and storage |
+| DockingScene.ParitySpecs | Null/deep/cyclic layouts, overflow and invalid metadata |
+| DockingScene.TransactionSpecs | Batches, rollback, stale revisions, cancellation, ordered/reentrant observers, previews and directional closing |
+| DockingScene.MvvmSpecs | Stable proxies, commands, metadata, dispatch, disposal, source collections and cancellation |
+| DockingScene.VectorSpecs | Built-in icons, SVG grammar, curves/arcs, numeric syntax, locale and budgets |
+| DockingScene.TabSpecs | Measured offsets, binary visible ranges, insertion positions, scrolling and drag index correction |
+| DockingScene.TabLayoutSpecs | Three-lane allocation, six overflow modes, minimum/fixed extents, large strips, filtered digits and 1,000 seeded allocation/fit checks |
 
-The suite summaries in each CI artifact are the authoritative counts for that commit. New tests must assert real behavior rather than merely inspect source strings.
+The summaries in each artifact are authoritative for that revision. The 1,000 new allocations comprise 500 mixed constrained cases and 500 feasible-fit cases; they supplement 13 named tab-layout specifications rather than representing 1,000 UI tests.
 
-## Uno browser validation
+## Integrated docking browser suite
 
-The workflow publishes the same `net10.0-browserwasm` application distributed to users, serves it under `/DockingScene/`, and opens it in Chromium. The harness explicitly waits for the splash to disappear and uses real pointer/keyboard input. Geometry and editor observations are read from the opt-in diagnostic snapshot; no test-only hook calls manager commands from JavaScript.
+The workflow publishes the same `net10.0-browserwasm` application distributed to users and serves it under `/DockingScene/`. Chromium waits for the splash to disappear and uses real pointer and keyboard input.
 
-Scenarios include startup/paint, document creation without spurious dirty state, content identity through close/open, persistence restore, standard/tabbed MDI, layout locking, editor caret behavior, preview promotion/keep-open, measured tab reordering, Ctrl-drag floating, drag redocking, split resizing, auto-hide resizing/pinning, pinned close-others, switcher cancellation, theme/content retention and final reset.
+The 20 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
 
-Every scenario produces a pass/fail entry. Failures capture the actual screenshot and diagnostic state. Successful runs include workspace, standard MDI, floating and dark-theme screenshots. The trace archive can be opened with Playwright's trace viewer. UI tests do not certify complete Actipro compatibility.
+## Standalone tab browser suite
 
-Chromium is launched with ANGLE/SwiftShader software WebGL. This exercises the actual Skia-rendered application, but is **not** a hardware GPU benchmark. Desktop targets are compiled in CI; native OS window interaction, Windows/macOS runtime testing, multi-monitor behavior, touch/stylus, screen readers, RTL, Firefox/WebKit and visual comparison against Actipro require additional validation.
+A second fresh browser session opens **Tab options → Open standalone tab playground**. Its 18 scenarios exercise actual reusable controls, including:
+
+- Lazy creation and header virtualization; independent lane scrolling; menu access to hidden tabs.
+- Global shrinking with feasible minima; all 20 compressed headers selected through their physical label targets; fixed extents under overconstraint; all six overflow affordance sets.
+- Hidden strip space reclamation and content identity through four placements; standalone pin/unpin; closing vetoes and middle-click CanClose checks.
+- Application-added MenuOpening actions; singleton tool-strip visibility; normal/pinned/preview keyboard filtering and digit 9 selecting the last item.
+- Exception-free execution and exact deployed commit identity.
+
+Assertions observe the real application through read-only opt-in diagnostics. They do not invoke manager commands or replace the renderer with test stubs. Both suites run even if one fails, and either failure blocks distribution. Failed scenarios capture screenshots and JSON; traces capture the complete input session.
 
 ## Diagnostics and privacy
 
-Normal browser sessions do not start periodic diagnostic capture. `?diagnostics=1` enables a read-only object containing window metadata, bounds and sample editor text/caret/instance observations. This is intended for local tests and the public demonstration's synthetic documents. Do not enable it around confidential content in a downstream app.
+Normal browser sessions do not run periodic diagnostic capture. `?diagnostics=1` enables window metadata, bounds and synthetic sample-editor text/caret/identity observations. Downstream applications must not enable these observations around confidential content.
 
-Diagnostic hit bounds are clipped by ancestor scrolling viewports and explicit rectangle clips. They do not perform sibling-occlusion analysis. Tests use actual pointer input and observable state transitions rather than treating the rectangles themselves as proof of correct interaction.
+Bounds are clipped by ancestor viewports, tab-lane clips and explicit rectangle clips. They do not perform sibling-occlusion analysis. Tests therefore require actual input-driven state transitions instead of treating diagnostic rectangles as proof of correct interaction.
 
-## Pointer and keyboard regression coverage
+## Package and deployed-site gates
 
-The integrated suite also verifies that a physical tab/splitter drag owns a pointer capture, that releasing over the outer toolbar terminates the gesture, that Escape releases capture without changing placement, and that the switcher supports both Escape cancellation and Enter commit. The initialization assertion compares complete text using canonical line separators because Uno uses carriage returns internally; text normalization is not a document edit.
+All six alpha NuGet packages are built from one source snapshot. A fresh package cache restores a plain .NET consumer that executes the five UI-independent packages, followed by a separate Uno consumer that compiles the Controls surface, including tab options and events, without ProjectReferences.
 
-## Package consumers and deployed-site checks
+The distribution workflow repeats model contracts before publishing. After a green main build and both browser suites, Pages deploys the artifact. A separate job checks `build-info.json` against the source commit and reruns both suites against the live URL. Source snapshots, packages, contract logs, screenshots and local/live traces are retained as workflow artifacts.
 
-All six alpha packages are built from one source snapshot. Two isolated consumers restore from the generated local feed into a fresh package cache: a plain .NET console exercises the five UI-independent packages; a separate Uno library compiles the Controls package's public surface without ProjectReferences. This is a package-consumption check, not a native desktop UI runtime test.
+## Limits
 
-The distribution workflow runs the model specifications before browser publishing, so Pages cannot be deployed merely because compilation succeeded. After deployment, the same browser suite runs against the live Pages URL and checks its `build-info.json` commit identity against the validated source revision. Source snapshots, complete package sets and both local-server and deployed-browser traces are uploaded as workflow artifacts.
+Chromium uses **ANGLE/SwiftShader software WebGL**. It exercises the actual Uno Skia renderer but is not a hardware-GPU benchmark. Desktop targets compile in CI; native desktop interaction, Windows/macOS runtime behavior, detached windows, multi-monitor integration, touch/stylus/inertial scrolling, screen readers, RTL, Firefox/WebKit and vendor visual comparison still require additional validation.
 
-## Release gate
-
-A release should be tied to a concrete commit with passing executable suites, successful desktop/browser builds and passing browser scenarios. Pages deployment runs only from a successful main-branch workflow. Preserve source snapshots and validation artifacts to make release claims auditable. Full parity must not be declared until the outstanding rows in `parity.md` are implemented and tested.
+A green build certifies only the exercised contracts and scenarios at its exact revision, not full Actipro compatibility. Keep the outstanding matrix in `parity.md` alongside release evidence.
