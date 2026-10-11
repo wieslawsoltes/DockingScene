@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.5`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.6`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -120,3 +120,7 @@ Project source is MIT licensed. Uno Platform, Skia and other dependencies retain
 ## Retained-host performance and interaction
 
 Host geometry is reused across activation and non-geometric metadata changes. Splitter buttons, auto-hide rails, popup resize grips and empty-workspace presenters retain their visual identity until removed from the layout. A tab click restores the selected content's last focused control, and detached queued projections cannot reclaim transferred content. Standalone tabs support elapsed-time-based drag edge scrolling with a `CanTabsAutoScroll` toggle. The [retained-host review](docs/retained-host-review.md) documents cache inputs, focus behavior, real-input regressions and remaining costs.
+
+## Metro visual fidelity
+
+The sample uses contextual document actions, a thin document-strip accent, dotted tool-caption grips and an accent status bar. Solution Explorer and Properties use compact native layouts. Tool-caption buttons retain their identities across activation and theme changes, and hover-only actions do not remeasure tab headers. The Appearance menu exposes these policies without changing the underlying workspace. See [Metro fidelity](docs/metro-fidelity.md) for public references, reusable APIs, defaults and pixel-test boundaries.

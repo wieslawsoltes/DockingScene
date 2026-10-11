@@ -1,0 +1,10 @@
+<ResourceDictionary
+    x:Class="DockingScene.App.ExplorerResources"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DataTemplate x:Key="SourceTreeNodeContent">
+        <ContentPresenter Content="{Binding Content}"
+                          HorizontalContentAlignment="Stretch"
+                          VerticalContentAlignment="Center" />
+    </DataTemplate>
+</ResourceDictionary>

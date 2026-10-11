@@ -75,6 +75,8 @@ public partial class AdvancedTabControl : UserControl
     private sealed record HeaderVisual(Border Border, Button Select, TextBlock Text, List<Button> Actions)
     {
         public (string Background, string Foreground)? Paint { get; set; }
+        public bool IsPointerOver { get; set; }
+        public bool HasKeyboardFocus { get; set; }
     }
 
     public AdvancedTabControl()
@@ -188,7 +190,7 @@ public partial class AdvancedTabControl : UserControl
             }
             _header.Visibility = IsTabStripVisible ? Visibility.Visible : Visibility.Collapsed;
         }
-        BuildActions(); ArrangeHeaders(true);
+        RefreshTabAppearance(); BuildActions(); ArrangeHeaders(true);
     }
     private void RemoveHeader(string id)
     {

@@ -40,6 +40,7 @@ public sealed partial class WorkspaceView
             var stack = new Stack<DependencyObject>(); stack.Push(root);
             while (stack.TryPop(out var node))
             {
+                if (node is Microsoft.UI.Xaml.Shapes.Shape shape && Map(shape.Stroke) is { } stroke) shape.Stroke = DockChrome.Brush(stroke);
                 if (node is TextBlock text && Map(text.Foreground) is { } textColor) text.Foreground = DockChrome.Brush(textColor);
                 if (node is Control control)
                 {
@@ -50,28 +51,6 @@ public sealed partial class WorkspaceView
                 for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++) stack.Push(VisualTreeHelper.GetChild(node, i));
             }
         }
-    }
-    private FrameworkElement Welcome()
-    {
-        var body = new StackPanel { Spacing = 14, Margin = new(30, 25, 30, 25), MaxWidth = 850, HorizontalAlignment = HorizontalAlignment.Left };
-        var eyebrow = DockChrome.Text("DOCKING & MULTIPLE DOCUMENT INTERFACE", _theme, 11); eyebrow.Foreground = DockChrome.Brush(_theme.MutedText); body.Children.Add(eyebrow);
-        var title = DockChrome.Text("A workspace that works your way.", _theme, 29); title.TextWrapping = TextWrapping.Wrap; body.Children.Add(title);
-        var intro = DockChrome.Text("DockingScene brings reusable docking, tabbed documents, auto-hide tools and overlapping MDI windows to Uno Platform. Every editor is a real retained Uno control — not a screenshot or an HTML imitation.", _theme, 14); intro.TextWrapping = TextWrapping.Wrap; body.Children.Add(intro);
-        body.Children.Add(new Border { Height = 1, Background = DockChrome.Brush(_theme.Border), Margin = new(0, 8, 0, 6) });
-        void Section(string heading, string text)
-        {
-            body.Children.Add(DockChrome.Text(heading, _theme, 17)); var block = DockChrome.Text(text, _theme, 13); block.TextWrapping = TextWrapping.Wrap; block.Foreground = DockChrome.Brush(_theme.MutedText); body.Children.Add(block);
-        }
-        Section("Dock, split, float", "Drag a document tab or a tool-window title. The guide compass previews its destination. Drop away from a guide to float. Hold Ctrl to suppress docking, or press Escape to cancel.");
-        Section("Keep your tools close", "The Toolbox lives on the left auto-hide rail. Hover or click to reveal it; drag its inner edge to resize, or pin it to keep it open. Tab context menus expose placement and document commands.");
-        Section("One model. Two MDI experiences.", "Switch between tabbed and standard MDI. Standard MDI supports overlapping documents, minimize, maximize, cascade and three tiling arrangements. Changes are atomic and undoable.");
-        var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 9, Margin = new(0, 6, 0, 0) };
-        actions.Children.Add(DockChrome.Button("New document", "welcome:new", _theme, NewDocument));
-        actions.Children.Add(DockChrome.Button("Try standard MDI", "welcome:mdi", _theme, () => Arrange(DockingScene.Layout.MdiArrangement.Cascade)));
-        actions.Children.Add(DockChrome.Button("Show Toolbox", "welcome:toolbox", _theme, () => _site.OpenAutoHide("toolbox"))); body.Children.Add(actions);
-        var note = DockChrome.Text("Independent implementation · Actipro API and pixel parity remain incomplete.\nCtrl+Tab / F8: switcher  ·  Ctrl+F4: close  ·  Ctrl+1…9: document  ·  Right-click a tab: commands", _theme, 11);
-        note.TextWrapping = TextWrapping.Wrap; note.Margin = new(0, 8, 0, 0); note.Foreground = DockChrome.Brush(_theme.MutedText); body.Children.Add(note);
-        return new ScrollViewer { Content = body, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
     private FrameworkElement Editor(DockWindow window)
     {
@@ -109,56 +88,10 @@ public sealed partial class WorkspaceView
         };
         return editor;
     }
-    private FrameworkElement Explorer()
-    {
-        var tree = new TreeView { SelectionMode = TreeViewSelectionMode.Single, FontSize = 12 };
-        var root = new TreeViewNode { Content = "Solution 'DockingScene' (7 projects)", IsExpanded = true };
-        foreach (var package in new[] { "Core", "Layout", "Serialization", "Mvvm", "Themes", "Controls", "App" })
-        {
-            var project = new TreeViewNode { Content = "◈  DockingScene." + package, IsExpanded = package is "Core" or "Controls" };
-            foreach (var name in package switch
-            {
-                "Core" => new[] { "DockManager.cs", "DockTree.cs", "Model.cs", "DockLayoutValidator.cs" },
-                "Controls" => new[] { "DockSite.cs", "AdvancedTabControl.cs", "StandardMdiHost.cs", "WindowControl.cs" },
-                "Layout" => new[] { "DockLayoutEngine.cs", "WindowGeometry.cs", "TabStripMetrics.cs", "DockGuides.cs" },
-                "Serialization" => new[] { "DockLayoutSerializer.cs" }, "Mvvm" => new[] { "DockWorkspaceViewModel.cs", "DockSourceBinding.cs" },
-                "Themes" => new[] { "DockTheme.cs", "VectorPath.cs" }, _ => new[] { "App.xaml", "MainWindow.xaml" }
-            }) project.Children.Add(new() { Content = "   " + name });
-            root.Children.Add(project);
-        }
-        tree.RootNodes.Add(root);
-        tree.ItemInvoked += (_, e) => { if (e.InvokedItem is TreeViewNode node && node.Children.Count == 0) Execute(_site.Manager.Open(node.Content?.ToString()?.Contains("xaml") == true ? "main" : "code")); };
-        return tree;
-    }
     private FrameworkElement Outline()
     {
         var list = new ListView { FontSize = 12, SelectionMode = ListViewSelectionMode.Single };
         list.ItemsSource = new[] { "▾  DockingScene.Core", "   ◇ DockManager", "      Register(window)", "      Dock(id, target, side)", "      Float(id)", "      AutoHide(id, side)", "      Transaction(name, operations)", "      OpenPreview(window)", "      Undo() / Redo()", "▾  DockingScene.Mvvm", "   ◇ DockWorkspaceViewModel", "   ◇ DockSourceBinding<T>" }; return list;
-    }
-    private FrameworkElement Properties()
-    {
-        var panel = new StackPanel { Margin = new(8), Spacing = 7 }; panel.Children.Add(DockChrome.Text("Window properties", _theme, 13));
-        var choices = DockChrome.Identify(new ComboBox { ItemsSource = _site.Manager.Layout.Windows.Keys.Order().ToArray(), SelectedItem = "main", MinHeight = 27, FontSize = 12, HorizontalAlignment = HorizontalAlignment.Stretch }, "properties:window"); panel.Children.Add(choices);
-        var title = DockChrome.Identify(new TextBox { Header = "Title", MinHeight = 28, FontSize = 12 }, "properties:title"); panel.Children.Add(title);
-        var readOnly = DockChrome.Identify(new CheckBox { Content = "Read only", FontSize = 12, MinHeight = 25 }, "properties:readonly"); panel.Children.Add(readOnly);
-        var floatable = DockChrome.Identify(new CheckBox { Content = "Can float", FontSize = 12, MinHeight = 25 }, "properties:float"); panel.Children.Add(floatable);
-        var closable = DockChrome.Identify(new CheckBox { Content = "Can close", FontSize = 12, MinHeight = 25 }, "properties:close"); panel.Children.Add(closable);
-        void Load()
-        {
-            if (choices.SelectedItem is string id && _site.Manager.Layout.Windows.TryGetValue(id, out var w))
-            { title.Text = w.Title; readOnly.IsChecked = w.IsReadOnly; floatable.IsChecked = w.Capabilities.HasFlag(DockCapabilities.Float); closable.IsChecked = w.Capabilities.HasFlag(DockCapabilities.Close); }
-        }
-        choices.SelectionChanged += (_, _) => Load(); Load();
-        panel.Children.Add(DockChrome.Button("Apply", "properties:apply", _theme, () =>
-        {
-            if (choices.SelectedItem is not string id) return;
-            Execute(_site.Manager.UpdateWindow(id, w => w with
-            {
-                Title = title.Text, IsReadOnly = readOnly.IsChecked == true,
-                Capabilities = (w.Capabilities & ~(DockCapabilities.Float | DockCapabilities.Close)) | (floatable.IsChecked == true ? DockCapabilities.Float : 0) | (closable.IsChecked == true ? DockCapabilities.Close : 0)
-            }));
-        }));
-        return new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
     private FrameworkElement Output()
     {

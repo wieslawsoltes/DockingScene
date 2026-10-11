@@ -11,6 +11,9 @@ public static class ControlConsumer
     {
         Manager = manager,
         DisposeContentOnUnregister = false,
+        AreDocumentTabEmbeddedButtonsAlwaysVisible = false,
+        HasToolTabCloseButtons = false,
+        HasDocumentTabStripHighlight = true,
         DocumentTabOverflowBehavior = TabOverflowBehavior.Menu,
         ToolWindowsSingleTabLayoutBehavior = SingleTabLayoutBehavior.Hide,
         HasDocumentTabPinButtons = true,
@@ -20,6 +23,9 @@ public static class ControlConsumer
     {
         var tabs = new AdvancedTabControl { OverflowBehavior = TabOverflowBehavior.ShrinkWithMenu, MinTabExtent = 60, MaxTabExtent = 200, HasTabPinButtons = true };
         tabs.Items.Add(new() { Id = "preview", Header = "Preview", IsPreview = true, ContentFactory = () => new Microsoft.UI.Xaml.Controls.TextBox() });
+        tabs.AreTabEmbeddedButtonsAlwaysVisible = false;
+        tabs.HighlightThickness = new Microsoft.UI.Xaml.Thickness(0, 0, 0, 1);
+        tabs.CanTabsHighlightOnPointerOverWhenInactive = true;
         tabs.CanTabsDrag = true;
         tabs.CanTabsAutoScroll = true;
         tabs.TabReordering += (_, e) => e.Cancel = e.Item.IsModified;

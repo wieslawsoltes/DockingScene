@@ -11,6 +11,7 @@ public sealed partial class WorkspaceView
 {
     private void WriteTabDiagnostics(Utf8JsonWriter writer)
     {
+        WriteMetroDiagnostics(writer);
         writer.WriteBoolean("factoryFailureRetained", _factoryFailureRetained);
         writer.WriteBoolean("recursiveFactoryRejected", _recursiveFactoryRejected);
         writer.WriteNumber("factoryCallbackCount", _factoryCallbackCount);

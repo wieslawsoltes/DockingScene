@@ -31,8 +31,8 @@ public sealed class DockSourceBinding<T> : IDisposable where T : class
         if (_observable is not null) _observable.CollectionChanged += CollectionChanged;
     }
     public T? Resolve(string id) => _owned.GetValueOrDefault(id);
-    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => Synchronize();
-    private void PropertyChanged(object? sender, PropertyChangedEventArgs e) => Synchronize();
+    private void CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) { if (!_disposed) Synchronize(); }
+    private void PropertyChanged(object? sender, PropertyChangedEventArgs e) { if (!_disposed) Synchronize(); }
     public DockResult Synchronize()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -40,16 +40,24 @@ public sealed class DockSourceBinding<T> : IDisposable where T : class
         _synchronizing = true;
         try
         {
+            // Describing an item calls application code. Capture the revision
+            // first so a callback cannot make this projection overwrite a newer
+            // manager snapshot, even when there would otherwise be no operations.
+            var before = _manager.Layout;
             var next = new Dictionary<string, T>(StringComparer.Ordinal);
             var descriptions = new Dictionary<string, DockWindow>(StringComparer.Ordinal);
             foreach (var item in _source)
             {
+                ObjectDisposedException.ThrowIf(_disposed, this);
+                if (next.Count >= _manager.Policy.MaximumWindows) throw new InvalidOperationException("Source exceeds the configured window limit.");
                 if (item is null) throw new ArgumentException("A docking source cannot contain null items.");
                 var description = _describe(item) ?? throw new ArgumentException("The window descriptor cannot be null.");
+                ObjectDisposedException.ThrowIf(_disposed, this);
                 if (!next.TryAdd(description.Id, item)) throw new ArgumentException("Duplicate source window id: " + description.Id);
                 descriptions.Add(description.Id, description);
             }
-            var before = _manager.Layout;
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_manager.Layout.Revision != before.Revision) throw new InvalidOperationException("The layout changed while describing the source.");
             var operations = new List<Func<DockManager, DockResult>>();
             foreach (var id in _owned.Keys.Where(id => !next.ContainsKey(id) && before.Windows.ContainsKey(id)))
             { string key = id; operations.Add(manager => manager.Unregister(key)); }
@@ -70,13 +78,23 @@ public sealed class DockSourceBinding<T> : IDisposable where T : class
                 else operations.Add(manager => manager.Register(description, OpenNewWindows));
             }
             LastResult = operations.Count == 0 ? new(true, before.Revision) : _manager.Transaction("SynchronizeSources", operations, before.Revision);
-            if (LastResult.Success)
+            // Changed observers run before Transaction returns and may dispose
+            // this binding. A committed success stays a success; disposal only
+            // prevents the obsolete adapter from reattaching item subscriptions.
+            if (LastResult.Success && !_disposed)
             {
                 var observed = new HashSet<INotifyPropertyChanged>(next.Values.OfType<INotifyPropertyChanged>(), ReferenceEqualityComparer.Instance);
                 foreach (var item in _observed.Where(item => !observed.Contains(item)).ToArray())
                 { item.PropertyChanged -= PropertyChanged; _observed.Remove(item); }
-                foreach (var item in observed) if (_observed.Add(item)) item.PropertyChanged += PropertyChanged;
-                _owned = next;
+                foreach (var item in observed)
+                {
+                    if (_disposed) break;
+                    if (!_observed.Add(item)) continue;
+                    item.PropertyChanged += PropertyChanged;
+                    // A custom event accessor can itself invoke application code.
+                    if (_disposed) item.PropertyChanged -= PropertyChanged;
+                }
+                if (!_disposed) _owned = next;
             }
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
