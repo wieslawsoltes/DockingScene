@@ -23,6 +23,7 @@ public sealed partial class App : Application
             var view = new WorkspaceView();
             view.EnableTabDemo();
             view.EnableHostReview();
+            view.EnableMetroChrome();
             view.Loaded += (_, _) => ReportStartup("Workspace loaded");
             _window.Content = view;
             ReportStartup("Activating application window");
