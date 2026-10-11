@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { captureDiagnostics } from './diagnostics.mjs';
 import { readHitBounds } from './hit-targets.mjs';
 import { validateHitTargetReader } from './hit-targets.contract.mjs';
+import { runSwitcherRegressions } from './switcher-regressions.mjs';
 
 await validateHitTargetReader();
 
@@ -119,8 +120,6 @@ try {
     assert.equal((await windowState('preview')).displayMode, 'Preview'); assert.equal((await windowState('preview')).isModified, false);
     await click('editor:preview'); await page.keyboard.press('Control+a'); await page.keyboard.type('abcde');
     await page.keyboard.press('End'); await page.keyboard.press('ArrowLeft'); await page.keyboard.type('X');
-    // Text updates and the corresponding managed metadata notification need not
-    // appear in the same diagnostic tick. Wait for the whole expected transition.
     await wait(() => globalThis.dockingScene.editors.preview.text === 'abcdXe' &&
       globalThis.dockingScene.windows.some(w => w.id === 'preview' && w.isModified && w.displayMode === 'Normal'));
     assert.equal((await state()).activeWindowId, 'preview'); assert.equal((await windowState('preview')).displayMode, 'Normal');
@@ -143,7 +142,6 @@ try {
     await page.screenshot({ path: `${output}/floating.png` });
   });
   await test('Floating tab can be dragged back into a document header', async () => {
-    // Without this precondition, a failed preceding Float test can produce a false pass.
     assert.equal((await windowState('code')).placement, 'Floating', 'Redocking requires an actually floating source');
     assert.equal((await state()).floatingHosts.length, 1);
     const instance = (await state()).editors.code.instance; const target = await bounds('tab:main');
@@ -206,6 +204,7 @@ try {
     await click('toolbar:Windows'); await bounds('window-switcher'); await page.keyboard.press('Enter');
     await wait(() => !globalThis.dockingScene.bounds['window-switcher'] && globalThis.dockingScene.activeWindowId === 'output');
   });
+  await runSwitcherRegressions({ page, state, test, reset, click, wait });
   await test('Final reset and exception-free browser session', async () => {
     await reset();
     assert.equal((await state()).floatingHosts.length, 0);

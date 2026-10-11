@@ -2,13 +2,11 @@ using DockingScene.Core;
 using DockingScene.Themes;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Input;
-using Windows.System;
 
 namespace DockingScene.Controls;
 
 /// <summary>MRU keyboard switcher. Selection is provisional until committed.</summary>
-public sealed class StandardSwitcher : UserControl
+public sealed partial class StandardSwitcher : UserControl
 {
     private readonly string[] _ids;
     private readonly DockLayout _layout;
@@ -36,36 +34,40 @@ public sealed class StandardSwitcher : UserControl
         foreach (var list in new[] { _tools, _documents })
         {
             list.FontSize = theme.FontSize; list.Foreground = DockChrome.Brush(theme.Text);
-            list.ItemClick += (_, e) => { if (e.ClickedItem is DockWindow w) Committed?.Invoke(w.Id); };
+            list.ItemClick += (_, e) => { if (e.ClickedItem is DockWindow w) { _index = Array.IndexOf(_ids, w.Id); Commit(); } };
         }
         _description = DockChrome.Text("", theme); _description.TextWrapping = TextWrapping.Wrap; _description.Margin = new(0, 8, 0, 0);
         Grid.SetRow(_description, 2); Grid.SetColumnSpan(_description, 2); grid.Children.Add(_description);
         Content = new Border { BorderBrush = DockChrome.Brush(theme.Accent), BorderThickness = new(2), Child = grid };
         DockChrome.Identify(this, "window-switcher", "Window switcher");
-        void Shortcut(VirtualKey key, Action action)
+        Loaded += (_, _) =>
         {
-            var accelerator = new KeyboardAccelerator { Key = key };
-            accelerator.Invoked += (_, e) => { action(); e.Handled = true; };
-            KeyboardAccelerators.Add(accelerator);
-        }
-        // Keyboard accelerators remain available during the focus handoff from an
-        // external toolbar. They are disconnected with this visual on dismissal.
-        Shortcut(VirtualKey.Escape, () => Cancelled?.Invoke());
-        Shortcut(VirtualKey.Enter, Commit);
-        Loaded += (_, _) => DispatcherQueue.TryEnqueue(() =>
-        {
-            if (IsLoaded) Focus(FocusState.Programmatic);
-        });
+            if (_completed) return;
+            AcquireInputScope(XamlRoot?.Content);
+            // Do not defer focus past the input that opened the switcher. The
+            // root preview scope also covers the interval before Loaded fires.
+            Focus(FocusState.Programmatic);
+        };
+        Unloaded += (_, _) => DetachInputScope();
         Move(_ids.Length > 1 ? 1 : 0);
     }
     public void Move(int delta)
     {
-        if (_ids.Length == 0) return;
+        if (_completed || _ids.Length == 0) return;
         _index = (_index + delta % _ids.Length + _ids.Length) % _ids.Length;
         var window = _layout.Windows[_ids[_index]];
         _tools.SelectedItem = window.Kind == WindowKind.Tool ? window : null;
         _documents.SelectedItem = window.Kind == WindowKind.Document ? window : null;
         _description.Text = window.Title + "\n" + window.Description;
     }
-    public void Commit() { if (SelectedId is { } id) Committed?.Invoke(id); }
+    public void Commit()
+    {
+        if (_completed || SelectedId is not { } id) return;
+        ReleaseInputScope(); Committed?.Invoke(id);
+    }
+    public void Cancel()
+    {
+        if (_completed) return;
+        ReleaseInputScope(); Cancelled?.Invoke();
+    }
 }

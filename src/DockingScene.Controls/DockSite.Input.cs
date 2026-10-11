@@ -122,12 +122,15 @@ public partial class DockSite
         _switcher = new(Manager.Layout, Theme, Strings) { Width = Math.Min(620, Math.Max(240, ActualWidth - 30)), Height = Math.Min(370, Math.Max(180, ActualHeight - 30)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         _switcher.Cancelled += () => CloseSwitcher(false);
         _switcher.Committed += id => { var current = _switcher; _switcher = null; if (current is not null) _root.Children.Remove(current); Submit(Manager.Activate(id)); };
+        // Attach before adding the visual: a fast key may arrive before focus
+        // leaves an external toolbar, even though the overlay is already painted.
+        _switcher.AcquireInputScope(XamlRoot?.Content);
         if (direction < 0) _switcher.Move(-2); _root.Children.Add(_switcher);
     }
     private void CloseSwitcher(bool commit)
     {
         if (_switcher is null) return;
-        if (commit) _switcher.Commit(); else { _root.Children.Remove(_switcher); _switcher = null; }
+        if (commit) _switcher.Commit(); else { _switcher.ReleaseInputScope(); _root.Children.Remove(_switcher); _switcher = null; }
     }
     public void ShowWindowMenu(string id, FrameworkElement source)
     {

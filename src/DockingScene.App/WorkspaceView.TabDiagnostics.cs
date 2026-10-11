@@ -8,6 +8,8 @@ public sealed partial class WorkspaceView
 {
     private void WriteTabDiagnostics(Utf8JsonWriter writer)
     {
+        writer.WriteString("switcherSelection", _site.SwitcherSelectedId);
+        writer.WriteBoolean("switcherInputScoped", _site.IsSwitcherInputScoped);
         writer.WriteStartArray("tabStrips");
         foreach (var (groupId, tabs) in _site.TabControls) WriteTabStrip(writer, groupId, tabs);
         if (_tabPlayground is { } playground && _site.Manager.Layout.Windows.ContainsKey("tab-playground")) WriteTabStrip(writer, "playground", playground);
