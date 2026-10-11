@@ -38,45 +38,6 @@ public sealed partial class WorkspaceView
         note.TextWrapping = TextWrapping.Wrap; note.Foreground = DockChrome.Brush(_theme.MutedText); body.Children.Add(note);
         return new ScrollViewer { Content = body, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
     }
-    private FrameworkElement Explorer()
-    {
-        var tree = new TreeView { SelectionMode = TreeViewSelectionMode.Single, FontSize = 12 };
-        // Native Uno/WinUI template resources: compact density without replacing
-        // the tree's keyboard, expansion, selection or virtualization behavior.
-        tree.Resources["TreeViewItemMinHeight"] = 22d;
-        tree.Resources["TreeViewItemPadding"] = new Thickness(0);
-        var style = new Style { TargetType = typeof(TreeViewItem) };
-        style.Setters.Add(new Setter(Control.MinHeightProperty, 22d));
-        style.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(0)));
-        tree.ItemContainerStyle = style;
-        var targets = new Dictionary<TreeViewNode, string>();
-        object Label(string text, string glyph, string id)
-        {
-            var row = DockChrome.Identify(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5, Height = 22, VerticalAlignment = VerticalAlignment.Center }, "source-tree:" + id);
-            row.Children.Add(DockChrome.Glyph(glyph, _theme.Text, 13)); row.Children.Add(DockChrome.Text(text, _theme)); return row;
-        }
-        var root = new TreeViewNode { Content = Label("Solution 'DockingScene' (7 projects)", DockGlyphs.Folder, "solution"), IsExpanded = true };
-        foreach (string package in new[] { "Core", "Layout", "Serialization", "Mvvm", "Themes", "Controls", "App" })
-        {
-            var project = new TreeViewNode { Content = Label("DockingScene." + package, DockGlyphs.Folder, package), IsExpanded = package is "Core" or "Controls" };
-            foreach (string name in package switch
-            {
-                "Core" => new[] { "DockManager.cs", "DockTree.cs", "Model.cs", "DockLayoutValidator.cs" },
-                "Controls" => new[] { "DockSite.cs", "AdvancedTabControl.cs", "StandardMdiHost.cs", "WindowControl.cs" },
-                "Layout" => new[] { "DockLayoutEngine.cs", "WindowGeometry.cs", "TabStripMetrics.cs", "DockGuides.cs" },
-                "Serialization" => new[] { "DockLayoutSerializer.cs" }, "Mvvm" => new[] { "DockWorkspaceViewModel.cs", "DockSourceBinding.cs" },
-                "Themes" => new[] { "DockTheme.cs", "VectorPath.cs" }, _ => new[] { "App.xaml", "MainWindow.xaml" }
-            })
-            {
-                var file = new TreeViewNode { Content = Label(name, DockGlyphs.Document, name) };
-                project.Children.Add(file); targets[file] = name.EndsWith(".xaml", StringComparison.Ordinal) ? "main" : "code";
-            }
-            root.Children.Add(project);
-        }
-        tree.RootNodes.Add(root);
-        tree.ItemInvoked += (_, e) => { if (e.InvokedItem is TreeViewNode node && targets.TryGetValue(node, out var id)) Execute(_site.Manager.Open(id)); };
-        return tree;
-    }
     private FrameworkElement Properties()
     {
         var owner = _site.Manager;
