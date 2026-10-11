@@ -2,6 +2,10 @@ import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { captureDiagnostics } from './diagnostics.mjs';
+import { readHitBounds } from './hit-targets.mjs';
+import { validateHitTargetReader } from './hit-targets.contract.mjs';
+
+await validateHitTargetReader();
 
 const output = `${process.env.BROWSER_RESULTS || 'artifacts/browser-results'}/tab-layout`;
 await mkdir(output, { recursive: true });
@@ -17,7 +21,7 @@ const state = () => page.evaluate(() => globalThis.dockingScene);
 const strip = async () => (await state()).tabStrips.find(t => t.id === 'playground');
 async function wait(fn, arg) { await page.waitForFunction(fn, arg, { timeout: 15000 }); }
 async function settle() { const s = (await state()).sequence; await wait(s => globalThis.dockingScene.sequence > s + 1, s); }
-async function bounds(id) { await wait(id => !!globalThis.dockingScene.bounds[id], id); return (await state()).bounds[id]; }
+async function bounds(id) { return readHitBounds(page, id); }
 async function click(id, options = {}) { const r = await bounds(id); await page.mouse.click(r.x + Math.min(r.width / 2, 45), r.y + r.height / 2, options); }
 const menusGone = () => wait(() => !Object.keys(globalThis.dockingScene.bounds).some(id => id.startsWith('tab-options:') || id.startsWith('tab-list:') || id === 'play:custom-menu'));
 async function setting(title) { await menusGone(); await click('toolbar:TabOptions'); await settle(); await click('tab-options:' + title); await menusGone(); await settle(); }
