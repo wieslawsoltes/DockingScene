@@ -14,7 +14,7 @@ public partial class DockSite
         _canvas.AddHandler(PointerMovedEvent, new PointerEventHandler((_, e) => MoveInteraction(e)), true);
         _canvas.AddHandler(PointerReleasedEvent, new PointerEventHandler((_, e) => EndInteraction(e)), true);
         _canvas.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => CancelInteraction()), true);
-        _canvas.AddHandler(PointerCaptureLostEvent, new PointerEventHandler((_, e) => { TraceInput("CaptureLost", e); if (ReferenceEquals(e.OriginalSource, _canvas) && IsInteractionActive) CancelInteraction(); }), true);
+        _canvas.AddHandler(PointerCaptureLostEvent, new PointerEventHandler((_, e) => { TraceInput("CaptureLost", e); if (IsInteractionActive && _canvas.PointerCaptures?.Any(p => p.PointerId == e.Pointer.PointerId) != true) CancelInteraction(); }), true);
         VisualsUpdated += RenderAutoHideResizeGrip;
         AddHandler(KeyDownEvent, new KeyEventHandler((_, e) =>
         {

@@ -52,10 +52,11 @@ async function drag(id, destination, modifiers = []) {
   for (const modifier of modifiers) await page.keyboard.down(modifier);
   try {
     await page.mouse.move(x, y); await page.mouse.down();
+    await wait(() => globalThis.dockingScene.interactionActive && globalThis.dockingScene.capturedPointerCount === 1);
     await page.mouse.move(destination.x, destination.y, { steps: 18 });
     await page.mouse.up();
   } finally { for (const modifier of [...modifiers].reverse()) await page.keyboard.up(modifier); }
-  await wait(() => globalThis.dockingScene.interactionActive === false);
+  await wait(() => globalThis.dockingScene.interactionActive === false && globalThis.dockingScene.capturedPointerCount === 0);
   await settle();
 }
 async function test(name, action) {
@@ -76,7 +77,12 @@ try {
   await test('Uno WebAssembly startup and complete painted workspace', async () => {
     const s = await state(); assert.equal(s.renderer, 'Uno Skia'); assert.equal(s.windows.length, 12);
     assert.equal(s.activeWindowId, 'welcome'); assert.equal(s.mdiMode, 'Tabbed'); assert(s.groups.length >= 4);
-    assert.equal(s.autoHideGroups.length, 1); assert.deepEqual(errors, []); await page.screenshot({ path: `${output}/workspace.png` });
+    assert.equal(s.autoHideGroups.length, 1); assert.deepEqual(errors, []);
+    if (process.env.EXPECTED_BUILD_COMMIT) {
+      const response = await page.request.get(new URL('build-info.json', url).href);
+      assert(response.ok(), 'Deployment must expose its build identity');
+      assert.equal((await response.json()).commit, process.env.EXPECTED_BUILD_COMMIT);
+    } await page.screenshot({ path: `${output}/workspace.png` });
   });
   await test('New document is initially unmodified', async () => {
     await click('toolbar:New'); await wait(() => globalThis.dockingScene.windows.some(w => w.id === 'new-1')); await settle();
@@ -174,6 +180,30 @@ try {
     await menu('Theme', 'Metro Dark'); assert.equal((await state()).theme, 'Metro Dark');
     assert.equal((await state()).editors.code.instance, editor.instance); assert.equal((await state()).editors.code.text, editor.text);
     await page.screenshot({ path: `${output}/dark.png` }); await menu('Theme', 'Metro Light');
+  });
+  await test('Captured drag releases outside the dock site', async () => {
+    await reset();
+    await drag('tab:code', { x: 500, y: 35 }, ['Control']);
+    await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').placement === 'Floating');
+    assert.equal((await state()).capturedPointerCount, 0);
+    await click('toolbar:Undo');
+    await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').placement === 'Document');
+  });
+  await test('Escape cancels an owned drag without committing placement', async () => {
+    await reset(); const r = await bounds('tab:code');
+    const order = (await state()).groups.find(g => g.windows.includes('code')).windows;
+    await page.mouse.move(r.x + 30, r.y + r.height / 2); await page.mouse.down();
+    await wait(() => globalThis.dockingScene.capturedPointerCount === 1);
+    await page.mouse.move(520, 340, { steps: 12 }); await page.keyboard.press('Escape');
+    await wait(() => !globalThis.dockingScene.interactionActive && globalThis.dockingScene.capturedPointerCount === 0);
+    await page.mouse.up(); await settle();
+    assert.equal((await state()).floatingHosts.length, 0);
+    assert.deepEqual((await state()).groups.find(g => g.windows.includes('code')).windows, order);
+  });
+  await test('Window switcher Enter commits the provisional MRU selection', async () => {
+    await reset(); assert.equal((await state()).activeWindowId, 'welcome');
+    await click('toolbar:Windows'); await bounds('window-switcher'); await page.keyboard.press('Enter');
+    await wait(() => !globalThis.dockingScene.bounds['window-switcher'] && globalThis.dockingScene.activeWindowId === 'output');
   });
   await test('Final reset and exception-free browser session', async () => {
     await reset();

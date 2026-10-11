@@ -27,23 +27,6 @@ public partial class DockSite
     public string? OpenAutoHideWindowId => _autoOpen;
     public DockRect OpenAutoHideBounds => _autoBounds;
     public bool IsInteractionActive => !_dragIds.IsEmpty || _splitDrag is not null || _autoResizeId is not null;
-    private void BeginDockDrag(ImmutableArray<string> ids, PointerRoutedEventArgs e)
-    {
-        if (Manager.Layout.IsLayoutLocked || ids.IsEmpty || ids.Any(id => !Manager.Allows(id, DockCapabilities.Drag))) return;
-        if (!e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
-        _dragStart = e.GetCurrentPoint(_canvas).Position; _dragIds = ids; _dragRevision = Manager.Layout.Revision; _dragging = false; _tabDropIndex = -1;
-        var group = DockTree.GroupOf(Manager.Layout, ids[0]);
-        var rect = group is not null && _geometry?.Nodes.TryGetValue(group.Id, out var r) == true ? r : Manager.Layout.Windows[ids[0]].FloatingBounds;
-        _dragBounds = new(_dragStart.X - Math.Min(100, rect.Width / 2), _dragStart.Y - 12, Math.Max(240, Math.Min(600, rect.Width)), Math.Max(180, Math.Min(460, rect.Height)));
-        _canvas.CapturePointer(e.Pointer); TraceInput("Begin", e); e.Handled = true;
-    }
-    private void BeginSplitDrag(SplitterGeometry split, PointerRoutedEventArgs e)
-    {
-        var node = DockTree.Find(Manager.Layout, split.Id);
-        if (Manager.Layout.IsLayoutLocked || node is null || DockTree.WindowIds(node).Any(id => !Manager.Allows(id, DockCapabilities.Resize)) || !e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
-        _splitDrag = split; _splitRatio = split.Ratio; _splitRevision = Manager.Layout.Revision;
-        _canvas.CapturePointer(e.Pointer); TraceInput("Begin", e); e.Handled = true;
-    }
     private void MoveInteraction(PointerRoutedEventArgs e)
     {
         var p = e.GetCurrentPoint(_canvas).Position;

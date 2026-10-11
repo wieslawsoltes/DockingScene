@@ -25,6 +25,7 @@ public sealed partial class WorkspaceView
             writer.WriteStartObject(); writer.WriteBoolean("ready", true); writer.WriteNumber("sequence", ++_diagnosticSequence);
             writer.WriteNumber("workspaceGeneration", _workspaceGeneration);
             writer.WriteBoolean("interactionActive", _site.IsInteractionActive);
+            writer.WriteNumber("capturedPointerCount", _site.CapturedPointerCount);
             writer.WriteStartArray("inputEvents");
             foreach (var item in _site.InteractionLog) writer.WriteStringValue(item);
             writer.WriteEndArray();
