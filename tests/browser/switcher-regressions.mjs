@@ -41,4 +41,17 @@ export async function runSwitcherRegressions({ page, state, test, reset, click, 
       !globalThis.dockingScene.bounds['window-switcher'] && globalThis.dockingScene.activeWindowId === 'welcome');
     assert.equal((await state()).editors.code.text, before);
   });
+  await test('Enter character dispatch stays inside the modal scope until release', async () => {
+    await reset(); await click('tab:code'); await click('editor:code');
+    await page.keyboard.press('Control+a'); await page.keyboard.type('unchanged');
+    await wait(() => globalThis.dockingScene.editors.code.text === 'unchanged');
+    await page.keyboard.press('F8'); await page.keyboard.down('Enter');
+    try {
+      await wait(() => globalThis.dockingScene.switcherInputScoped && globalThis.dockingScene.bounds['window-switcher']);
+      assert.equal((await state()).editors.code.text, 'unchanged');
+    } finally { await page.keyboard.up('Enter'); }
+    await wait(() => !globalThis.dockingScene.switcherInputScoped && globalThis.dockingScene.activeWindowId === 'welcome');
+    assert.equal((await state()).editors.code.text, 'unchanged');
+  });
+
 }

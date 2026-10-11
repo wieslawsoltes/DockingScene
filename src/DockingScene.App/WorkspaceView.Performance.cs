@@ -84,6 +84,7 @@ public sealed partial class WorkspaceView
         Add("Unregister", "unregister", () => Execute(site.Manager.Unregister("owned")));
         Add("Toggle disposal ownership", "ownership", () => site.DisposeContentOnUnregister = !site.DisposeContentOnUnregister);
         Add("Replace manager", "manager", () => { site.Manager = new(); Register(); });
+        Add("Unregister + register", "recreate", () => { site.Manager.Unregister("owned").ThrowIfFailed(); Register(); });
         Register(); return root;
     }
     private sealed class TrackedEditor(Action dispose) : TextBox, IDisposable

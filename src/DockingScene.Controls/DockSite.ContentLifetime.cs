@@ -9,11 +9,17 @@ public partial class DockSite
     public event Action<string, object?>? WindowContentReleased;
     private void ReleaseWindowContent(IEnumerable<string> ids)
     {
-        var disposed = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        var released = new List<(string Id, object? Content)>();
         foreach (string id in ids)
         {
             if (!_windows.Remove(id, out var window)) continue;
             var content = window.Content; window.ContentFactory = null; window.Content = null;
+            released.Add((id, content));
+        }
+        // Detach the whole batch before callbacks can register a replacement.
+        var disposed = new HashSet<object>(ReferenceEqualityComparer.Instance);
+        foreach (var (id, content) in released)
+        {
             try
             {
                 if (DisposeContentOnUnregister && content is IDisposable disposable && disposed.Add(content)) disposable.Dispose();

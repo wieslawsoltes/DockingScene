@@ -9,6 +9,7 @@ public sealed partial class StandardSwitcher
     private UIElement? _inputRoot;
     private KeyEventHandler? _previewDown, _previewUp;
     private bool _completed;
+    private bool _enterPending;
     internal bool HasInputScope => _inputRoot is not null;
 
     /// <summary>Intercept modal keys before an external launch button can handle
@@ -24,7 +25,7 @@ public sealed partial class StandardSwitcher
     }
     internal void ReleaseInputScope()
     {
-        _completed = true; DetachInputScope();
+        _completed = true; _enterPending = false; DetachInputScope();
     }
     private void DetachInputScope()
     {
@@ -38,7 +39,12 @@ public sealed partial class StandardSwitcher
         if (_completed || _inputRoot is null) return;
         switch (e.Key)
         {
-            case VirtualKey.Enter: e.Handled = true; Commit(); break;
+            case VirtualKey.Enter:
+                // CharacterReceived can follow a handled KeyDown. Keep the modal
+                // visual focused through that character dispatch; complete on KeyUp.
+                e.Handled = true; _enterPending = true;
+                if (IsLoaded) Focus(FocusState.Programmatic);
+                break;
             case VirtualKey.Escape: e.Handled = true; Cancel(); break;
             case VirtualKey.Up: e.Handled = true; Move(-1); break;
             case VirtualKey.Down: e.Handled = true; Move(1); break;
@@ -46,7 +52,8 @@ public sealed partial class StandardSwitcher
     }
     private void OnRootPreviewKeyUp(object sender, KeyRoutedEventArgs e)
     {
-        if (!_completed && _inputRoot is not null && e.Key == VirtualKey.Control)
-        { e.Handled = true; Commit(); }
+        if (_completed || _inputRoot is null) return;
+        if (e.Key == VirtualKey.Control || e.Key == VirtualKey.Enter && _enterPending)
+        { e.Handled = true; _enterPending = false; Commit(); }
     }
 }

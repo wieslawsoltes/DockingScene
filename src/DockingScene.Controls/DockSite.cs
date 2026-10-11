@@ -87,6 +87,9 @@ public partial class DockSite : UserControl
         void Notify()
         {
             if (!ReferenceEquals(sender, GetValue(ManagerProperty))) return;
+            // Honor unregister transitions even when the same id is re-registered
+            // before the next coalesced render can observe the intermediate layout.
+            ReleaseWindowContent(_windows.Keys.Where(id => e.Before.Windows.ContainsKey(id) && !e.After.Windows.ContainsKey(id)).ToArray());
             QueueRender(); LayoutChanged?.Invoke(this, e);
         }
         if (DispatcherQueue.HasThreadAccess) Notify(); else DispatcherQueue.TryEnqueue(Notify);
