@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><IsPackable>false</IsPackable></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="DockingScene.Core" Version="$(Version)" />
+    <PackageReference Include="DockingScene.Layout" Version="$(Version)" />
+    <PackageReference Include="DockingScene.Serialization" Version="$(Version)" />
+    <PackageReference Include="DockingScene.Mvvm" Version="$(Version)" />
+    <PackageReference Include="DockingScene.Themes" Version="$(Version)" />
+  </ItemGroup>
+</Project>

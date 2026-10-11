@@ -1,0 +1,20 @@
+<Solution>
+ <Folder Name="/src/">
+  <Project Path="src/DockingScene.Core/DockingScene.Core.csproj" />
+  <Project Path="src/DockingScene.Layout/DockingScene.Layout.csproj" />
+  <Project Path="src/DockingScene.Serialization/DockingScene.Serialization.csproj" />
+  <Project Path="src/DockingScene.Themes/DockingScene.Themes.csproj" />
+  <Project Path="src/DockingScene.Mvvm/DockingScene.Mvvm.csproj" />
+  <Project Path="src/DockingScene.Controls/DockingScene.Controls.csproj" />
+  <Project Path="src/DockingScene.App/DockingScene.App.csproj" />
+ </Folder>
+ <Folder Name="/tests/">
+  <Project Path="tests/DockingScene.Specs/DockingScene.Specs.csproj" />
+  <Project Path="tests/DockingScene.LayoutSpecs/DockingScene.LayoutSpecs.csproj" />
+  <Project Path="tests/DockingScene.ParitySpecs/DockingScene.ParitySpecs.csproj" />
+  <Project Path="tests/DockingScene.TransactionSpecs/DockingScene.TransactionSpecs.csproj" />
+  <Project Path="tests/DockingScene.MvvmSpecs/DockingScene.MvvmSpecs.csproj" />
+  <Project Path="tests/DockingScene.VectorSpecs/DockingScene.VectorSpecs.csproj" />
+  <Project Path="tests/DockingScene.TabSpecs/DockingScene.TabSpecs.csproj" />
+ </Folder>
+</Solution>

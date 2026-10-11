@@ -1,0 +1,45 @@
+name: Validate
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run all UI-independent specification suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/validation
+          for project in tests/*Specs/*.csproj; do
+            name=$(basename "$project" .csproj)
+            dotnet run --project "$project" -c Release | tee "artifacts/validation/$name.log"
+          done
+      - name: Package UI-independent libraries
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/packages
+          for p in src/DockingScene.{Core,Layout,Serialization,Mvvm,Themes}/*.csproj; do
+            test -f "$p" || continue
+            dotnet pack "$p" -c Release -o artifacts/packages
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: core-validation
+          path: artifacts/validation
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-core
+          path: artifacts/packages

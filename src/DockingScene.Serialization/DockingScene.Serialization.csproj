@@ -1,0 +1,1 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net10.0</TargetFramework><IsPackable>true</IsPackable><Description>Versioned, bounded docking layout persistence with source-generated JSON and atomic file storage.</Description></PropertyGroup><ItemGroup><ProjectReference Include="../DockingScene.Core/DockingScene.Core.csproj" /></ItemGroup></Project>
