@@ -22,6 +22,7 @@ public sealed partial class App : Application
             ReportStartup("Creating docking workspace");
             var view = new WorkspaceView();
             view.EnableTabDemo();
+            view.EnableHostReview();
             view.Loaded += (_, _) => ReportStartup("Workspace loaded");
             _window.Content = view;
             ReportStartup("Activating application window");
