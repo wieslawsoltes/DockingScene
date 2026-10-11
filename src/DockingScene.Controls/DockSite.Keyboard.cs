@@ -9,6 +9,7 @@ public partial class DockSite
 {
     private void ConfigureInput()
     {
+        Unloaded += (_, _) => CloseSwitcher(false);
         _canvas.AddHandler(PointerMovedEvent, new PointerEventHandler((_, e) => MoveInteraction(e)), true);
         _canvas.AddHandler(PointerReleasedEvent, new PointerEventHandler((_, e) => EndInteraction(e)), true);
         _canvas.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => CancelInteraction()), true);
@@ -17,6 +18,9 @@ public partial class DockSite
         VisualsUpdated += ApplyTabOptions;
         AddHandler(KeyDownEvent, new KeyEventHandler((_, e) =>
         {
+            // A modal preview handler may already have moved selection. Do not
+            // process the same key again while its bubbling route completes.
+            if (e.Handled && _switcher?.HasInputScope == true) return;
             if (e.Handled && _switcher is null && !IsInteractionActive) return;
             if (e.Key == VirtualKey.Escape) { CancelInteraction(); CloseSwitcher(false); CloseAutoHide(); e.Handled = true; }
             else if (_switcher is not null && e.Key == VirtualKey.Enter) { CloseSwitcher(true); e.Handled = true; }
@@ -34,7 +38,6 @@ public partial class DockSite
         Shortcut(VirtualKey.W, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
         Shortcut(VirtualKey.F4, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
         Shortcut(VirtualKey.Down, VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu, () => ActiveDocumentTabs()?.ShowOverflowMenu());
-        // OEM minus is 0xBD in the Win32 virtual-key table, including Uno's VirtualKey mapping.
         Shortcut((VirtualKey)0xBD, VirtualKeyModifiers.Menu, ShowActiveDocumentMenu);
         for (int digit = 1; digit <= 9; digit++)
         {
