@@ -89,6 +89,6 @@ public sealed partial class WorkspaceView
     }
     private sealed class TrackedEditor(Action dispose) : TextBox, IDisposable
     {
-        public void Dispose() => dispose();
+        void IDisposable.Dispose() => dispose();
     }
 }

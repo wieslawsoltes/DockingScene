@@ -49,8 +49,9 @@ public sealed class StandardMdiHost : UserControl
                 window.MinimizeRequested += () => _manager.SetMdiState(key, MdiWindowState.Minimized);
                 _windows.Add(id, window); _canvas.Children.Add(window);
             }
-            window.MinimumSize = model.MinimumSize with { Height = model.MinimumSize.Height + _theme.TitleHeight };
-            window.MaximumSize = model.MaximumSize;
+            // Model constraints describe content; both frame limits include the same chrome.
+            window.MinimumSize = new(model.MinimumSize.Width + 2, model.MinimumSize.Height + _theme.TitleHeight + 2);
+            window.MaximumSize = new(model.MaximumSize.Width + 2, model.MaximumSize.Height + _theme.TitleHeight + 2);
             window.CanResize = _manager.Allows(id, DockCapabilities.Resize) && !layout.IsLayoutLocked;
             window.CanMove = _manager.Allows(id, DockCapabilities.Drag) && !layout.IsLayoutLocked;
             window.CanClose = _manager.Allows(id, DockCapabilities.Close);

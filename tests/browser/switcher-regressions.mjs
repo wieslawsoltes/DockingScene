@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readHitBounds } from './hit-targets.mjs';
 
 /** Actual input regressions; no focus mutation hook or readiness delay before keys. */
 export async function runSwitcherRegressions({ page, state, test, reset, click, wait }) {
@@ -66,6 +67,21 @@ export async function runSwitcherRegressions({ page, state, test, reset, click, 
       await wait(() => !globalThis.dockingScene.switcherInputScoped && globalThis.dockingScene.activeWindowId === 'welcome');
       assert.equal((await state()).editors.code.text, 'retained-' + iteration);
     }
+  });
+
+  await test('A layout-changing shortcut cancels the active docking gesture', async () => {
+    await reset();
+    const source = await readHitBounds(page, 'tab:code');
+    const order = (await state()).groups.find(g => g.windows.includes('code')).windows;
+    await page.mouse.move(source.x + 20, source.y + source.height / 2); await page.mouse.down();
+    try {
+      await wait(() => globalThis.dockingScene.interactionActive && globalThis.dockingScene.capturedPointerCount === 1);
+      await page.mouse.move(520, 330, { steps: 8 });
+      await page.keyboard.press('Control+1');
+      await wait(() => !globalThis.dockingScene.interactionActive && globalThis.dockingScene.capturedPointerCount === 0);
+    } finally { await page.mouse.up(); }
+    assert.equal((await state()).floatingHosts.length, 0);
+    assert.deepEqual((await state()).groups.find(g => g.windows.includes('code')).windows, order);
   });
 
 }

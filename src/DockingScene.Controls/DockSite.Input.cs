@@ -29,6 +29,7 @@ public partial class DockSite
     public bool IsInteractionActive => !_dragIds.IsEmpty || _splitDrag is not null || _autoResizeId is not null;
     private void MoveInteraction(PointerRoutedEventArgs e)
     {
+        if (CancelStaleInteraction()) { e.Handled = true; return; }
         var p = e.GetCurrentPoint(_canvas).Position;
         if (MoveAutoHideResize(p)) { e.Handled = true; return; }
         if (_splitDrag is { } split)

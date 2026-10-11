@@ -92,6 +92,7 @@ public class WindowControl : UserControl
         };
         PointerReleased += (_, e) => { if (!_moving) return; _moving = false; ReleasePointerCapture(e.Pointer); BoundsChanged?.Invoke(Bounds); e.Handled = true; };
         PointerCanceled += (_, _) => CancelMovement();
+        Unloaded += (_, _) => CancelMovement();
         PointerCaptureLost += (_, _) => { if (_moving) CancelMovement(); };
     }
     private void Begin(PointerRoutedEventArgs e, DockSide x, DockSide y)
