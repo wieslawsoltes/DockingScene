@@ -148,6 +148,9 @@ public partial class AdvancedTabControl : UserControl
         finally { _batch = false; }
         Theme = theme; Placement = placement; IsGroupActive = active;
         Refresh(); Select(selectedId);
+        // A host projection must publish its selected chrome in this update, not
+        // leave stale native Button visual states until a later dispatcher tick.
+        RealizeHeaders();
     }
     public void Select(string? id, bool notify = false) => SelectCore(id, notify);
     public void ReleaseContent() => ContentLease.Set(_presenter, null);

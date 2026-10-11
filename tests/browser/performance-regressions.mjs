@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { assertPaintedHostTabs } from './painted-tabs.mjs';
 
 /** Real control workloads and input regressions. No JavaScript model mutation. */
 export async function runPerformanceRegressions({ page, state, strip, test, wait, settle, bounds, click, setting, mode }) {
@@ -21,6 +22,7 @@ export async function runPerformanceRegressions({ page, state, strip, test, wait
   }
   await test('2,002-tab bulk load measures each new header only once', async () => {
     await setting('Open standalone tab playground');
+    await assertPaintedHostTabs(page);
     await click('play:measured'); await mode('ScrollWithMenu'); await settle();
     const before = await strip(); await click('perf:large');
     await wait(() => globalThis.dockingScene.tabStrips.find(t => t.id === 'playground').count === 2002); await settle();
