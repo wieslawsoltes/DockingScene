@@ -1,7 +1,7 @@
 name: Uno application
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
 permissions:
@@ -13,6 +13,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    outputs:
+      commit: ${{ steps.source.outputs.commit }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -21,21 +23,47 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate every model specification before distribution
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/contracts
+          for project in tests/*Specs/*.csproj; do
+            dotnet run --project "$project" -c Release | tee "artifacts/contracts/$(basename "$project" .csproj).log"
+          done
       - name: Restore browser toolchain
         run: dotnet workload install wasm-tools --skip-manifest-update
       - name: Build desktop application
         run: dotnet build src/DockingScene.App/DockingScene.App.csproj -f net10.0-desktop -c Release
       - name: Publish browser application
         run: dotnet publish src/DockingScene.App/DockingScene.App.csproj -f net10.0-browserwasm -c Release -o artifacts/browser
-      - name: Pack reusable controls
-        run: dotnet pack src/DockingScene.Controls/DockingScene.Controls.csproj -c Release -o artifacts/packages
+      - name: Pack all six reusable libraries from the same source
+        shell: bash
+        run: |
+          set -euo pipefail
+          for project in src/DockingScene.{Core,Layout,Serialization,Mvvm,Themes,Controls}/*.csproj; do
+            dotnet pack "$project" -c Release -o artifacts/packages
+          done
+          test "$(find artifacts/packages -maxdepth 1 -name '*.nupkg' | wc -l)" -eq 6
+      - name: Compile and run an isolated package-only consumer
+        shell: bash
+        run: |
+          set -euo pipefail
+          export NUGET_PACKAGES="$RUNNER_TEMP/dockingscene-package-consumer"
+          dotnet restore tests/PackageSmoke/PackageSmoke.csproj --source "$PWD/artifacts/packages" --source https://api.nuget.org/v3/index.json
+          dotnet run --project tests/PackageSmoke/PackageSmoke.csproj -c Release --no-restore
+          dotnet restore tests/ControlsPackageSmoke/ControlsPackageSmoke.csproj --source "$PWD/artifacts/packages" --source https://api.nuget.org/v3/index.json
+          dotnet build tests/ControlsPackageSmoke/ControlsPackageSmoke.csproj -c Release --no-restore
       - name: Prepare browser distribution and source snapshot
+        id: source
         run: |
           set -euo pipefail
           test -f artifacts/browser/wwwroot/index.html
           mkdir -p artifacts/site/DockingScene
           cp -a artifacts/browser/wwwroot/. artifacts/site/DockingScene/
           touch artifacts/site/DockingScene/.nojekyll
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          printf '{"commit":"%s"}\n' "$(git rev-parse HEAD)" > artifacts/site/DockingScene/build-info.json
           git archive --format=zip HEAD -o artifacts/DockingScene-source.zip
       - name: Install browser test dependencies
         run: |
@@ -56,6 +84,7 @@ jobs:
           path: |
             artifacts/browser-results
             artifacts/server.log
+            artifacts/contracts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -70,7 +99,7 @@ jobs:
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
-          name: packages-controls
+          name: packages-all
           path: artifacts/packages
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
@@ -83,6 +112,8 @@ jobs:
     permissions:
       pages: write
       id-token: write
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -90,3 +121,41 @@ jobs:
       - name: Deploy validated Uno browser build
         id: deployment
         uses: actions/deploy-pages@v4
+  verify-deployment:
+    if: github.ref == 'refs/heads/main'
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test runner
+        run: |
+          npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
+          cd tests/browser
+          npx playwright install --with-deps chromium
+      - name: Verify the deployed revision and real browser interactions
+        env:
+          BROWSER_URL: ${{ needs.deploy.outputs.page_url }}
+          EXPECTED_BUILD_COMMIT: ${{ needs.build.outputs.commit }}
+          BROWSER_RESULTS: artifacts/deployed-browser-results
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BROWSER_URL"
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 10 "${BROWSER_URL%/}/build-info.json?revision=$EXPECTED_BUILD_COMMIT" | jq -e --arg commit "$EXPECTED_BUILD_COMMIT" '.commit == $commit'; then
+              node tests/browser/run.mjs
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The deployed source revision did not become available." >&2
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-browser-validation
+          path: artifacts/deployed-browser-results

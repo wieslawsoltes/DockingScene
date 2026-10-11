@@ -30,7 +30,17 @@ Chromium is launched with ANGLE/SwiftShader software WebGL. This exercises the a
 
 Normal browser sessions do not start periodic diagnostic capture. `?diagnostics=1` enables a read-only object containing window metadata, bounds and sample editor text/caret/instance observations. This is intended for local tests and the public demonstration's synthetic documents. Do not enable it around confidential content in a downstream app.
 
-The diagnostics contain approximated hit bounds. A supplementary change to clip them by every ancestor viewport was blocked during upload and is **not** part of the repository implementation at this point. Tests must not treat off-viewport diagnostic rectangles as proof that a control was painted or clickable.
+Diagnostic hit bounds are clipped by ancestor scrolling viewports and explicit rectangle clips. They do not perform sibling-occlusion analysis. Tests use actual pointer input and observable state transitions rather than treating the rectangles themselves as proof of correct interaction.
+
+## Pointer and keyboard regression coverage
+
+The integrated suite also verifies that a physical tab/splitter drag owns a pointer capture, that releasing over the outer toolbar terminates the gesture, that Escape releases capture without changing placement, and that the switcher supports both Escape cancellation and Enter commit. The initialization assertion compares complete text using canonical line separators because Uno uses carriage returns internally; text normalization is not a document edit.
+
+## Package consumers and deployed-site checks
+
+All six alpha packages are built from one source snapshot. Two isolated consumers restore from the generated local feed into a fresh package cache: a plain .NET console exercises the five UI-independent packages; a separate Uno library compiles the Controls package's public surface without ProjectReferences. This is a package-consumption check, not a native desktop UI runtime test.
+
+The distribution workflow runs the model specifications before browser publishing, so Pages cannot be deployed merely because compilation succeeded. After deployment, the same browser suite runs against the live Pages URL and checks its `build-info.json` commit identity against the validated source revision. Source snapshots, complete package sets and both local-server and deployed-browser traces are uploaded as workflow artifacts.
 
 ## Release gate
 

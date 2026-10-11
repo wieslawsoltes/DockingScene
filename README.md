@@ -40,7 +40,7 @@ python3 -m http.server 8765 --directory artifacts/site
 
 Open `http://localhost:8765/DockingScene/`. The application is built with this base path, including for GitHub Pages; do not serve it at `/` without changing `WasmShellWebAppBasePath` and rebuilding.
 
-The Pages workflow deploys only a successfully validated `main` build. The intended project URL is [wieslawsoltes.github.io/DockingScene](https://wieslawsoltes.github.io/DockingScene/); consult the repository's deployment status rather than assuming an unvalidated branch has been deployed.
+The Pages workflow deploys only a successfully validated `main` build, then runs the browser suite against the deployed URL and verifies its source commit. The intended project URL is [wieslawsoltes.github.io/DockingScene](https://wieslawsoltes.github.io/DockingScene/); consult the repository's deployment status rather than assuming an unvalidated branch has been deployed.
 
 ## Use the engine and a DockSite
 
@@ -58,8 +58,8 @@ var site = new DockSite
     Manager = manager,
     ContentFactory = window => new Microsoft.UI.Xaml.Controls.TextBox
     {
-        Text = window.Title,
-        AcceptsReturn = true
+        AcceptsReturn = true,
+        Text = window.Title
     }
 };
 
@@ -82,7 +82,7 @@ The toolbar switches between tabbed and standard MDI. Standard MDI supports over
 
 ## Validation and artifacts
 
-`Validate` runs every `tests/*Specs` executable and packs UI-independent libraries. `Uno application` builds the desktop target, publishes the actual browser application, packs the controls, and drives pointer/keyboard interactions through Chromium. Browser tests read diagnostics; they do **not** call JavaScript hooks to mutate the managed model.
+`Validate` runs every `tests/*Specs` executable and packs UI-independent libraries. `Uno application` builds the desktop target, publishes the actual browser application, packs all six libraries, and drives pointer/keyboard interactions through Chromium. Browser tests read diagnostics; they do **not** call JavaScript hooks to mutate the managed model.
 
 ```sh
 npm install --prefix tests/browser
@@ -92,7 +92,7 @@ BROWSER_URL=http://localhost:8765/DockingScene/ node tests/browser/run.mjs
 
 Diagnostic capture is **off by default**. The browser harness adds `?diagnostics=1`, enabling read-only geometry, layout, and sample-editor observations for the test session. Do not enable this in an application containing sensitive documents. Disabling diagnostics removes the periodic visual-tree walk.
 
-Workflow artifacts include source snapshots, browser distributions, NuGet packages, executable-specification logs, browser results, screenshots and Playwright traces. Read [validation scope](docs/validation.md) before interpreting a green check as complete product compatibility.
+Workflow artifacts include source snapshots, browser distributions, the complete six-package `0.1.0-alpha.1` set, executable-specification logs, browser results, screenshots and Playwright traces. Package-only consumers validate the generated NuGet feed separately from project-reference builds. Read [validation scope](docs/validation.md) before interpreting a green check as complete product compatibility.
 
 ## Rendering and license
 

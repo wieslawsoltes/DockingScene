@@ -59,7 +59,7 @@ The optional dispatcher callback must schedule actions on the consumer UI dispat
 
 `DockSourceBinding<T>` synchronizes application-owned collections and item property notifications using a single batch. It never takes ownership of explicitly registered windows. Duplicate IDs and collisions are rejected. A removal veto leaves the manager unchanged even though the external collection may already have changed; the binding reports `SynchronizationFailed`. Reconcile the source or call `Synchronize` after resolving the conflict. Two-way automatic removal of application items following a user close is not implemented.
 
-The application owns content and view-model lifetime. The controls cache actual content lazily by window ID and reparent the same visual through a single-presenter lease. Hiding does not destroy the content. Unregistering removes the control cache entry. Application content and view models are not serialized or implicitly disposed. Dispose MVVM adapters and source bindings when their application owner is finished with them.
+The application owns content and view-model lifetime. The controls cache actual content lazily by window ID and reparent the same visual through a single-presenter lease. Hiding does not destroy the content. Unregistering removes the control cache entry. Application content and view models are not serialized. The MVVM adapters do not dispose their content. DockSite invokes `IDisposable.Dispose` on factory-created content when its window is unregistered; factories must account for that ownership rule when returning shared objects. Dispose MVVM adapters and source bindings when their application owner is finished with them.
 
 ## Layout and interaction
 
