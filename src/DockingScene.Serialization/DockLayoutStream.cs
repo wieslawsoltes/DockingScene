@@ -2,11 +2,12 @@ using System.Text;
 
 namespace DockingScene.Serialization;
 
-/// <summary>Bounded asynchronous layout input for seekable or streaming sources.
+/// <summary>Bounded asynchronous UTF-8 layout input for seekable or streaming sources.
 /// Reads at most MaximumBytes + 1 bytes to distinguish exact-size input from overflow.
 /// Leaves the caller's stream open and propagates cancellation and I/O errors.</summary>
 public static class DockLayoutStream
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     public static async Task<LayoutLoadResult> ReadAsync(Stream source, LayoutLoadOptions? options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -23,10 +24,16 @@ public static class DockLayoutStream
             if (content.Length + count > options.MaximumBytes) return new(null, "Stored layout exceeds the configured size limit.");
             content.Write(buffer, 0, count);
         }
-        content.Position = 0;
-        using var reader = new StreamReader(content, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-        string json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         cancellationToken.ThrowIfCancellationRequested();
-        return DockLayoutSerializer.Deserialize(json, options);
+        var data = content.GetBuffer();
+        int length = checked((int)content.Length);
+        int offset = length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF ? 3 : 0;
+        try
+        {
+            string json = StrictUtf8.GetString(data, offset, length - offset);
+            return DockLayoutSerializer.Deserialize(json, options);
+        }
+        catch (DecoderFallbackException)
+        { return new(null, "Invalid docking layout: input must be well-formed UTF-8."); }
     }
 }

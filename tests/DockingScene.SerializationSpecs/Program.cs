@@ -55,6 +55,31 @@ await Test("Storage save honors the same window budget as load", async () => {
         var loaded = await store.LoadAsync("sample"); Check(loaded.Success && loaded.Layout!.Windows.Count == 1);
     } finally { if (Directory.Exists(folder)) Directory.Delete(folder, true); }
 });
+await Test("Malformed UTF-8 is rejected instead of altering window titles", async () => {
+    var sourceBytes = Encoding.UTF8.GetBytes("{\"schemaVersion\":1,\"title\":\"x\"}");
+    sourceBytes[Array.IndexOf(sourceBytes, (byte)'x')] = 0xFF;
+    using var source = new ChunkStream(sourceBytes, 1);
+    var result = await DockLayoutStream.ReadAsync(source);
+    Check(!result.Success && result.Error!.Contains("UTF-8"));
+});
+await Test("UTF-8 BOM is supported and included in the byte budget", async () => {
+    byte[] data = new byte[] { 0xEF, 0xBB, 0xBF }.Concat(bytes).ToArray();
+    using var accepted = new ChunkStream(data, 1);
+    Check((await DockLayoutStream.ReadAsync(accepted, new() { MaximumBytes = data.Length })).Success);
+    using var rejected = new ChunkStream(data, 7);
+    Check(!(await DockLayoutStream.ReadAsync(rejected, new() { MaximumBytes = data.Length - 1 })).Success);
+});
+await Test("Truncated multibyte input is rejected", async () => {
+    using var source = new ChunkStream(bytes.Concat(new byte[] { 0xE2, 0x82 }).ToArray(), 1);
+    Check(!(await DockLayoutStream.ReadAsync(source)).Success);
+});
+await Test("Cancelled saves do not enumerate or validate a candidate", async () => {
+    var folder = Path.Combine(Path.GetTempPath(), "DockingScene-" + Guid.NewGuid().ToString("N"));
+    var store = new FileDockLayoutStore(folder);
+    using var cancellation = new CancellationTokenSource(); cancellation.Cancel();
+    try { await store.SaveAsync("test", null!, cancellation.Token); throw new Exception("Cancellation ignored"); }
+    catch (OperationCanceledException) { Check(!Directory.Exists(folder)); }
+});
 Console.WriteLine($"{passed}/{passed + failed} serialization input review specifications passed.");
 return failed == 0 ? 0 : 1;
 

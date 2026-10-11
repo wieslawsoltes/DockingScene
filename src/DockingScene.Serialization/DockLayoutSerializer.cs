@@ -103,6 +103,7 @@ public sealed class FileDockLayoutStore(string directory, LayoutLoadOptions? opt
     }
     public async Task SaveAsync(string name, DockLayout layout, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var path = GetPath(name);
         DockLayoutValidator.Validate(layout, _options.MaximumWindows);
         var bytes = Encoding.UTF8.GetBytes(DockLayoutSerializer.Serialize(layout));
@@ -121,7 +122,11 @@ public sealed class FileDockLayoutStore(string directory, LayoutLoadOptions? opt
             cancellationToken.ThrowIfCancellationRequested();
             File.Move(temporary, path, true);
         }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); _gate.Release(); }
+        finally
+        {
+            try { if (File.Exists(temporary)) File.Delete(temporary); }
+            finally { _gate.Release(); }
+        }
     }
     public async Task<LayoutLoadResult> LoadAsync(string name, CancellationToken cancellationToken = default)
     {
