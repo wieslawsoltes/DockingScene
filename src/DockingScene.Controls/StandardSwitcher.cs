@@ -40,6 +40,13 @@ public sealed class StandardSwitcher : UserControl
         Grid.SetRow(_description, 2); Grid.SetColumnSpan(_description, 2); grid.Children.Add(_description);
         Content = new Border { BorderBrush = DockChrome.Brush(theme.Accent), BorderThickness = new(2), Child = grid };
         DockChrome.Identify(this, "window-switcher", "Window switcher");
+        Loaded += (_, _) =>
+        {
+            // The toolbar is outside DockSite. Move focus into the switcher so its
+            // Escape/Enter keys route through the owning site's keyboard handlers.
+            var list = SelectedId is { } id && _layout.Windows[id].Kind == WindowKind.Tool ? _tools : _documents;
+            list.Focus(FocusState.Programmatic);
+        };
         Move(_ids.Length > 1 ? 1 : 0);
     }
     public void Move(int delta)
