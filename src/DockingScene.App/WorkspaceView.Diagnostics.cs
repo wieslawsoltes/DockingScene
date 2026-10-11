@@ -20,10 +20,15 @@ public sealed partial class WorkspaceView
         try
         {
             var buffer = new ArrayBufferWriter<byte>(); using var writer = new Utf8JsonWriter(buffer);
+            _site.InputDiagnosticsEnabled = true;
             var layout = _site.Manager.Layout;
             writer.WriteStartObject(); writer.WriteBoolean("ready", true); writer.WriteNumber("sequence", ++_diagnosticSequence);
             writer.WriteNumber("workspaceGeneration", _workspaceGeneration);
             writer.WriteBoolean("interactionActive", _site.IsInteractionActive);
+            writer.WriteStartArray("inputEvents");
+            foreach (var item in _site.InteractionLog) writer.WriteStringValue(item);
+            writer.WriteEndArray();
+            writer.WriteString("focusedElement", Microsoft.UI.Xaml.Input.FocusManager.GetFocusedElement(XamlRoot)?.GetType().Name);
             writer.WriteString("version", "0.1.0"); writer.WriteString("renderer", "Uno Skia"); writer.WriteNumber("revision", layout.Revision);
             writer.WriteString("activeWindowId", layout.ActiveWindowId); writer.WriteString("mdiMode", layout.MdiMode.ToString()); writer.WriteString("theme", _theme.Name);
             writer.WriteBoolean("locked", layout.IsLayoutLocked); writer.WriteBoolean("canUndo", _site.Manager.CanUndo); writer.WriteBoolean("canRedo", _site.Manager.CanRedo);

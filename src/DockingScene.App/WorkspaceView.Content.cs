@@ -92,12 +92,15 @@ public sealed partial class WorkspaceView
         }, "editor:" + window.Id, window.Title + " editor");
         _editors[window.Id] = new(editor); _documents[window.Id] = source;
         ScrollViewer.SetHorizontalScrollBarVisibility(editor, ScrollBarVisibility.Auto); ScrollViewer.SetVerticalScrollBarVisibility(editor, ScrollBarVisibility.Auto);
-        string previous = source;
+        string previous = source.ReplaceLineEndings("\n");
         editor.TextChanged += (_, _) =>
         {
             // Uno may deliver the initial Text assignment after the handler is attached. Initialization is not an edit.
-            if (editor.Text == previous) return;
-            previous = editor.Text; _documents[window.Id] = editor.Text;
+            // WinUI/Uno uses CR internally. Canonicalize line separators without
+            // suppressing actual text edits or altering the control's caret offsets.
+            var text = editor.Text.ReplaceLineEndings("\n");
+            if (text == previous) return;
+            previous = text; _documents[window.Id] = text;
             if (_site.Manager.Layout.Windows.TryGetValue(window.Id, out var current) && !current.IsModified && !current.IsReadOnly)
                 Execute(_site.Manager.UpdateWindow(window.Id, w => w with { IsModified = true }));
         };

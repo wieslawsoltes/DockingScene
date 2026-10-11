@@ -2,6 +2,8 @@ using DockingScene.Core;
 using DockingScene.Themes;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Windows.System;
 
 namespace DockingScene.Controls;
 
@@ -10,16 +12,16 @@ public sealed class StandardSwitcher : UserControl
 {
     private readonly string[] _ids;
     private readonly DockLayout _layout;
-    private readonly DockTheme _theme;
     private readonly ListView _tools = new() { IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.Single };
     private readonly ListView _documents = new() { IsItemClickEnabled = true, SelectionMode = ListViewSelectionMode.Single };
     private readonly TextBlock _description;
     private int _index;
     public string? SelectedId => _ids.Length == 0 ? null : _ids[_index];
     public event Action<string>? Committed;
+    public event Action? Cancelled;
     public StandardSwitcher(DockLayout layout, DockTheme theme, DockStrings? strings = null)
     {
-        strings ??= new(); _layout = layout; _theme = theme;
+        strings ??= new(); _layout = layout; IsTabStop = true;
         _ids = layout.ActivationHistory.Concat(layout.Windows.Keys.Where(id => !layout.HiddenWindows.Contains(id))).Distinct(StringComparer.Ordinal).ToArray();
         var grid = new Grid { Padding = new(16), Background = DockChrome.Brush(theme.Surface) };
         grid.RowDefinitions.Add(new() { Height = GridLength.Auto }); grid.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) }); grid.RowDefinitions.Add(new() { Height = new(50) });
@@ -40,13 +42,20 @@ public sealed class StandardSwitcher : UserControl
         Grid.SetRow(_description, 2); Grid.SetColumnSpan(_description, 2); grid.Children.Add(_description);
         Content = new Border { BorderBrush = DockChrome.Brush(theme.Accent), BorderThickness = new(2), Child = grid };
         DockChrome.Identify(this, "window-switcher", "Window switcher");
-        Loaded += (_, _) =>
+        void Shortcut(VirtualKey key, Action action)
         {
-            // The toolbar is outside DockSite. Move focus into the switcher so its
-            // Escape/Enter keys route through the owning site's keyboard handlers.
-            var list = SelectedId is { } id && _layout.Windows[id].Kind == WindowKind.Tool ? _tools : _documents;
-            list.Focus(FocusState.Programmatic);
-        };
+            var accelerator = new KeyboardAccelerator { Key = key };
+            accelerator.Invoked += (_, e) => { action(); e.Handled = true; };
+            KeyboardAccelerators.Add(accelerator);
+        }
+        // Keyboard accelerators remain available during the focus handoff from an
+        // external toolbar. They are disconnected with this visual on dismissal.
+        Shortcut(VirtualKey.Escape, () => Cancelled?.Invoke());
+        Shortcut(VirtualKey.Enter, Commit);
+        Loaded += (_, _) => DispatcherQueue.TryEnqueue(() =>
+        {
+            if (IsLoaded) Focus(FocusState.Programmatic);
+        });
         Move(_ids.Length > 1 ? 1 : 0);
     }
     public void Move(int delta)

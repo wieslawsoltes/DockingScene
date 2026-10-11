@@ -81,7 +81,7 @@ try {
   await test('New document is initially unmodified', async () => {
     await click('toolbar:New'); await wait(() => globalThis.dockingScene.windows.some(w => w.id === 'new-1')); await settle();
     assert.equal((await state()).activeWindowId, 'new-1'); assert.equal((await windowState('new-1')).isModified, false);
-    assert.equal((await state()).editors['new-1'].text,
+    assert.equal((await state()).editors['new-1'].text.replace(/\r\n?|\n/g, '\n'),
       '// new-1\n// This editor instance is retained while docking, floating and hiding.\n');
   });
   await test('Close and reopen through a menu preserves registered identity', async () => {

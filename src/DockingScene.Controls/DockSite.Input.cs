@@ -27,47 +27,6 @@ public partial class DockSite
     public string? OpenAutoHideWindowId => _autoOpen;
     public DockRect OpenAutoHideBounds => _autoBounds;
     public bool IsInteractionActive => !_dragIds.IsEmpty || _splitDrag is not null || _autoResizeId is not null;
-    private void ConfigureInput()
-    {
-        // Child controls may mark pointer events handled. Captured gestures must still
-        // receive their terminal event; otherwise their preview survives the physical release.
-        _canvas.AddHandler(PointerMovedEvent, new PointerEventHandler((_, e) => MoveInteraction(e)), true);
-        _canvas.AddHandler(PointerReleasedEvent, new PointerEventHandler((_, e) => EndInteraction(e)), true);
-        _canvas.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => CancelInteraction()), true);
-        _canvas.AddHandler(PointerCaptureLostEvent, new PointerEventHandler((_, _) => { if (IsInteractionActive) CancelInteraction(); }), true);
-        VisualsUpdated += RenderAutoHideResizeGrip;
-        AddHandler(KeyDownEvent, new KeyEventHandler((_, e) =>
-        {
-            if (e.Handled && _switcher is null && !IsInteractionActive) return;
-            if (e.Key == VirtualKey.Escape) { CancelInteraction(); CloseSwitcher(false); CloseAutoHide(); e.Handled = true; }
-            else if (_switcher is not null && e.Key == VirtualKey.Enter) { CloseSwitcher(true); e.Handled = true; }
-            else if (_switcher is not null && e.Key is VirtualKey.Up or VirtualKey.Down) { _switcher.Move(e.Key == VirtualKey.Up ? -1 : 1); e.Handled = true; }
-        }), true);
-        AddHandler(KeyUpEvent, new KeyEventHandler((_, e) => { if (e.Key == VirtualKey.Control && _switcher is not null) { CloseSwitcher(true); e.Handled = true; } }), true);
-        void Shortcut(VirtualKey key, VirtualKeyModifiers modifiers, Action action)
-        {
-            var accelerator = new KeyboardAccelerator { Key = key, Modifiers = modifiers };
-            accelerator.Invoked += (_, e) => { action(); e.Handled = true; }; KeyboardAccelerators.Add(accelerator);
-        }
-        Shortcut(VirtualKey.Tab, VirtualKeyModifiers.Control, () => ShowSwitcher(1));
-        Shortcut(VirtualKey.Tab, VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => ShowSwitcher(-1));
-        Shortcut(VirtualKey.F8, VirtualKeyModifiers.None, () => ShowSwitcher(1));
-        Shortcut(VirtualKey.W, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
-        Shortcut(VirtualKey.F4, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
-        for (int i = 0; i < 9; i++)
-        {
-            int index = i;
-            void ActivateIndex(TabDisplayMode mode)
-            {
-                var layout = Manager.Layout;
-                var group = layout.ActiveWindowId is { } id ? DockTree.GroupOf(layout, id) : null;
-                group = group?.Kind == GroupKind.Documents ? group : DockTree.Groups(layout).FirstOrDefault(g => g.Kind == GroupKind.Documents);
-                if (group is not null && group.Windows.Count(id => layout.Windows[id].DisplayMode == mode) > index) Submit(Manager.ActivateTab(group.Id, index, mode));
-            }
-            Shortcut((VirtualKey)((int)VirtualKey.Number1 + i), VirtualKeyModifiers.Control, () => ActivateIndex(TabDisplayMode.Normal));
-            Shortcut((VirtualKey)((int)VirtualKey.Number1 + i), VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu, () => ActivateIndex(TabDisplayMode.Pinned));
-        }
-    }
     private void BeginDockDrag(ImmutableArray<string> ids, PointerRoutedEventArgs e)
     {
         if (Manager.Layout.IsLayoutLocked || ids.IsEmpty || ids.Any(id => !Manager.Allows(id, DockCapabilities.Drag))) return;
@@ -76,14 +35,14 @@ public partial class DockSite
         var group = DockTree.GroupOf(Manager.Layout, ids[0]);
         var rect = group is not null && _geometry?.Nodes.TryGetValue(group.Id, out var r) == true ? r : Manager.Layout.Windows[ids[0]].FloatingBounds;
         _dragBounds = new(_dragStart.X - Math.Min(100, rect.Width / 2), _dragStart.Y - 12, Math.Max(240, Math.Min(600, rect.Width)), Math.Max(180, Math.Min(460, rect.Height)));
-        _canvas.CapturePointer(e.Pointer); e.Handled = true;
+        _canvas.CapturePointer(e.Pointer); TraceInput("Begin", e); e.Handled = true;
     }
     private void BeginSplitDrag(SplitterGeometry split, PointerRoutedEventArgs e)
     {
         var node = DockTree.Find(Manager.Layout, split.Id);
         if (Manager.Layout.IsLayoutLocked || node is null || DockTree.WindowIds(node).Any(id => !Manager.Allows(id, DockCapabilities.Resize)) || !e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
         _splitDrag = split; _splitRatio = split.Ratio; _splitRevision = Manager.Layout.Revision;
-        _canvas.CapturePointer(e.Pointer); e.Handled = true;
+        _canvas.CapturePointer(e.Pointer); TraceInput("Begin", e); e.Handled = true;
     }
     private void MoveInteraction(PointerRoutedEventArgs e)
     {
@@ -150,6 +109,7 @@ public partial class DockSite
     }
     private void EndInteraction(PointerRoutedEventArgs e)
     {
+        if (IsInteractionActive) TraceInput("Release", e);
         if (EndAutoHideResize(e)) return;
         if (_splitDrag is not null)
         {
@@ -177,6 +137,7 @@ public partial class DockSite
     {
         if (_switcher is not null) { _switcher.Move(direction); return; }
         _switcher = new(Manager.Layout, Theme, Strings) { Width = Math.Min(620, Math.Max(240, ActualWidth - 30)), Height = Math.Min(370, Math.Max(180, ActualHeight - 30)), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
+        _switcher.Cancelled += () => CloseSwitcher(false);
         _switcher.Committed += id => { var current = _switcher; _switcher = null; if (current is not null) _root.Children.Remove(current); Submit(Manager.Activate(id)); };
         if (direction < 0) _switcher.Move(-2); _root.Children.Add(_switcher);
     }
