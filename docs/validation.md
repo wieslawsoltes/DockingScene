@@ -21,7 +21,9 @@ The summaries in each artifact are authoritative for that revision. The 1,000 ne
 
 The workflow publishes the same `net10.0-browserwasm` application distributed to users and serves it under `/DockingScene/`. Chromium waits for the splash to disappear and uses real pointer and keyboard input.
 
-The 20 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
+The 23 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
+
+Three switcher regressions also cover twelve immediate Enter/Escape openings without waiting for focus, one-step arrow navigation, input-scope cleanup and absence of background editor changes. The original twenty docking assertions remain in place. See [switcher input scope](switcher-input-scope.md) and [atomic test geometry](browser-hit-targets.md) for the two different live-check failures and their corrections.
 
 ## Standalone tab browser suite
 
