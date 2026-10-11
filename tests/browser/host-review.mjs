@@ -3,6 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { captureDiagnostics } from './diagnostics.mjs';
 import { readHitBounds } from './hit-targets.mjs';
+import { pngPixels } from './painted-tabs.mjs';
 
 const output = `${process.env.BROWSER_RESULTS || 'artifacts/browser-results'}/host-review`;
 await mkdir(output, { recursive: true });
@@ -61,6 +62,8 @@ try {
       // No content click or focus wait: typed input follows the tab pointer release.
       await page.keyboard.press('Control+a'); await page.keyboard.type('tab-focus-' + i);
       await wait(text => globalThis.dockingScene.editors.code?.text === text, 'tab-focus-' + i);
+      await click('editor:code'); await page.keyboard.press('Control+a'); await page.keyboard.type('body-focus-' + i);
+      await wait(text => globalThis.dockingScene.editors.code?.text === text, 'body-focus-' + i);
       assert.equal((await state()).focusedId, 'editor:code');
     }
   });
@@ -80,6 +83,14 @@ try {
     const after = await state(); assert.equal(after.geometryBuilds, before.geometryBuilds);
     assert(after.geometryReuses > before.geometryReuses); assert.equal(after.auxiliaryCreated, before.auxiliaryCreated);
     assert.deepEqual(after.auxiliaryIdentities, before.auxiliaryIdentities);
+    await page.mouse.move(800, 300); await settle();
+    const active = await bounds('tab:code'), inactive = await bounds('tab:main');
+    const image = pngPixels(await page.screenshot());
+    const scale = image.width / page.viewportSize().width;
+    for (const [rect, expected] of [[active, [0,122,204]], [inactive, [231,231,231]]]) {
+      const actual = image.rgb(Math.round((rect.x + 4) * scale), Math.round((rect.y + 3) * scale));
+      assert(actual.every((value, i) => Math.abs(value - expected[i]) <= 3), 'Retained tab native paint is stale: ' + actual);
+    }
     console.log('HOST_REUSE ' + JSON.stringify({ builds: after.geometryBuilds - before.geometryBuilds, reuses: after.geometryReuses - before.geometryReuses, created: after.auxiliaryCreated - before.auxiliaryCreated }));
   });
   await test('Retained splitter keyboard input uses fresh geometry on successive edits', async () => {

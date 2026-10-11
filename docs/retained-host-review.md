@@ -6,7 +6,7 @@ This continuation reviews the docking host's remaining repeated layout/visual wo
 
 Main workflow 38156647264 compiled desktop/WebAssembly, passed the model and package gates, then failed one of 58 browser scenarios. The trace places the failure before F8: after a reset and editor selection, typed text never reached the editor. The captured state had no focused control. That is different from the earlier switcher's Enter-character dispatch issue.
 
-`AdvancedTabControl.FocusSelectedContent` restores a weakly remembered focused descendant or finds an eligible control in the already-created selected content. It runs synchronously on a simple tab pointer release, not during background projection. A required template/layout flush is limited to explicit focus requests. Existing content factories are not invoked for unrelated windows, and background render passes never steal focus.
+`AdvancedTabControl.FocusSelectedContent` restores a weakly remembered focused descendant or finds an eligible control in the already-created selected content. It runs synchronously on a simple tab pointer release, not during background projection. Selected-content pointer input also establishes focus at the content boundary, including clicks on blank editor space. A required template/layout flush is limited to explicit focus requests. Existing content factories are not invoked for unrelated windows, and background render passes never steal focus.
 
 Previously loaded but now detached tab controls skip queued refreshes. This prevents a stale presenter from reclaiming a visual that another group has just acquired. The sample also removes obsolete editor/diagnostic references on release without removing a newer same-id instance. The initial focus-only commit passed all 58 existing browser cases; the final gate adds twelve immediate tab-click/typing cycles and a caret/selection restoration check.
 
@@ -18,7 +18,7 @@ Cache inputs are the viewport, all `DockMetrics`, tree topology and group member
 
 The input contract matches the engine's validated immutable layout contract. This helper is not a substitute for structural validation. Shape/metadata comparisons may still be linear when snapshots differ; the optimization removes redundant measuring, arrangement and geometry-result allocation rather than guaranteeing constant-time complete rendering.
 
-Twelve executable cases cover all invalidation families, failed-call preservation and clearing. Three hundred deterministic transitions compare cached node rectangles, splitters, rails and warnings against the uncached engine.
+Thirteen executable cases cover all invalidation families, failed-call preservation and clearing. Three hundred deterministic transitions compare cached node rectangles, splitters, rails and warnings against the uncached engine. An additional extreme-finite-size case protects proportional minimum-size shrinking from multiplication overflow: divide the finite minimum ratio before multiplying by the available extent.
 
 ## Retained auxiliary controls
 
@@ -32,7 +32,7 @@ The new browser workload switches active tabs twenty times and requires zero new
 
 `CanTabsAutoScroll` defaults to true. During an owned standalone drag, the tab lane scrolls when the pointer reaches its leading or trailing edge. `TabEdgeScroll.NextOffset` provides the independent axis calculation: proportional edge speed, viewport/content bounds, finite input validation and elapsed-time integration. Delayed ticks are capped at 100 milliseconds to avoid a large jump.
 
-A timer runs only while an active edge drag can scroll. Pointer release, Escape, capture loss, unload, changed collection revision or disabling drag/scrolling stops it. The insertion marker is recomputed as hidden tabs enter the viewport. Existing measurement caches and tab identities are retained. No cross-lane pin/preview conversion or cross-site transfer is introduced; hosted DockSite dragging remains under its own docking controller.
+A timer runs only while an active edge drag can scroll. Pointer release, Escape, capture loss, unload, changed collection revision or disabling drag/scrolling stops it. A temporary root preview-key scope keeps Escape available even when scrolling virtualizes away the originally focused header. It is detached when the gesture ends. The insertion marker is recomputed as hidden tabs enter the viewport. Existing measurement caches and tab identities are retained. No cross-lane pin/preview conversion or cross-site transfer is introduced; hosted DockSite dragging remains under its own docking controller.
 
 Ten executable cases cover direction, speed, constraints, invalid numbers, elapsed-time equivalence and extreme finite inputs. Real pointer cases cover commit to a hidden destination, Escape/timer cleanup, disabled scrolling and the vertical axis.
 
@@ -43,3 +43,7 @@ The existing 58 browser scenarios, including actual PNG tab-paint checks, remain
 Diagnostic capture remains opt-in and read-only. Added observations are focus automation IDs, geometry build/reuse counts, auxiliary identities and edge-scroll steps. Test inputs still use actual pointer and keyboard events; no script changes the managed model.
 
 CI uses the real Uno Skia renderer through SwiftShader software WebGL. Neither these work counts nor desktop compilation certify hardware GPU performance, native desktop runtime, accessibility, RTL, touch/inertial scrolling or vendor pixel parity. Full candidate validation, metadata reconciliation, some host projection and complex layout changes still cost work. Native/detached hosts, linked sites, full template/data-source APIs and advanced vendor-compatible persistence remain unfinished. Prior blocked profile/bookmark changes are not retried or included.
+
+## Expanded-run findings
+
+The first retained-host run passed eight of ten new scenarios, but Escape did not cancel after the source header was virtualized away; focus had moved to a toolbar button outside the header's key route. The drag now owns a short-lived root preview-key scope rather than relying on that disappearing header. The existing repeated editor-body click scenario also exposed the focus precondition again, so content pointer focus handling and the twelve-cycle regression were extended without removing the second click or waiting for focus before typing. The retained activation test additionally samples actual PNG tab colors after repeated changes. Final-head workflow artifacts, not an earlier partial run, determine release readiness.

@@ -9,9 +9,26 @@ namespace DockingScene.Controls;
 public partial class AdvancedTabControl
 {
     private static readonly ConditionalWeakTable<AdvancedTabItem, WeakReference<Control>> ContentFocus = new();
+    private uint? _contentFocusPointer;
 
     private void ConfigureContentFocus()
     {
+        // Clicking blank editor space still requests selected-content focus. Handle
+        // that request at the content boundary as well as at a tab header. An
+        // already-focused descendant keeps its own caret and selection behavior.
+        _presenter.AddHandler(PointerPressedEvent, new PointerEventHandler((_, e) =>
+        {
+            _contentFocusPointer = e.GetCurrentPoint(_presenter).Properties.IsLeftButtonPressed ? e.Pointer.PointerId : null;
+            if (_contentFocusPointer is not null && FocusSelectedContent(FocusState.Pointer)) e.Handled = true;
+        }), true);
+        _presenter.AddHandler(PointerReleasedEvent, new PointerEventHandler((_, e) =>
+        {
+            if (_contentFocusPointer != e.Pointer.PointerId) return;
+            _contentFocusPointer = null;
+            if (FocusSelectedContent(FocusState.Pointer)) e.Handled = true;
+        }), true);
+        _presenter.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => _contentFocusPointer = null), true);
+        Unloaded += (_, _) => _contentFocusPointer = null;
         _presenter.GotFocus += (_, _) =>
         {
             if (_presenter.Content is not AdvancedTabItem item || XamlRoot is not { } root) return;

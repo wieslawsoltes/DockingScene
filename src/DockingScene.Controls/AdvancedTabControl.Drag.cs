@@ -14,10 +14,12 @@ public partial class AdvancedTabControl
 {
     private readonly DispatcherTimer _dragScroll = new() { Interval = TimeSpan.FromMilliseconds(30) };
     private readonly Stopwatch _dragScrollClock = new();
+    private UIElement? _dragInputRoot;
+    private KeyEventHandler? _dragEscapeHandler;
     private Point _dragPosition;
     private bool _dragScrollRunning;
     public long DragAutoScrollSteps { get; private set; }
-    public static readonly DependencyProperty CanTabsAutoScrollProperty = DependencyProperty.Register(nameof(CanTabsAutoScroll), typeof(bool), typeof(AdvancedTabControl), new PropertyMetadata(true));
+    public static readonly DependencyProperty CanTabsAutoScrollProperty = DependencyProperty.Register(nameof(CanTabsAutoScroll), typeof(bool), typeof(AdvancedTabControl), new PropertyMetadata(true, (d, e) => { if (e.NewValue is false) ((AdvancedTabControl)d).StopDragScroll(); }));
     public bool CanTabsAutoScroll { get => (bool)GetValue(CanTabsAutoScrollProperty); set => SetValue(CanTabsAutoScrollProperty, value); }
     private string? _dragTabId;
     private long _dragItemsRevision;
@@ -86,6 +88,7 @@ public partial class AdvancedTabControl
             if (node is UIElement element && element.PointerCaptures?.Any(p => p.PointerId == e.Pointer.PointerId) == true)
                 element.ReleasePointerCapture(e.Pointer);
         if (!_header.CapturePointer(e.Pointer)) return;
+        AcquireDragInputScope();
         _dragTabId = item.Id; _dragItemsRevision = _itemsRevision; _tabDragStart = e.GetCurrentPoint(_header).Position;
         _tabDragMoved = false; _tabInsertion = -1; e.Handled = true;
     }
@@ -142,10 +145,27 @@ public partial class AdvancedTabControl
         DockChrome.Position(_tabInsertionMarker, vertical ? new(0, edge, 155, 2) : new(edge, 0, 2, Theme.TabHeight), 100);
         _tabInsertionMarker.Visibility = Visibility.Visible;
     }
+    private void AcquireDragInputScope()
+    {
+        if (_dragInputRoot is not null || XamlRoot?.Content is not { } root) return;
+        _dragInputRoot = root;
+        _dragEscapeHandler ??= (_, e) =>
+        {
+            if (IsTabDragActive && e.Key == VirtualKey.Escape) { e.Handled = true; CancelTabDrag(); }
+        };
+        // Scrolling may virtualize away the header that originally held focus.
+        // Escape belongs to the owned gesture, not that disappearing visual.
+        root.AddHandler(PreviewKeyDownEvent, _dragEscapeHandler, true);
+    }
+    private void ReleaseDragInputScope()
+    {
+        if (_dragInputRoot is not { } root) return;
+        _dragInputRoot = null; root.RemoveHandler(PreviewKeyDownEvent, _dragEscapeHandler!);
+    }
     private void StopDragScroll() { _dragScrollRunning = false; _dragScroll.Stop(); _dragScrollClock.Stop(); }
     private void CancelTabDrag()
     {
-        StopDragScroll();
+        StopDragScroll(); ReleaseDragInputScope();
         _dragTabId = null; _tabInsertion = -1; _tabDragMoved = false;
         _tabInsertionMarker.Visibility = Visibility.Collapsed; _header.ReleasePointerCaptures();
     }
