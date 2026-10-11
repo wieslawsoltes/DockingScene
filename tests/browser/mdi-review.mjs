@@ -11,6 +11,9 @@ export async function runMdiReviewTests({page, state, test, reset, click, wait, 
     await reset(); await menu('menubar:Window', 'appmenu:Standard MDI'); await settle();
     const before = (await state()).mdiFrames;
     for (const id of ['main', 'code', 'main', 'code']) await activate(id);
+    await menu('menubar:Window', 'appmenu:Tile grid');
+    await click('editor:main'); await wait(() => globalThis.dockingScene.activeWindowId === 'main');
+    await menu('menubar:Window', 'appmenu:Cascade'); await activate('code');
     const after = (await state()).mdiFrames;
     for (const id of Object.keys(before)) assert.deepEqual(after[id].buttons, before[id].buttons);
     const title = await bounds('window-title:code');

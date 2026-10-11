@@ -56,6 +56,8 @@ public partial class WindowControl : UserControl
         _title.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); _title.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         _title.Children.Add(_titleText); _title.Children.Add(_buttons); Grid.SetColumn(_titleText, 1); Grid.SetColumn(_buttons, 2);
         ConfigureWindowChrome();
+        _content.AddHandler(PointerPressedEvent, new PointerEventHandler((_, e) =>
+        { if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) Activated?.Invoke(); }), true);
         _titleText.PointerPressed += (_, e) =>
         {
             if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
@@ -101,6 +103,7 @@ public partial class WindowControl : UserControl
     }
     private void Begin(PointerRoutedEventArgs e, DockSide x, DockSide y)
     {
+        Activated?.Invoke();
         _coordinateRoot = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(this) as UIElement ?? this;
         _start = e.GetCurrentPoint(_coordinateRoot).Position; _original = Bounds; _resizeX = x; _resizeY = y;
         _moving = CapturePointer(e.Pointer);

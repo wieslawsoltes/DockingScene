@@ -14,6 +14,7 @@ public sealed class StandardMdiHost : UserControl
     private readonly Canvas _canvas = new();
     private readonly Dictionary<string, WindowControl> _windows = new(StringComparer.Ordinal);
     private readonly Dictionary<string, long> _gestureRevisions = new(StringComparer.Ordinal);
+    private System.Collections.ObjectModel.ReadOnlyDictionary<string, WindowControl>? _windowView;
     private DockManager? _manager;
     private string[] _ids = [];
     private Func<string, AdvancedTabItem>? _content;
@@ -24,7 +25,7 @@ public sealed class StandardMdiHost : UserControl
     public bool CanWindowsMinimize { get => (bool)GetValue(CanWindowsMinimizeProperty); set => SetValue(CanWindowsMinimizeProperty, value); }
     public bool CanWindowsMaximize { get => (bool)GetValue(CanWindowsMaximizeProperty); set => SetValue(CanWindowsMaximizeProperty, value); }
     public MinimizedWindowLayout? MinimizedLayout { get; private set; }
-    public IReadOnlyDictionary<string, WindowControl> Windows => new System.Collections.ObjectModel.ReadOnlyDictionary<string, WindowControl>(_windows);
+    public IReadOnlyDictionary<string, WindowControl> Windows => _windowView ??= new(_windows);
     public event Action<string>? OperationRejected;
     private static void OptionsChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((StandardMdiHost)d).Refresh();
 
@@ -50,7 +51,11 @@ public sealed class StandardMdiHost : UserControl
         foreach (var window in _windows.Values) { window.CancelMovement(); window.SetWindowContent(null); }
         _gestureRevisions.Clear();
     }
-    public IReadOnlyList<DockWindow> GetDocuments() => _manager is null ? [] : _ids.Where(_manager.Layout.Windows.ContainsKey).Select(id => _manager.Layout.Windows[id]).ToArray();
+    public IReadOnlyList<DockWindow> GetDocuments()
+    {
+        var layout = _manager?.Layout;
+        return layout is null ? [] : _ids.Where(layout.Windows.ContainsKey).Select(id => layout.Windows[id]).ToArray();
+    }
     public void ArrangeMinimizedWindows() => Refresh();
     public DockResult Arrange(MdiArrangement arrangement) => _manager is null ? new(false, 0, "No manager.") :
         WindowGeometry.ArrangeMdi(_manager, new(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight)), arrangement);
@@ -121,7 +126,7 @@ public sealed class StandardMdiHost : UserControl
                     MdiWindowState.Minimized => MinimizedLayout.Windows[id],
                     _ => WindowGeometry.KeepVisible(model.MdiBounds, viewport)
                 };
-                window.SetBounds(bounds);
+                if (!window.IsMoving) window.SetBounds(bounds);
                 int rank = index.ActivationRank(id);
                 Canvas.SetZIndex(window, rank < 0 ? 0 : layout.ActivationHistory.Length - rank + 1);
                 window.UpdateChrome(model.Title + (model.IsModified ? " *" : ""), _theme, layout.ActiveWindowId == id);
