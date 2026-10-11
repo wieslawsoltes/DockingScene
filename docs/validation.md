@@ -2,7 +2,7 @@
 
 ## Model and package gates
 
-All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. CI runs every matching project under `pipefail`; logging cannot hide a failed process. There are fifteen suites:
+All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. CI runs every matching project under `pipefail`; logging cannot hide a failed process. There are sixteen suites:
 
 | Suite | Main coverage |
 | --- | --- |
@@ -10,6 +10,7 @@ All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. C
 | LayoutSpecs | Geometry, splits, guides, MDI, serialization and storage |
 | ParitySpecs | Invalid/null/deep/cyclic layouts and metadata boundaries |
 | TransactionSpecs | Atomicity, rollback, close vetoes, revisions, previews and observer ordering |
+| MdiReviewSpecs | Minimized placement, state preservation, move-only capabilities and stale rejection |
 | SourceBindingSpecs | Bounded source enumeration, callback revisions and reentrant disposal/subscription cleanup |
 | MvvmSpecs | Stable projections, metadata, dispatcher/disposal and source synchronization |
 | VectorSpecs | Built-in icons, bounded SVG grammar, curves/arcs, numeric syntax and locale |
@@ -22,7 +23,7 @@ All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. C
 | GeometryCacheSpecs | Cache input equivalence/invalidation, 300 comparisons with uncached results, and finite minimum-compression arithmetic |
 | EdgeScrollSpecs | Direction, speed, elapsed time, boundaries, invalid inputs and extreme finite numbers |
 
-Current suite definitions contain 2,727 baseline assertions and 196 named focused specifications. Seeded loops supplement these summaries; they are not additional browser scenarios. The logs for the exact commit are authoritative for execution results.
+Current suite definitions contain 2,727 baseline assertions and 207 named focused specifications. Seeded loops supplement these summaries; they are not additional browser scenarios. The logs for the exact commit are authoritative for execution results.
 
 The Uno workflow compiles desktop, publishes the actual WebAssembly application, and packs all six libraries from the same source revision. Two separate consumers restore the generated NuGet packages into a fresh cache: a plain .NET application executes the five non-UI packages, and a Uno library compiles the controls APIs without project references. Desktop compilation and package consumption are not native UI runtime tests.
 
@@ -34,9 +35,9 @@ The workflow serves the actual distribution under `/DockingScene/`. Three indepe
 
 **Standalone tabs, performance and lifetime: 32 scenarios.** These cover lazy content, bounded header realization, independent lanes, all overflow policies, fixed/shrunk widths, physical selection of every compressed header, four placements, pinning, closing/menu callbacks, filtered digits, application versus owned content, reentrant factories, same-id replacement and coalesced unregister/register. The 2,002-tab workload checks one measure per new header, no new measures or lane plans for 200 selections, and one affected header measure for rename/replacement. PNG pixel checks inspect real rendered host-tab colors rather than DOM properties.
 
-**Retained host, edge scrolling and Metro chrome: 23 scenarios.** Twelve reset/tab-click cycles type immediately without a second content click, then also verify editor-body clicking; another check preserves caret selection across tabs. Twenty activations require zero new geometry builds and zero new auxiliary controls, including unchanged individual identities and correct PNG tab paint. Further cases cover repeated keyboard edits of one retained splitter, color-only themes, horizontal/vertical drag scrolling, cancellation and disabled scrolling. A child-directed focus transfer must remain outside the document and accept subsequent toolbar keyboard input.
+**Retained host, edge scrolling and Metro chrome and MDI review: 31 scenarios.** Twelve reset/tab-click cycles type immediately without a second content click, then also verify editor-body clicking; another check preserves caret selection across tabs. Twenty activations require zero new geometry builds and zero new auxiliary controls, including unchanged individual identities and correct PNG tab paint. Further cases cover repeated keyboard edits of one retained splitter, color-only themes, horizontal/vertical drag scrolling, cancellation and disabled scrolling. A child-directed focus transfer must remain outside the document and accept subsequent toolbar keyboard input.
 
-These 81 named browser scenarios do not represent separate platforms or exhaustive vendor conformance tests. Screenshots and traces preserve successful states and failures. Report actual result counts from the final revision, not an earlier passing subset.
+These 89 named browser scenarios do not represent separate platforms or exhaustive vendor conformance tests. Screenshots and traces preserve successful states and failures. Report actual result counts from the final revision, not an earlier passing subset.
 
 ## Live deployment
 
@@ -57,3 +58,7 @@ Ten additional cases inspect status/gripper/hover/highlight PNG pixels and use p
 ## Metro template and inspector follow-up
 
 Two further physical-input cases cover collapse/re-expansion with dark-theme icon pixels, native tree keyboard invocation, and an unapplied Properties draft surviving document registration. Hover also checks that no header controls are allocated. See [metro-follow-up.md](metro-follow-up.md) for the template failure and fix. These bring the retained-host/Metro suite to 23 and the complete browser gate to 81 named scenarios.
+
+## Standard MDI regressions
+
+Eight further real-input scenarios cover retained caption controls and pixels, window menus, preserved normal bounds, state-button policies, Escape cancellation, committed movement, multirow minimized placement and target-specific closing. The original 81 cases are retained; see [mdi-review.md](mdi-review.md).

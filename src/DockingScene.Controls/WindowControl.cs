@@ -107,6 +107,6 @@ public partial class WindowControl : UserControl
         if (_moving) { AcquireMovementInput(); MovementStarted?.Invoke(); }
     }
     public void CancelMovement() { if (!_moving) return; _moving = false; ReleaseMovementInput(); SetBounds(_original); ReleasePointerCaptures(); }
-    public void SetBounds(DockRect bounds) { if (Bounds == bounds && Width == bounds.Width && Height == bounds.Height) return; Bounds = bounds; DockChrome.Position(this, bounds); }
+    public void SetBounds(DockRect bounds) { if (Bounds == bounds && Width == bounds.Width && Height == bounds.Height) return; Bounds = bounds; DockChrome.Position(this, bounds, Canvas.GetZIndex(this)); }
     public void SetWindowContent(object? content) => ContentLease.Set(_content, content);
 }
