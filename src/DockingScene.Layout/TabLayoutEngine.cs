@@ -47,7 +47,14 @@ public static class TabLayoutEngine
         }
         double special = totals[0] + totals[2];
         if (!double.IsFinite(special) || !double.IsFinite(special + totals[1])) throw new ArgumentException("Tab extents overflow.", nameof(tabs));
-        // Keep at least one usable normal-tab slot when special lanes overflow.
+        // Shrink globally before reserving lanes: several normal minima must not be
+        // starved by a large pinned/preview lane when a feasible all-tab fit exists.
+        if (CanShrink(behavior) && special + totals[1] > extent)
+        {
+            sizes = Shrink(tabs.ToArray(), sizes, extent);
+            for (int lane = 0; lane < 3; lane++) totals[lane] = indices[lane].Sum(i => sizes[i]);
+            special = totals[0] + totals[2];
+        }
         double normalReserve = indices[1].Count == 0 ? 0 : Math.Min(extent / 3, indices[1].Min(i => tabs[i].Minimum));
         double specialBudget = Math.Max(0, extent - normalReserve);
         double scale = special == 0 ? 0 : Math.Min(1, specialBudget / special);
@@ -58,17 +65,12 @@ public static class TabLayoutEngine
         for (int lane = 0; lane < 3; lane++)
         {
             var widths = indices[lane].Select(i => sizes[i]).ToArray();
-            if (CanShrink(behavior) && totals[lane] > budgets[lane])
-                widths = Shrink(indices[lane].Select(i => tabs[i]).ToArray(), widths, budgets[lane]);
             var mode = lane == 0 ? TabDisplayMode.Pinned : lane == 1 ? TabDisplayMode.Normal : TabDisplayMode.Preview;
             lanes.Add(new(mode, start, budgets[lane], indices[lane].ToImmutableArray(), new(widths)));
             start += budgets[lane];
         }
         return new(lanes.ToImmutable(), extent);
     }
-
-    /// <summary>Water-filling: cap large tabs first, retaining naturally short tabs.
-    /// Fixed-size tabs and an overconstrained sum of minima remain intact and overflow.</summary>
     private static double[] Shrink(TabMeasurement[] tabs, double[] desired, double budget)
     {
         if (tabs.Length == 0) return desired;
