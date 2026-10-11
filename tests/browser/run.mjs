@@ -2,6 +2,10 @@ import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { captureDiagnostics } from './diagnostics.mjs';
+import { readHitBounds } from './hit-targets.mjs';
+import { validateHitTargetReader } from './hit-targets.contract.mjs';
+
+await validateHitTargetReader();
 
 const output = process.env.BROWSER_RESULTS || 'artifacts/browser-results';
 await mkdir(output, { recursive: true });
@@ -23,10 +27,7 @@ async function settle() {
   await wait(sequence => globalThis.dockingScene.sequence > sequence, sequence);
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 }
-async function bounds(id) {
-  await wait(id => !!globalThis.dockingScene?.bounds?.[id], id);
-  const rect = (await state()).bounds[id]; assert(rect.width > 0 && rect.height > 0, `Empty hit target: ${id}`); return rect;
-}
+async function bounds(id) { return readHitBounds(page, id); }
 async function click(id, options = {}) {
   const r = await bounds(id); await page.mouse.click(r.x + Math.min(r.width / 2, 60), r.y + r.height / 2, options);
 }
