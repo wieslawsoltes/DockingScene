@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { captureDiagnostics } from './diagnostics.mjs';
 import { readHitBounds } from './hit-targets.mjs';
 import { pngPixels } from './painted-tabs.mjs';
+import { runMetroChromeTests } from './metro-chrome.mjs';
 
 const output = `${process.env.BROWSER_RESULTS || 'artifacts/browser-results'}/host-review`;
 await mkdir(output, { recursive: true });
@@ -146,6 +147,7 @@ try {
     await page.keyboard.press('Space'); await bounds('interaction:handoff');
     await page.keyboard.press('Escape'); await settle();
   });
+  await runMetroChromeTests({ page, state, test, reset, click, wait, bounds, settle, menu, output });
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {
