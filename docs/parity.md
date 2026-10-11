@@ -1,28 +1,32 @@
 # Docking and MDI compatibility matrix
 
-This is a behavior-oriented independent implementation, not a copy of proprietary source. **Full Actipro WPF parity is not complete.** A feature being implemented here does not imply every Actipro property/event, visual state, platform integration or edge case is compatible.
+This is a behavior-oriented independent implementation, not a copy of proprietary source. **Full Actipro WPF parity is not complete.** An implemented behavior does not imply every vendor property, event, visual state, platform integration or edge case is compatible.
 
-Reference material reviewed: [Actipro Docking & MDI overview](https://www.actiprosoftware.com/docs/controls/wpf/docking/index), [Tabbed MDI](https://www.actiprosoftware.com/docs/controls/wpf/docking/workspace-mdi-features/tabbed-mdi), and [Layout serialization](https://www.actiprosoftware.com/docs/controls/wpf/docking/layout-features/layout-serialization). The independent APIs below intentionally do not claim binary compatibility with WPF assemblies.
+Reference material: [Docking & MDI overview](https://www.actiprosoftware.com/docs/controls/wpf/docking/index), [AdvancedTabControl](https://www.actiprosoftware.com/docs/controls/wpf/docking/advanced-tab-control), [Tabbed MDI](https://www.actiprosoftware.com/docs/controls/wpf/docking/workspace-mdi-features/tabbed-mdi), and [Layout serialization](https://www.actiprosoftware.com/docs/controls/wpf/docking/layout-features/layout-serialization). DockingScene's independent APIs do not claim WPF binary compatibility.
 
 | Area | Implemented | Remaining / limits |
 | --- | --- | --- |
-| Core model | Immutable windows/groups/splits/workspace; unique IDs; docked, document, hidden, auto-hide and floating locations | Actipro's complete class/property/event surface |
-| Transactions | Atomic batches, validation, close vetoes, expected revisions, bounded undo/redo, ordered notifications | Full Actipro routed-event/lifecycle equivalence; asynchronous close orchestration |
-| Docking | Tool/document placement, splitting, attachment, group movement, capability policy, layout lock, live guide preview | All guide appearance options, exact placement policies and complete linked-DockSite transfers |
-| Tabbed MDI | Real retained documents, measured header virtualization, pointer reordering, overflow list, four placements, keyboard navigation | Sticky pinned/preview lanes, all overflow strategies, multi-preview parity, complete template customization |
-| Preview/pinned tabs | Keep-open, pin/unpin, modification promotion, atomic preview replacement, directional close preserving pinned tabs | Exact visual/keyboard parity for every Actipro tab variant |
-| Standard MDI | Overlapping frames, movement, eight resize edges/corners, minimize/maximize, cascade, horizontal/vertical/grid tiling | Native host integration, all size-to-content and minimized-arrangement policies |
-| Floating | Hosted controls with live content, movement, resizing, maximize and redocking | Separate native OS windows, browser detached windows, monitor/taskbar/owner/activation integration |
-| Auto-hide | Four rails, hover/click activation, delayed closing, pinning, resizable popups | Complete animation options, all focus and inactivity policies, exact group restore positions |
-| Content lifetime | Lazy creation and retained content across placement changes; unregister releases control cache | Full native HWND interop and application-specific disposal integration |
-| MVVM | Observable proxies, commands, stable identities, optional dispatcher, atomic one-way source synchronization | Full ItemsSource/DataTemplateSelector surface on every standalone control and two-way application collection ownership |
-| Serialization | Bounded JSON, unknown-window policy, validation, atomic manager restore and file storage | Actipro XML, lazy window creation, tool-only merging, CanSerialize/custom fields, all legacy migration behaviors |
-| Themes and icons | Four palettes, original vector icons, explicit geometry construction, high-contrast palette | Certified pixel comparison, all vendor themes, complete RTL/localization and accessibility audit |
-| Rendering | Real Uno Skia desktop/browser application and actual browser pointer/keyboard tests | Native hardware-GPU performance measurement, platform-wide visual equivalence, exhaustive browser/device coverage |
-| Packaging | Six reusable NuGet projects with UI-independent engine/layout/MVVM/persistence packages | Signed stable releases, public NuGet publication, long-term API compatibility guarantees |
+| Core model | Immutable windows/groups/splits/workspace; unique IDs; document, docked, hidden, auto-hide and floating locations | Complete vendor class/property/event surface |
+| Transactions | Atomic batches, validation, closing vetoes, expected revisions, bounded undo/redo and ordered notifications | Full routed-event/lifecycle equivalence; asynchronous close orchestration |
+| Docking | Tool/document placement, splits, attachment, group movement, policy, locking and live guide preview | Complete guide appearance/placement policies and linked-DockSite ownership transfers |
+| Tabbed MDI | Retained documents, measured header virtualization, pointer reordering, four placements and three independently scrolling/clipped lanes | Complete templates, native multi-preview group semantics, full RTL and touch/inertial scrolling behavior |
+| Overflow | None, Menu, Scroll, ScrollWithMenu, Shrink and ShrinkWithMenu; global minimum-preserving allocation and fixed horizontal extents | Exact vendor default settings and every overflow visual state |
+| Standalone tabs | Lazy retained content, pin/unpin, preview promotion, close buttons, middle-click capability checks, cancellable TabClosing and customizable overflow MenuOpening | Standalone drag-reorder policy, system-drag-over activation, complete selector/ItemsSource surface, standalone Ctrl+Tab orchestration, full context-menu event equivalence |
+| Tab presentation | Four placements, strip visibility, optional pin/close buttons, singleton tool-strip visibility, compressed-header label targets | Slanted/overlapping/curved templates, rotated content, animations, vendor brush/style/template APIs |
+| Keyboard | DockSite filtered normal/pinned/preview digit access, digit 9 as last, MRU switcher, header arrows/Home/End, document-list and context-menu commands | Host-reserved shortcuts and exact keyboard/focus equivalence on all platforms |
+| Standard MDI | Overlap, movement, eight resize edges/corners, minimize/maximize, cascade and horizontal/vertical/grid tiling | Native host integration, full size-to-content and minimized-window arrangement policies |
+| Floating | Hosted controls with live content, movement, resizing, maximize and redocking | Native OS or detached browser windows, monitor/taskbar/owner integration |
+| Auto-hide | Four rails, hover/click activation, delayed closing, pinning and resizable popups | Animation options, every focus/inactivity policy and exact restore positions |
+| Content lifetime | Lazy content creation and retention across placement changes; unregister releases the DockSite cache | Native HWND interop and complete application-specific disposal integration |
+| MVVM | Stable observable proxies, commands, dispatcher support and atomic one-way source synchronization | Complete ItemsSource/DataTemplateSelector surfaces and two-way application collection ownership |
+| Serialization | Bounded JSON, unknown-window policy, validation, atomic manager restore and file storage | Actipro XML, lazy creation, tool-only merging, CanSerialize/custom fields, exact reopen positions and migration behaviors |
+| Themes and rendering | Four palettes, original vector icons, explicit geometry and real Uno Skia desktop/browser UI | Certified pixel comparison, all vendor themes, full localization/RTL/accessibility, native hardware-GPU performance and exhaustive devices/browsers |
+| Packaging | Six versioned NuGet projects, same-commit packing, isolated package-only consumers | Signed stable releases, public NuGet publication and long-term API stability guarantees |
+
+The layout-profile model attempted alongside this increment was blocked during upload and is not present in the repository. The prior dock-position bookmark extension is also not part of this implementation. No tool-only reconciliation, CanSerialize or bookmark-anchor feature is claimed here.
 
 ## Validation interpretation
 
-Executable specification suites cover contracts in Core, Layout, Serialization, MVVM, vector paths and measured tabs. Chromium browser scenarios cover a meaningful subset of the integrated Uno control behavior. The browser results artifact identifies exactly which scenarios passed on a particular commit. Neither a passing build nor a screenshot proves the unimplemented rows above.
+Executable suites cover contracts in Core, Layout, Serialization, MVVM, vector paths and tab geometry/allocation. Chromium browser suites cover integrated DockSite behavior and the reusable standalone tab control through real inputs. Artifacts identify exactly which scenarios passed for a particular commit. Neither compilation nor a screenshot proves the unimplemented rows.
 
-No numerical percentage of compatibility is claimed: there is no complete, independently verified denominator or vendor conformance suite in this repository.
+No percentage of full compatibility is claimed: the repository does not contain a complete independently verified vendor conformance suite or denominator.

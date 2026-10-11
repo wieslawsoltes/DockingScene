@@ -9,13 +9,12 @@ public partial class DockSite
 {
     private void ConfigureInput()
     {
-        // Child controls may mark pointer events handled. Captured gestures must still
-        // receive their terminal event; otherwise their preview survives the physical release.
         _canvas.AddHandler(PointerMovedEvent, new PointerEventHandler((_, e) => MoveInteraction(e)), true);
         _canvas.AddHandler(PointerReleasedEvent, new PointerEventHandler((_, e) => EndInteraction(e)), true);
         _canvas.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => CancelInteraction()), true);
         _canvas.AddHandler(PointerCaptureLostEvent, new PointerEventHandler((_, e) => { TraceInput("CaptureLost", e); if (IsInteractionActive && _canvas.PointerCaptures?.Any(p => p.PointerId == e.Pointer.PointerId) != true) CancelInteraction(); }), true);
         VisualsUpdated += RenderAutoHideResizeGrip;
+        VisualsUpdated += ApplyTabOptions;
         AddHandler(KeyDownEvent, new KeyEventHandler((_, e) =>
         {
             if (e.Handled && _switcher is null && !IsInteractionActive) return;
@@ -34,18 +33,22 @@ public partial class DockSite
         Shortcut(VirtualKey.F8, VirtualKeyModifiers.None, () => ShowSwitcher(1));
         Shortcut(VirtualKey.W, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
         Shortcut(VirtualKey.F4, VirtualKeyModifiers.Control, () => { if (Manager.Layout.ActiveWindowId is { } id) Submit(Manager.Close(id)); });
-        for (int i = 0; i < 9; i++)
+        Shortcut(VirtualKey.Down, VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu, () => ActiveDocumentTabs()?.ShowOverflowMenu());
+        // OEM minus is 0xBD in the Win32 virtual-key table, including Uno's VirtualKey mapping.
+        Shortcut((VirtualKey)0xBD, VirtualKeyModifiers.Menu, ShowActiveDocumentMenu);
+        for (int digit = 1; digit <= 9; digit++)
         {
-            int index = i;
-            void ActivateIndex(TabDisplayMode mode)
+            int key = digit;
+            void ActivateDigit(TabDisplayMode mode)
             {
                 var layout = Manager.Layout;
                 var group = layout.ActiveWindowId is { } id ? DockTree.GroupOf(layout, id) : null;
                 group = group?.Kind == GroupKind.Documents ? group : DockTree.Groups(layout).FirstOrDefault(g => g.Kind == GroupKind.Documents);
-                if (group is not null && group.Windows.Count(id => layout.Windows[id].DisplayMode == mode) > index) Submit(Manager.ActivateTab(group.Id, index, mode));
+                if (group is not null) Submit(Manager.ActivateTabByDigit(group.Id, key, mode));
             }
-            Shortcut((VirtualKey)((int)VirtualKey.Number1 + i), VirtualKeyModifiers.Control, () => ActivateIndex(TabDisplayMode.Normal));
-            Shortcut((VirtualKey)((int)VirtualKey.Number1 + i), VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu, () => ActivateIndex(TabDisplayMode.Pinned));
+            Shortcut((VirtualKey)((int)VirtualKey.Number1 + digit - 1), VirtualKeyModifiers.Control, () => ActivateDigit(TabDisplayMode.Normal));
+            Shortcut((VirtualKey)((int)VirtualKey.Number1 + digit - 1), VirtualKeyModifiers.Control | VirtualKeyModifiers.Menu, () => ActivateDigit(TabDisplayMode.Pinned));
+            Shortcut((VirtualKey)((int)VirtualKey.Number1 + digit - 1), VirtualKeyModifiers.Control | VirtualKeyModifiers.Shift, () => ActivateDigit(TabDisplayMode.Preview));
         }
     }
 }

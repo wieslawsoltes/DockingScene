@@ -70,13 +70,16 @@ jobs:
           npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
           cd tests/browser
           npx playwright install --with-deps chromium
-      - name: Validate the real Uno browser application
+      - name: Validate docking and standalone tab controls in the real browser application
         run: |
           set -euo pipefail
           python3 -m http.server 8765 --bind 127.0.0.1 --directory artifacts/site > artifacts/server.log 2>&1 &
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" || true' EXIT
-          node tests/browser/run.mjs
+          RESULT=0
+          node tests/browser/run.mjs || RESULT=1
+          node tests/browser/tab-layout.mjs || RESULT=1
+          exit "$RESULT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -125,7 +128,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: [build, deploy]
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -147,8 +150,10 @@ jobs:
           test -n "$BROWSER_URL"
           for attempt in $(seq 1 30); do
             if curl -fsS --max-time 10 "${BROWSER_URL%/}/build-info.json?revision=$EXPECTED_BUILD_COMMIT" | jq -e --arg commit "$EXPECTED_BUILD_COMMIT" '.commit == $commit'; then
-              node tests/browser/run.mjs
-              exit 0
+              RESULT=0
+              node tests/browser/run.mjs || RESULT=1
+              node tests/browser/tab-layout.mjs || RESULT=1
+              exit "$RESULT"
             fi
             sleep 2
           done

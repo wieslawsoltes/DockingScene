@@ -14,7 +14,6 @@ public sealed partial class WorkspaceView
     private void PublishDiagnostics()
     {
 #if BROWSER_WASM
-        // Production demos do not walk the visual tree or expose editor text. Explicitly opt in for test runs.
         _diagnosticsEnabled ??= Uno.Foundation.WebAssemblyRuntime.InvokeJS("new URL(location.href).searchParams.get('diagnostics') === '1' ? 'true' : 'false'") == "true";
         if (_diagnosticsEnabled != true) { _diagnostics.Stop(); return; }
         try
@@ -35,6 +34,7 @@ public sealed partial class WorkspaceView
             writer.WriteBoolean("locked", layout.IsLayoutLocked); writer.WriteBoolean("canUndo", _site.Manager.CanUndo); writer.WriteBoolean("canRedo", _site.Manager.CanRedo);
             writer.WriteBoolean("modified", _modified); writer.WriteNumber("cachedContentCount", _site.CachedContentCount); writer.WriteString("lastMessage", _lastMessage);
             writer.WriteString("autoHideWindowId", _site.OpenAutoHideWindowId); WriteRect(writer, "autoHideBounds", _site.OpenAutoHideBounds);
+            WriteTabDiagnostics(writer);
             writer.WriteStartArray("windows");
             foreach (var window in layout.Windows.Values)
             {

@@ -21,6 +21,7 @@ public sealed partial class App : Application
             _window = new Window { Title = "DockingScene — Docking & MDI" };
             ReportStartup("Creating docking workspace");
             var view = new WorkspaceView();
+            view.EnableTabDemo();
             view.Loaded += (_, _) => ReportStartup("Workspace loaded");
             _window.Content = view;
             ReportStartup("Activating application window");
@@ -33,7 +34,6 @@ public sealed partial class App : Application
     {
         Console.WriteLine("DockingScene: " + stage + (error is null ? "" : "\n" + error));
 #if BROWSER_WASM
-        // Primitive JSON converters do not depend on constructor parameter metadata removed by trimming.
         Uno.Foundation.WebAssemblyRuntime.InvokeJS("globalThis.dockingSceneStartup = {stage:" + JsonSerializer.Serialize(stage) + ",error:" + JsonSerializer.Serialize(error?.ToString()) + "}; console.info('DockingScene startup', globalThis.dockingSceneStartup);");
 #endif
     }
