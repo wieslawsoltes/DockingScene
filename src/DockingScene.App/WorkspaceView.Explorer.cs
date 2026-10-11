@@ -39,7 +39,7 @@ public sealed partial class WorkspaceView
         object Label(string text, string glyph, string id)
         {
             var row = DockChrome.Identify(new StackPanel { Orientation = Orientation.Horizontal, Spacing = 5, Height = 22, VerticalAlignment = VerticalAlignment.Center }, "source-tree:" + id);
-            var icon = DockChrome.Identify(DockChrome.Glyph(glyph, _theme.Text, 13), "source-tree-icon:" + id);
+            var icon = DockChrome.Identify((Microsoft.UI.Xaml.Shapes.Path)DockChrome.Glyph(glyph, _theme.Text, 13), "source-tree-icon:" + id);
             var caption = DockChrome.Identify(DockChrome.Text(text, _theme), "source-tree-text:" + id, text);
             labels.Add((caption, icon)); row.Children.Add(icon); row.Children.Add(caption); return row;
         }

@@ -33,9 +33,9 @@ The workflow serves the actual distribution under `/DockingScene/`. Three indepe
 
 **Standalone tabs, performance and lifetime: 32 scenarios.** These cover lazy content, bounded header realization, independent lanes, all overflow policies, fixed/shrunk widths, physical selection of every compressed header, four placements, pinning, closing/menu callbacks, filtered digits, application versus owned content, reentrant factories, same-id replacement and coalesced unregister/register. The 2,002-tab workload checks one measure per new header, no new measures or lane plans for 200 selections, and one affected header measure for rename/replacement. PNG pixel checks inspect real rendered host-tab colors rather than DOM properties.
 
-**Retained host, edge scrolling and Metro chrome: 21 scenarios.** Twelve reset/tab-click cycles type immediately without a second content click, then also verify editor-body clicking; another check preserves caret selection across tabs. Twenty activations require zero new geometry builds and zero new auxiliary controls, including unchanged individual identities and correct PNG tab paint. Further cases cover repeated keyboard edits of one retained splitter, color-only themes, horizontal/vertical drag scrolling, cancellation and disabled scrolling. A child-directed focus transfer must remain outside the document and accept subsequent toolbar keyboard input.
+**Retained host, edge scrolling and Metro chrome: 23 scenarios.** Twelve reset/tab-click cycles type immediately without a second content click, then also verify editor-body clicking; another check preserves caret selection across tabs. Twenty activations require zero new geometry builds and zero new auxiliary controls, including unchanged individual identities and correct PNG tab paint. Further cases cover repeated keyboard edits of one retained splitter, color-only themes, horizontal/vertical drag scrolling, cancellation and disabled scrolling. A child-directed focus transfer must remain outside the document and accept subsequent toolbar keyboard input.
 
-These 79 named browser scenarios do not represent separate platforms or exhaustive vendor conformance tests. Screenshots and traces preserve successful states and failures. Report actual result counts from the final revision, not an earlier passing subset.
+These 81 named browser scenarios do not represent separate platforms or exhaustive vendor conformance tests. Screenshots and traces preserve successful states and failures. Report actual result counts from the final revision, not an earlier passing subset.
 
 ## Live deployment
 
@@ -52,3 +52,7 @@ CI uses the actual Uno Skia renderer through **ANGLE/SwiftShader software WebGL*
 ## Metro appearance regressions
 
 Ten additional cases inspect status/gripper/hover/highlight PNG pixels and use physical input for grip dragging, contextual closing, Appearance policies, native compact-tree invocation and Properties metadata/new-window selection. Caption button identities must survive activation and dark/light transitions. Hover and strip-highlight changes must not perform new text measurements or lane allocation. These extend the retained-host suite; no prior assertion was removed. Final workflow artifacts determine which exact revision passed.
+
+## Metro template and inspector follow-up
+
+Two further physical-input cases cover collapse/re-expansion with dark-theme icon pixels, native tree keyboard invocation, and an unapplied Properties draft surviving document registration. Hover also checks that no header controls are allocated. See [metro-follow-up.md](metro-follow-up.md) for the template failure and fix. These bring the retained-host/Metro suite to 23 and the complete browser gate to 81 named scenarios.

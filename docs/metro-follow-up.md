@@ -1,0 +1,13 @@
+# Metro template and inspector follow-up
+
+The `2492be4` run passed 78 of 79 browser scenarios. The failure screenshot showed Solution Explorer rendering `Microsoft.UI.Xaml.Controls.StackPanel` instead of its vector-label content. The default TreeView item template formats `TreeViewNode.Content` using a TextBlock; the native tree structure and pointer semantics were still present, but the intended labels were not.
+
+`ExplorerResources` now supplies a compiled `ContentPresenter` item template in RootNodes mode. This presents the label visual instead of converting it to text. The native TreeView still owns expansion, selection, keyboard navigation and virtualization. The static example catalog disables source-row rearrangement; it does not imply a source-filesystem editor. No vendor artwork or font files are included.
+
+The same review found that collapsed nodes are outside the realized visual subtree walked by the sample's theme updater. Each tree now propagates its foreground changes to all of its retained label and icon objects, including collapsed nodes. This uses one property callback per tree, no reflection-based binding per icon and no label recreation. The actual foreground pixels are checked after collapsing, changing theme and expanding again; native ArrowDown/Enter must open the corresponding retained editor.
+
+The recovered commit `0ad7fb9` is now attached to the PR branch. It completes pointer capture before restoring tab content focus, verifies the actual focused descendant after materializing the selected presenter, and prevents transient ComboBox selection notifications from overwriting a same-window property draft when the window registry changes. A new real-input regression types a property draft, registers another document and applies the original draft to its unchanged target.
+
+These checks supplement the existing Metro appearance scenarios. Hover verifies zero new measurements, lane allocations **and header controls**. Final workflow artifacts identify the executed source revision. This is not a complete vendor pixel comparison, native desktop runtime certification or hardware-GPU benchmark.
+
+Primary references: [Uno TreeView implementation contract](https://platform.uno/docs/articles/implemented/microsoft-ui-xaml-controls-treeview.html), [native ItemTemplate property](https://learn.microsoft.com/en-us/windows/winui/api/microsoft.ui.xaml.controls.treeview.itemtemplate), and the [Uno default TreeView template](https://github.com/unoplatform/uno/blob/951b7b464b8372daa95dae6eeedf9ac6c8109b90/src/Uno.UI.FluentTheme/Resources/PriorityDefault/TreeView.xaml).

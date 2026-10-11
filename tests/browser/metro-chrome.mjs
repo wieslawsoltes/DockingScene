@@ -56,6 +56,7 @@ export async function runMetroChromeTests({page, state, test, reset, click, wait
     assert.deepEqual(await bounds('tab:main'), r);
     assert.equal((await docs()).textMeasurements, before.textMeasurements);
     assert.equal((await docs()).layoutPasses, before.layoutPasses);
+    assert.equal((await docs()).headersCreated, before.headersCreated);
     await page.mouse.move(800, 300); await wait(() => !globalThis.dockingScene.bounds['close:main']);
   });
   await test('A hovered unselected document can close without activating it', async () => {
@@ -86,6 +87,36 @@ export async function runMetroChromeTests({page, state, test, reset, click, wait
     const r = await bounds('source-tree:DockManager.cs'); assert(r.height <= 24);
     const next = await bounds('source-tree:DockTree.cs'); assert(next.y - r.y <= 26);
     await click('source-tree:DockManager.cs'); await wait(() => globalThis.dockingScene.activeWindowId === 'code');
+  });
+  await test('Collapsed native tree labels follow themes and retain keyboard navigation', async () => {
+    await reset();
+    try {
+      await click('source-tree:Core'); await page.keyboard.press('ArrowLeft');
+      await wait(() => !globalThis.dockingScene.bounds['source-tree:DockManager.cs']);
+      await menu('menubar:Theme', 'appmenu:Metro Dark');
+      await click('source-tree:Core'); await page.keyboard.press('ArrowRight');
+      const icon = await bounds('source-tree-icon:DockManager.cs'); await settle();
+      const image = pngPixels(await page.screenshot());
+      let foregroundPixels = 0;
+      for (let y = Math.ceil(icon.y); y < icon.y + icon.height - 1; y++)
+        for (let x = Math.ceil(icon.x); x < icon.x + icon.width - 1; x++) {
+          const [r,g,b] = image.rgb(x,y);
+          if (r > 210 && g > 210 && b > 210 && Math.max(r,g,b) - Math.min(r,g,b) < 5) foregroundPixels++;
+        }
+      assert(foregroundPixels >= 8, 'Collapsed icons must acquire the dark theme foreground before expansion');
+      await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      await wait(() => globalThis.dockingScene.activeWindowId === 'code');
+      await bounds('editor:code');
+    } finally { await menu('menubar:Theme', 'appmenu:Metro Light'); await reset(); }
+  });
+  await test('Registering a document preserves an unapplied property inspector draft', async () => {
+    await reset(); await click('properties:title');
+    await page.keyboard.press('Control+a'); await page.keyboard.type('Pending.xaml');
+    await click('toolbar:New'); await settle();
+    assert.equal((await state()).inspectorWindowId, 'main');
+    await click('properties:apply');
+    await wait(() => globalThis.dockingScene.windows.some(w => w.id === 'main' && w.title === 'Pending.xaml'));
+    await reset();
   });
   await test('Compact property inspector applies metadata and tracks newly registered windows', async () => {
     await reset(); await bounds('properties:apply');
