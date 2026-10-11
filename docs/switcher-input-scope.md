@@ -17,3 +17,7 @@ This uses the existing Uno Skia/WinUI preview event model; it does not intercept
 The existing MRU Enter and Escape scenarios are unchanged. Three additional real-input scenarios check six immediate Enter openings and six immediate Escape openings **without waiting for overlay geometry or focus**, one-step Up/Down movement, scope detachment, ordinary editor newline input after dismissal, and an F8/Enter switch that must not edit the background document.
 
 `switcherSelection` and `switcherInputScoped` are read-only observations in the opt-in sample diagnostics. They are not hooks for changing the model. Native desktop, cross-browser and screen-reader behavior still require additional validation; these tests do not certify every platform's focus system or complete Actipro parity.
+
+## Enter character dispatch follow-up
+
+A later accelerated projection run exposed an extra newline in the previously focused editor after committing Enter on KeyDown. CharacterReceived may follow a handled KeyDown independently. The switcher now retains focus and its modal scope through Enter-down and commits on Enter-up. A held-key browser regression checks both the open scope before release and unchanged background text after completion. Cancellation and direct programmatic Commit keep their existing behavior.

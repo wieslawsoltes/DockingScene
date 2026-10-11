@@ -29,6 +29,7 @@ public partial class DockSite
     public bool IsInteractionActive => !_dragIds.IsEmpty || _splitDrag is not null || _autoResizeId is not null;
     private void MoveInteraction(PointerRoutedEventArgs e)
     {
+        if (CancelStaleInteraction()) { e.Handled = true; return; }
         var p = e.GetCurrentPoint(_canvas).Position;
         if (MoveAutoHideResize(p)) { e.Handled = true; return; }
         if (_splitDrag is { } split)
@@ -126,6 +127,7 @@ public partial class DockSite
         // leaves an external toolbar, even though the overlay is already painted.
         _switcher.AcquireInputScope(XamlRoot?.Content);
         if (direction < 0) _switcher.Move(-2); _root.Children.Add(_switcher);
+        _switcher.TakeInputFocus();
     }
     private void CloseSwitcher(bool commit)
     {

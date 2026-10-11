@@ -73,7 +73,7 @@ Arrow/Home/End navigation inside a tab header follows visual lane order. Editor 
 
 ## Virtualization and ownership
 
-Header measurement and allocation run when metadata, theme, options or the available size change. Scrolling reuses that plan and realizes only the intersecting header interval plus 100 logical units of overscan per lane, using `TabStripMetrics` binary searches. Each lane has a real Uno clip; diagnostic bounds obey those clips.
+Measurements are cached per item identity and presentation key. Metadata changes remeasure only affected headers; theme/extent policy changes invalidate the relevant cache. Lane allocation is reused while measurements, extent and overflow policy are unchanged. Scrolling reuses that plan and realizes only the intersecting header interval plus 100 logical units of overscan per lane, using `TabStripMetrics` binary searches. Each lane has a real Uno clip; diagnostic bounds obey those clips.
 
 Only selected content factories are invoked. Switching overflow modes, moving a tab between lanes, changing strip placement and hiding/showing the strip retain the content object. Standalone controls do not dispose application-owned content on close.
 
@@ -82,3 +82,9 @@ Only selected content factories are invoked. Switching overflow modes, moving a 
 Choose **Tab options → Open standalone tab playground** in the sample. Its 20 synthetic tabs expose all six modes, fixed/measured extents, four placements, strip visibility, a close veto and an application-added menu entry. Tests operate these actual controls with pointer and keyboard input and observe opt-in diagnostics; there is no JavaScript model mutation hook.
 
 This increment does not implement full Actipro templates, slanted/overlapping borders, rotated content, layout animations, complete native accessibility peers or detached OS hosts. It does not include the separate layout-profile model update that was blocked during upload. The existing persistence and exact reopen-position limitations remain documented in `parity.md`.
+
+## Standalone reordering and diagnostics
+
+`CanTabsDrag` enables real pointer reordering within a display-mode lane. `ReorderTab(id, finalIndex)` offers the same operation directly. `TabReordering` can veto the mutation; `TabReordered` reports its final indexes. Escape, capture loss, unload or intervening collection changes cancel the drag. Content identity is preserved. Cross-lane promotion, edge-autoscroll and detached/cross-site transfers remain separate scope.
+
+`TextMeasurementCount`, `HeaderLayoutCount`, `HeaderCreationCount` and `RealizedHeaderCount` expose the performed work without claiming a hardware frame rate. The performance playground and tests use these counters to reject redundant remeasurement and unbounded header realization.

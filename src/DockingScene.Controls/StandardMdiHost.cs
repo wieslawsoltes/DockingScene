@@ -28,8 +28,10 @@ public sealed class StandardMdiHost : UserControl
     {
         if (_manager is null || _content is null) return;
         var layout = _manager.Layout;
+        var index = DockLayoutIndex.For(layout);
+        var ids = _ids.ToHashSet(StringComparer.Ordinal);
         _canvas.Background = DockChrome.Brush(_theme.InactiveTab);
-        foreach (var id in _windows.Keys.Where(id => !_ids.Contains(id)).ToArray())
+        foreach (var id in _windows.Keys.Where(id => !ids.Contains(id)).ToArray())
         { _windows[id].SetWindowContent(null); _canvas.Children.Remove(_windows[id]); _windows.Remove(id); }
         var viewport = new DockRect(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight));
         int minimized = 0;
@@ -47,9 +49,13 @@ public sealed class StandardMdiHost : UserControl
                 window.MinimizeRequested += () => _manager.SetMdiState(key, MdiWindowState.Minimized);
                 _windows.Add(id, window); _canvas.Children.Add(window);
             }
-            window.MinimumSize = model.MinimumSize with { Height = model.MinimumSize.Height + _theme.TitleHeight };
-            window.MaximumSize = model.MaximumSize;
-            window.CanResize = model.Capabilities.HasFlag(DockCapabilities.Resize) && !layout.IsLayoutLocked;
+            // Model constraints describe content; both frame limits include the same chrome.
+            window.MinimumSize = new(model.MinimumSize.Width + 2, model.MinimumSize.Height + _theme.TitleHeight + 2);
+            window.MaximumSize = new(model.MaximumSize.Width + 2, model.MaximumSize.Height + _theme.TitleHeight + 2);
+            window.CanResize = _manager.Allows(id, DockCapabilities.Resize) && !layout.IsLayoutLocked;
+            window.CanMove = _manager.Allows(id, DockCapabilities.Drag) && !layout.IsLayoutLocked;
+            window.CanClose = _manager.Allows(id, DockCapabilities.Close);
+            window.ShowMaximize = window.CanResize; window.ShowMinimize = window.CanResize;
             window.IsMaximized = model.MdiState == MdiWindowState.Maximized;
             var bounds = model.MdiState switch
             {
@@ -58,7 +64,7 @@ public sealed class StandardMdiHost : UserControl
                 _ => WindowGeometry.KeepVisible(model.MdiBounds, viewport)
             };
             window.SetBounds(bounds);
-            int rank = layout.ActivationHistory.IndexOf(id);
+            int rank = index.ActivationRank(id);
             Canvas.SetZIndex(window, rank < 0 ? 0 : layout.ActivationHistory.Length - rank + 1);
             window.UpdateChrome(model.Title + (model.IsModified ? " *" : ""), _theme, layout.ActiveWindowId == id);
             if (model.MdiState == MdiWindowState.Minimized) window.SetWindowContent(null);

@@ -72,10 +72,11 @@ public sealed class DockSourceBinding<T> : IDisposable where T : class
             LastResult = operations.Count == 0 ? new(true, before.Revision) : _manager.Transaction("SynchronizeSources", operations, before.Revision);
             if (LastResult.Success)
             {
-                foreach (var item in _observed) item.PropertyChanged -= PropertyChanged;
-                _observed.Clear(); _owned = next;
-                foreach (var item in next.Values.OfType<INotifyPropertyChanged>())
-                    if (_observed.Add(item)) item.PropertyChanged += PropertyChanged;
+                var observed = new HashSet<INotifyPropertyChanged>(next.Values.OfType<INotifyPropertyChanged>(), ReferenceEqualityComparer.Instance);
+                foreach (var item in _observed.Where(item => !observed.Contains(item)).ToArray())
+                { item.PropertyChanged -= PropertyChanged; _observed.Remove(item); }
+                foreach (var item in observed) if (_observed.Add(item)) item.PropertyChanged += PropertyChanged;
+                _owned = next;
             }
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)

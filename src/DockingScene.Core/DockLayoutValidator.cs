@@ -87,11 +87,12 @@ public static class DockLayoutValidator
         }
         foreach (var id in layout.HiddenWindows) AddWindow(id);
         if (locations.Count != layout.Windows.Count) Fail("Every registered window must have exactly one location.");
+        var hidden = layout.HiddenWindows.ToHashSet(StringComparer.Ordinal);
         if (validateActivation)
         {
-            if (layout.ActiveWindowId is not null && (!locations.Contains(layout.ActiveWindowId) || layout.HiddenWindows.Contains(layout.ActiveWindowId))) Fail("Active window is not open.");
+            if (layout.ActiveWindowId is not null && (!locations.Contains(layout.ActiveWindowId) || hidden.Contains(layout.ActiveWindowId))) Fail("Active window is not open.");
             if (layout.ActivationHistory.Distinct(StringComparer.Ordinal).Count() != layout.ActivationHistory.Length ||
-                layout.ActivationHistory.Any(id => id is null || !locations.Contains(id) || layout.HiddenWindows.Contains(id))) Fail("Invalid activation history.");
+                layout.ActivationHistory.Any(id => id is null || !locations.Contains(id) || hidden.Contains(id))) Fail("Invalid activation history.");
         }
     }
     private static bool ValidBounds(DockRect bounds) => bounds.IsValid && double.IsFinite(bounds.Right) && double.IsFinite(bounds.Bottom);

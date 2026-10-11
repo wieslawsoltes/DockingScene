@@ -92,9 +92,12 @@ public sealed partial class WorkspaceView
         }, "editor:" + window.Id, window.Title + " editor");
         _editors[window.Id] = new(editor); _documents[window.Id] = source;
         ScrollViewer.SetHorizontalScrollBarVisibility(editor, ScrollBarVisibility.Auto); ScrollViewer.SetVerticalScrollBarVisibility(editor, ScrollBarVisibility.Auto);
+        var owner = _site.Manager;
         string previous = source.ReplaceLineEndings("\n");
         editor.TextChanged += (_, _) =>
         {
+            if (!ReferenceEquals(owner, _site.Manager) || !owner.Layout.Windows.ContainsKey(window.Id) ||
+                !_editors.TryGetValue(window.Id, out var currentEditor) || !currentEditor.TryGetTarget(out var instance) || !ReferenceEquals(instance, editor)) return;
             // Uno may deliver the initial Text assignment after the handler is attached. Initialization is not an edit.
             // WinUI/Uno uses CR internally. Canonicalize line separators without
             // suppressing actual text edits or altering the control's caret offsets.

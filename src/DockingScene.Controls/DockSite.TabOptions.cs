@@ -37,11 +37,12 @@ public partial class DockSite
                 _tabAdapters.Add(tabs, new());
                 tabs.PinRequested += (id, pinned) => Submit(Manager.SetPinned(id, pinned));
             }
+            bool identityChanged = tabs.AutomationIdPrefix != groupId;
             tabs.AutomationIdPrefix = groupId;
             tabs.OverflowBehavior = tabs.IsToolGroup ? ToolTabOverflowBehavior : DocumentTabOverflowBehavior;
             tabs.HasTabPinButtons = !tabs.IsToolGroup && HasDocumentTabPinButtons;
             tabs.IsTabStripVisible = !tabs.IsToolGroup || tabs.Items.Count != 1 || ToolWindowsSingleTabLayoutBehavior == SingleTabLayoutBehavior.Show;
-            tabs.InvalidateTabPresentation();
+            if (identityChanged) tabs.InvalidateTabPresentation();
         }
     }
     private AdvancedTabControl? ActiveDocumentTabs()

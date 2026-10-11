@@ -31,7 +31,7 @@ public partial class AdvancedTabControl
     }
     private void ArrangeHeaders(bool reveal = false)
     {
-        if (!_ready || _arranging || _measurements.Length != Items.Count) return;
+        if (!_ready || _itemsDirty || _arranging || _measurements.Length != Items.Count) return;
         _arranging = true;
         try
         {
@@ -39,7 +39,14 @@ public partial class AdvancedTabControl
             double total = Math.Max(0, vertical ? ActualHeight : ActualWidth);
             double actions = Math.Min(total, vertical ? ActionCount > 0 ? Theme.TabHeight : 0 : ActionCount * 23);
             double available = Math.Max(0, total - actions);
-            _plan = TabLayoutEngine.Arrange(_measurements, available, OverflowBehavior);
+            if (_plan is null || _arrangedRevision != _measuresRevision || _arrangedExtent != available || _arrangedOverflow != OverflowBehavior || _arrangedVertical != vertical)
+            {
+                _plan = TabLayoutEngine.Arrange(_measurements, available, OverflowBehavior); HeaderLayoutCount++;
+                _arrangedRevision = _measuresRevision; _arrangedExtent = available; _arrangedOverflow = OverflowBehavior; _arrangedVertical = vertical;
+                _slots.Clear();
+                for (int l = 0; l < _plan.Lanes.Length; l++)
+                    for (int j = 0; j < _plan.Lanes[l].Indices.Length; j++) _slots.Add(Items[_plan.Lanes[l].Indices[j]].Id, (l, j));
+            }
             for (int i = 0; i < 3; i++)
             {
                 var lane = _lanes[i]; var plan = _plan.Lanes[i]; lane.Layout = plan;
@@ -56,12 +63,10 @@ public partial class AdvancedTabControl
     private void RevealSelection()
     {
         if (_selectedId is null || OverflowBehavior == TabOverflowBehavior.None) return;
-        foreach (var lane in _lanes)
+        if (_slots.TryGetValue(_selectedId, out var slot))
         {
-            if (lane.Layout is not { } plan || plan.Extent <= 0) continue;
-            int index = -1;
-            for (int i = 0; i < plan.Indices.Length; i++) if (Items[plan.Indices[i]].Id == _selectedId) { index = i; break; }
-            if (index >= 0) lane.Offset = plan.Metrics.BringIntoView(index, lane.Offset, plan.Extent);
+            var lane = _lanes[slot.Lane];
+            if (lane.Layout is { Extent: > 0 } plan) lane.Offset = plan.Metrics.BringIntoView(slot.Slot, lane.Offset, plan.Extent);
         }
     }
     private void ScrollLane(Lane lane, double distance)
@@ -72,7 +77,7 @@ public partial class AdvancedTabControl
     }
     private Lane ActiveScrollLane()
     {
-        var selected = Items.FirstOrDefault(i => i.Id == _selectedId);
+        var selected = _selectedId is null ? null : _byId.GetValueOrDefault(_selectedId);
         var lane = selected is null ? _lanes[1] : _lanes[TabLayoutEngine.LaneIndex(Mode(selected))];
         return lane.Layout?.IsOverflowing == true ? lane : _lanes.FirstOrDefault(l => l.Layout?.IsOverflowing == true) ?? lane;
     }
@@ -83,7 +88,8 @@ public partial class AdvancedTabControl
     }
     private void RealizeHeaders()
     {
-        if (_plan is null || _measurements.Length != Items.Count) return;
+        _headerPresentationPending = false;
+        if (_itemsDirty || _plan is null || _measurements.Length != Items.Count) return;
         bool vertical = Placement is TabPlacement.Left or TabPlacement.Right;
         var visible = new HashSet<string>(StringComparer.Ordinal);
         foreach (var lane in _lanes)

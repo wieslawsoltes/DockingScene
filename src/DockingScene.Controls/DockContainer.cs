@@ -13,6 +13,7 @@ public class DockContainer : UserControl
     private readonly TextBlock _caption = new() { VerticalAlignment = VerticalAlignment.Center, Margin = new(6, 0, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
     private readonly StackPanel _buttons = new() { Orientation = Orientation.Horizontal };
     public AdvancedTabControl Tabs { get; } = new();
+    private (string Id, DockWindow? Selected, DockTheme Theme, bool Active, bool AutoHidden, bool Locked, DockCapabilities Allowed)? _chrome;
     public DockGroup? Group { get; private set; }
     public event EventHandler<WindowDragEventArgs>? HeaderPointerPressed;
     public event Action? HeaderDoubleTapped;
@@ -31,13 +32,17 @@ public class DockContainer : UserControl
         _caption.DoubleTapped += (_, e) => { HeaderDoubleTapped?.Invoke(); e.Handled = true; };
         _caption.RightTapped += (_, e) => { OptionsRequested?.Invoke(_caption); e.Handled = true; };
     }
-    public void Update(DockGroup group, IReadOnlyList<AdvancedTabItem> items, DockLayout layout, DockTheme theme, bool autoHidden = false)
+    public void Update(DockGroup group, IReadOnlyList<AdvancedTabItem> items, DockLayout layout, DockTheme theme, bool autoHidden = false, DockCapabilities allowed = DockCapabilities.All)
     {
         Group = group;
         bool tools = group.Kind == GroupKind.Tools;
         bool active = group.Windows.Contains(layout.ActiveWindowId ?? "");
         var selected = group.SelectedId is null ? null : layout.Windows[group.SelectedId];
         bool title = tools && selected?.HasTitleBar == true;
+        var chrome = (group.Id, selected, theme, active, autoHidden, layout.IsLayoutLocked, allowed);
+        if (_chrome != chrome)
+        {
+        _chrome = chrome;
         _root.BorderBrush = DockChrome.Brush(theme.Border); _root.BorderThickness = tools ? new(1) : new(0);
         _root.RowDefinitions[0].Height = new(title ? theme.TitleHeight : 0);
         _title.Visibility = title ? Visibility.Visible : Visibility.Collapsed;
@@ -56,8 +61,9 @@ public class DockContainer : UserControl
         if (tools)
         {
             Add("Options", DockGlyphs.Chevron, b => OptionsRequested?.Invoke(b), true);
-            Add(autoHidden ? "Pin" : "AutoHide", autoHidden ? DockGlyphs.Unpin : DockGlyphs.Pin, _ => PinRequested?.Invoke(), selected?.Capabilities.HasFlag(DockCapabilities.AutoHide) == true);
-            Add("Close", DockGlyphs.Close, _ => CloseRequested?.Invoke(), selected?.Capabilities.HasFlag(DockCapabilities.Close) == true);
+            Add(autoHidden ? "Pin" : "AutoHide", autoHidden ? DockGlyphs.Unpin : DockGlyphs.Pin, _ => PinRequested?.Invoke(), !layout.IsLayoutLocked && ((selected?.Capabilities ?? DockCapabilities.None) & allowed).HasFlag(autoHidden ? DockCapabilities.Dock : DockCapabilities.AutoHide));
+            Add("Close", DockGlyphs.Close, _ => CloseRequested?.Invoke(), ((selected?.Capabilities ?? DockCapabilities.None) & allowed).HasFlag(DockCapabilities.Close));
+        }
         }
         Tabs.IsToolGroup = tools; Tabs.ShowNewTabButton = !tools;
         Tabs.Update(items, group.SelectedId, theme, group.TabPlacement, active);

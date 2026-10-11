@@ -59,7 +59,7 @@ The optional dispatcher callback must schedule actions on the consumer UI dispat
 
 `DockSourceBinding<T>` synchronizes application-owned collections and item property notifications using a single batch. It never takes ownership of explicitly registered windows. Duplicate IDs and collisions are rejected. A removal veto leaves the manager unchanged even though the external collection may already have changed; the binding reports `SynchronizationFailed`. Reconcile the source or call `Synchronize` after resolving the conflict. Two-way automatic removal of application items following a user close is not implemented.
 
-The application owns content and view-model lifetime. The controls cache actual content lazily by window ID and reparent the same visual through a single-presenter lease. Hiding does not destroy the content. Unregistering removes the control cache entry. Application content and view models are not serialized. The MVVM adapters do not dispose their content. DockSite invokes `IDisposable.Dispose` on factory-created content when its window is unregistered; factories must account for that ownership rule when returning shared objects. Dispose MVVM adapters and source bindings when their application owner is finished with them.
+The application owns content and view-model lifetime. The controls cache actual content lazily by window ID and reparent the same visual through a single-presenter lease. Hiding does not destroy the content. Unregistering removes the control cache entry. Application content and view models are not serialized. The MVVM adapters do not dispose their content. DockSite releases content without disposal by default. Set `DisposeContentOnUnregister = true` only for exclusively owned factory results; it then disposes on unregister or manager replacement, never ordinary close/hide. `WindowContentReleased` reports release. Same-id unregister/register transitions release the old content even when rendering is coalesced. Dispose MVVM adapters and source bindings when their application owner is finished with them.
 
 ## Layout and interaction
 
@@ -78,3 +78,9 @@ This format is DockingScene's own schema. Actipro XML import/export, tool-only r
 ## Rendering
 
 The controls use Uno layout, input, text and Skia drawing. `VectorPath` parses bounded SVG path data into neutral segments; `GlyphGeometry` maps those segments into explicit Uno path figures. This avoids runtime reflection/XAML path conversion in trimmed browser builds. No Direct3D, Vulkan, WebGPU or hardware-GPU throughput claim is made by the software-rendered Chromium CI run.
+
+## Indexed snapshots and no-op changes
+
+`DockLayoutIndex` uses a weak, reference-identity cache over validated immutable snapshots. Location/group/node/rank lookups are constant-time after a linear build; two different snapshots at the same revision never share an index. Pure tree maps retain unchanged children. Repeated activation and value-equal metadata updates do not advance revision, emit lifecycle notifications or clear redo history. Complete validation remains in place for changed candidates.
+
+See [performance review](performance-review.md) for selective MVVM updates, cached header measurement, stream bounds, ownership regressions and measured scope.

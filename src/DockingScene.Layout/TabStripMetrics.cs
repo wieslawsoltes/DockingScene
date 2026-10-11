@@ -25,6 +25,7 @@ public sealed class TabStripMetrics
     public TabRange VisibleRange(double offset, double viewport, double overscan = 0)
     {
         Validate(offset, viewport); if (!double.IsFinite(overscan) || overscan < 0) throw new ArgumentOutOfRangeException(nameof(overscan));
+        if (viewport == 0 && overscan == 0) return new(Math.Clamp(UpperBound(offset) - 1, 0, Count), 0);
         double start = Math.Max(0, offset - overscan), end = offset + viewport + overscan;
         int first = Math.Clamp(UpperBound(start) - 1, 0, Count), last = Math.Clamp(LowerBound(end), first, Count);
         return new(first, Math.Max(0, last - first));

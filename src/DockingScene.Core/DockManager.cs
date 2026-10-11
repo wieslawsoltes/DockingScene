@@ -56,13 +56,16 @@ public sealed partial class DockManager
             try
             {
                 var candidate = change(before);
+                if (ReferenceEquals(candidate, before) && commitJournal is null) return new(true, before.Revision);
                 // Validate structure before any tree-based activation repair, including for Restore.
                 DockLayoutValidator.Validate(candidate, Policy.MaximumWindows, validateActivation: false);
                 var after = DockTree.RepairActivation(candidate) with { Revision = checked(before.Revision + 1) };
                 DockLayoutValidator.Validate(after, Policy.MaximumWindows);
-                var closed = before.Windows.Keys.Where(id => !before.HiddenWindows.Contains(id) &&
-                    (!after.Windows.ContainsKey(id) || after.HiddenWindows.Contains(id))).ToImmutableArray();
-                if (!closing.IsDefault) closed = closed.Concat(closing.Where(id => before.Windows.ContainsKey(id) && !before.HiddenWindows.Contains(id))).Distinct(StringComparer.Ordinal).ToImmutableArray();
+                var hiddenBefore = before.HiddenWindows.ToHashSet(StringComparer.Ordinal);
+                var hiddenAfter = after.HiddenWindows.ToHashSet(StringComparer.Ordinal);
+                var closed = before.Windows.Keys.Where(id => !hiddenBefore.Contains(id) &&
+                    (!after.Windows.ContainsKey(id) || hiddenAfter.Contains(id))).ToImmutableArray();
+                if (!closing.IsDefault) closed = closed.Concat(closing.Where(id => before.Windows.ContainsKey(id) && !hiddenBefore.Contains(id))).Distinct(StringComparer.Ordinal).ToImmutableArray();
                 var changing = new DockChangingEventArgs(command, before, after, closed);
                 Changing?.Invoke(this, changing);
                 if (changing.Cancel) return new(false, before.Revision, changing.Reason ?? "Change cancelled.");

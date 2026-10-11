@@ -9,6 +9,8 @@
   <Project Path="src/DockingScene.App/DockingScene.App.csproj" />
  </Folder>
  <Folder Name="/tests/">
+  <Project Path="tests/DockingScene.BulkSpecs/DockingScene.BulkSpecs.csproj" />
+  <Project Path="tests/DockingScene.GeometryReviewSpecs/DockingScene.GeometryReviewSpecs.csproj" />
   <Project Path="tests/DockingScene.Specs/DockingScene.Specs.csproj" />
   <Project Path="tests/DockingScene.LayoutSpecs/DockingScene.LayoutSpecs.csproj" />
   <Project Path="tests/DockingScene.ParitySpecs/DockingScene.ParitySpecs.csproj" />
@@ -17,5 +19,7 @@
   <Project Path="tests/DockingScene.VectorSpecs/DockingScene.VectorSpecs.csproj" />
   <Project Path="tests/DockingScene.TabSpecs/DockingScene.TabSpecs.csproj" />
   <Project Path="tests/DockingScene.TabLayoutSpecs/DockingScene.TabLayoutSpecs.csproj" />
+  <Project Path="tests/DockingScene.PerformanceSpecs/DockingScene.PerformanceSpecs.csproj" />
+  <Project Path="tests/DockingScene.SerializationSpecs/DockingScene.SerializationSpecs.csproj" />
  </Folder>
 </Solution>

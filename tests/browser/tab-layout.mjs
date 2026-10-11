@@ -2,6 +2,7 @@ import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 import { captureDiagnostics } from './diagnostics.mjs';
+import { runPerformanceRegressions } from './performance-regressions.mjs';
 import { readHitBounds } from './hit-targets.mjs';
 import { validateHitTargetReader } from './hit-targets.contract.mjs';
 
@@ -146,6 +147,7 @@ try {
     await page.keyboard.press('Control+Shift+1'); await wait(() => globalThis.dockingScene.activeWindowId === 'preview');
     await page.keyboard.press('Control+Alt+9'); await wait(() => globalThis.dockingScene.activeWindowId === 'welcome');
   });
+  await runPerformanceRegressions({ page, state, strip, test, wait, settle, bounds, click, setting, mode });
   await test('No unhandled exceptions and verified deployment identity', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {

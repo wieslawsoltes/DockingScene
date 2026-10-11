@@ -24,9 +24,10 @@ public partial class DockSite
         grip.PointerPressed += (_, e) =>
         {
             if (!e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
+            if (!_canvas.CapturePointer(e.Pointer)) return;
             _hoverClose.Stop(); _hoverOpen.Stop(); _autoResizeId = id; _autoResizeSide = group.Side;
             _autoResizeSize = Manager.Layout.Windows[id].AutoHideSize; _autoResizeRevision = Manager.Layout.Revision;
-            _canvas.CapturePointer(e.Pointer); e.Handled = true;
+            e.Handled = true;
         };
     }
     private static DockRect AutoHideGripBounds(DockRect bounds, DockSide side) => side switch
