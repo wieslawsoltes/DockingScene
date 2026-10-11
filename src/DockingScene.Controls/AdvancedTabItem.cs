@@ -9,7 +9,7 @@ namespace DockingScene.Controls;
 public class AdvancedTabItem : ContentControl
 {
     private static DependencyProperty Property(string name, Type type, object? value) => DependencyProperty.Register(name, type, typeof(AdvancedTabItem), new PropertyMetadata(value, Changed));
-    private static void Changed(DependencyObject sender, DependencyPropertyChangedEventArgs args) => ((AdvancedTabItem)sender).MetadataChanged?.Invoke();
+    private static void Changed(DependencyObject sender, DependencyPropertyChangedEventArgs args) => ((AdvancedTabItem)sender).MetadataChanged?.Invoke((AdvancedTabItem)sender);
     public static readonly DependencyProperty IdProperty = Property(nameof(Id), typeof(string), "");
     public static readonly DependencyProperty HeaderProperty = Property(nameof(Header), typeof(string), "Document");
     public static readonly DependencyProperty IsPinnedProperty = Property(nameof(IsPinned), typeof(bool), false);
@@ -27,7 +27,7 @@ public class AdvancedTabItem : ContentControl
     public bool CanClose { get => (bool)GetValue(CanCloseProperty); set => SetValue(CanCloseProperty, value); }
     public string? TabColor { get => (string?)GetValue(TabColorProperty); set => SetValue(TabColorProperty, value); }
     public Func<object?>? ContentFactory { get; set; }
-    internal event Action? MetadataChanged;
+    internal event Action<AdvancedTabItem>? MetadataChanged;
     public AdvancedTabItem() => Id = Guid.NewGuid().ToString("N");
     public void EnsureContent() { if (ContentFactory is { } factory) { Content = factory(); ContentFactory = null; } }
 }

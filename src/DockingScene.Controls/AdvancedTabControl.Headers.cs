@@ -9,6 +9,7 @@ public partial class AdvancedTabControl
 {
     private HeaderVisual CreateHeader(AdvancedTabItem item)
     {
+        HeaderCreationCount++;
         var grid = new Grid(); grid.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); grid.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         var text = DockChrome.Text(item.Header + (item.IsModified ? " *" : ""), Theme);
         if (item.IsPreview) text.FontStyle = Windows.UI.Text.FontStyle.Italic;
@@ -22,7 +23,12 @@ public partial class AdvancedTabControl
         select.AddHandler(PointerPressedEvent, new PointerEventHandler((_, e) =>
         {
             if (e.GetCurrentPoint(select).Properties.IsMiddleButtonPressed) { if (CanTabsCloseOnMiddleClick) RequestClose(item); e.Handled = true; return; }
-            if (e.GetCurrentPoint(select).Properties.IsLeftButtonPressed) { Select(item.Id, true); TabPointerPressed?.Invoke(this, new(item.Id, select, e)); }
+            if (e.GetCurrentPoint(select).Properties.IsLeftButtonPressed) { Select(item.Id, true);
+                if (CanTabsDrag)
+                {
+                    if (TabPointerPressed is { } host) host(this, new(item.Id, select, e));
+                    else BeginTabDrag(item, e);
+                } }
         }), true);
         select.RightTapped += (_, e) => { ContextRequested?.Invoke(item.Id, select); e.Handled = true; };
         select.DoubleTapped += (_, e) => { Promote(item); e.Handled = true; };
@@ -62,6 +68,8 @@ public partial class AdvancedTabControl
         string color = selected ? IsGroupActive && !IsToolGroup ? Theme.Accent : Theme.Surface : Theme.InactiveTab;
         if (!selected && item.TabColor is { Length: 7 or 9 } custom && custom[0] == '#' && custom.Skip(1).All(Uri.IsHexDigit)) color = custom;
         string foreground = selected && IsGroupActive && !IsToolGroup ? Theme.AccentText : selected && IsToolGroup ? Theme.Accent : Theme.Text;
+        if (header.Paint == (color, foreground)) return;
+        header.Paint = (color, foreground);
         header.Border.Background = DockChrome.Brush(color); header.Select.Background = DockChrome.Brush(color);
         header.Select.Foreground = DockChrome.Brush(foreground); header.Text.Foreground = DockChrome.Brush(foreground);
         foreach (var button in header.Actions)
