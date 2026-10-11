@@ -16,7 +16,11 @@ public class AdvancedTabControl : UserControl
 {
     private readonly Grid _root = new();
     private readonly Grid _header = new();
-    private readonly Canvas _strip = new();
+    private readonly Canvas _strip = new()
+    {
+        HorizontalAlignment = HorizontalAlignment.Left,
+        VerticalAlignment = VerticalAlignment.Top
+    };
     private readonly StackPanel _actions = new() { Orientation = Orientation.Horizontal };
     private readonly ScrollViewer _scroll = new()
     {

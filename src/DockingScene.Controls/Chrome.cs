@@ -43,34 +43,48 @@ public static partial class DockChrome
         Canvas.SetLeft(element, rect.X); Canvas.SetTop(element, rect.Y);
         element.Width = Math.Max(0, rect.Width); element.Height = Math.Max(0, rect.Height); Canvas.SetZIndex(element, z);
     }
-    /// <summary>Read-only, popup-aware hit-test diagnostics; excludes collapsed/non-painted controls.</summary>
+    /// <summary>Read-only hit rectangles, clipped by ancestor scrolling viewports and
+    /// explicit rectangle clips. This does not attempt sibling-occlusion analysis.</summary>
     public static Dictionary<string, DockRect> AutomationBounds(FrameworkElement root)
     {
         var result = new Dictionary<string, DockRect>(StringComparer.Ordinal);
         var visited = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
-        var stack = new Stack<DependencyObject>(); stack.Push(root);
+        var stack = new Stack<(DependencyObject Node, DockRect Clip)>();
+        var viewport = new DockRect(0, 0, root.ActualWidth, root.ActualHeight);
+        stack.Push((root, viewport));
         if (root.XamlRoot is { } xamlRoot)
             foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
-                if (popup.IsOpen && popup.Child is { } child) stack.Push(child);
-        while (stack.TryPop(out var node))
+                if (popup.IsOpen && popup.Child is { } child) stack.Push((child, viewport));
+        while (stack.TryPop(out var entry))
         {
-            if (!visited.Add(node)) continue;
+            var node = entry.Node; var clip = entry.Clip;
+            if (!visited.Add(node) || clip.Width <= 0 || clip.Height <= 0) continue;
             if (node is FrameworkElement element)
             {
                 if (element.Visibility != Visibility.Visible || element.Opacity <= 0) continue;
-                var id = AutomationProperties.GetAutomationId(element);
-                if (!string.IsNullOrEmpty(id) && element.ActualWidth > 0 && element.ActualHeight > 0)
+                var transform = element.TransformToVisual(root);
+                var rect = transform.TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+                if (element.Clip is RectangleGeometry explicitClip)
                 {
-                    var rect = element.TransformToVisual(root).TransformBounds(new Rect(0, 0, element.ActualWidth, element.ActualHeight));
-                    double left = Math.Max(0, rect.X), top = Math.Max(0, rect.Y), right = Math.Min(root.ActualWidth, rect.Right), bottom = Math.Min(root.ActualHeight, rect.Bottom);
-                    if (right > left && bottom > top) result[id] = new(left, top, right - left, bottom - top);
+                    var r = transform.TransformBounds(explicitClip.Rect);
+                    clip = Intersect(clip, new(r.X, r.Y, r.Width, r.Height));
                 }
+                var painted = Intersect(clip, new(rect.X, rect.Y, rect.Width, rect.Height));
+                var id = AutomationProperties.GetAutomationId(element);
+                if (!string.IsNullOrEmpty(id) && painted.Width > 0 && painted.Height > 0) result[id] = painted;
+                if (element is ScrollViewer) clip = painted;
             }
-            int count = VisualTreeHelper.GetChildrenCount(node);
-            for (int i = 0; i < count; i++) stack.Push(VisualTreeHelper.GetChild(node, i));
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+                stack.Push((VisualTreeHelper.GetChild(node, i), clip));
         }
         return result;
     }
+    private static DockRect Intersect(DockRect a, DockRect b)
+    {
+        double x = Math.Max(a.X, b.X), y = Math.Max(a.Y, b.Y);
+        return new(x, y, Math.Max(0, Math.Min(a.Right, b.Right) - x), Math.Max(0, Math.Min(a.Bottom, b.Bottom) - y));
+    }
+
 }
 
 /// <summary>A visual can have only one presenter. Reparenting retains the actual editor/control instance.</summary>

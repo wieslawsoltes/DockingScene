@@ -72,6 +72,9 @@ public partial class DockSite : UserControl
         if (e.OldValue is DockManager old) old.Changed -= site.ModelChanged;
         site._subscribed = false;
         site.CancelInteraction();
+        site.CloseSwitcher(false);
+        site._hoverOpen.Stop(); site._hoverClose.Stop(); site._hoverId = null;
+        site.CloseAutoHide(); site._autoPopup?.Tabs.ReleaseContent();
         foreach (var group in site._groups.Values) group.Tabs.ReleaseContent();
         site._mdi?.ReleaseContent();
         site._windows.Clear();
@@ -129,7 +132,14 @@ public partial class DockSite : UserControl
         };
         view.AddHandler(PointerPressedEvent, new PointerEventHandler((_, _) =>
         {
-            if (view.Group?.SelectedId is { } id && Manager.Layout.ActiveWindowId != id) Submit(Manager.Activate(id));
+            // A tab's own handler already changed selection synchronously. The visual
+            // container still carries the preceding snapshot until the queued render.
+            var layout = Manager.Layout;
+            string? id = view.Group is { } displayed
+                ? (DockTree.Find(layout, displayed.Id) as DockGroup)?.SelectedId ??
+                    layout.AutoHideGroups.FirstOrDefault(group => group.Id == displayed.Id)?.SelectedId
+                : null;
+            if (id is not null && layout.ActiveWindowId != id) Submit(Manager.Activate(id));
         }), true);
         return view;
     }

@@ -26,16 +26,19 @@ public partial class DockSite
     public DockDragPreview? DragPreview => _preview;
     public string? OpenAutoHideWindowId => _autoOpen;
     public DockRect OpenAutoHideBounds => _autoBounds;
+    public bool IsInteractionActive => !_dragIds.IsEmpty || _splitDrag is not null || _autoResizeId is not null;
     private void ConfigureInput()
     {
-        _canvas.PointerMoved += (_, e) => MoveInteraction(e);
-        _canvas.PointerReleased += (_, e) => EndInteraction(e);
-        _canvas.PointerCanceled += (_, _) => CancelInteraction();
-        _canvas.PointerCaptureLost += (_, _) => { if (!_dragIds.IsEmpty || _splitDrag is not null || _autoResizeId is not null) CancelInteraction(); };
+        // Child controls may mark pointer events handled. Captured gestures must still
+        // receive their terminal event; otherwise their preview survives the physical release.
+        _canvas.AddHandler(PointerMovedEvent, new PointerEventHandler((_, e) => MoveInteraction(e)), true);
+        _canvas.AddHandler(PointerReleasedEvent, new PointerEventHandler((_, e) => EndInteraction(e)), true);
+        _canvas.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => CancelInteraction()), true);
+        _canvas.AddHandler(PointerCaptureLostEvent, new PointerEventHandler((_, _) => { if (IsInteractionActive) CancelInteraction(); }), true);
         VisualsUpdated += RenderAutoHideResizeGrip;
         AddHandler(KeyDownEvent, new KeyEventHandler((_, e) =>
         {
-            if (e.Handled) return;
+            if (e.Handled && _switcher is null && !IsInteractionActive) return;
             if (e.Key == VirtualKey.Escape) { CancelInteraction(); CloseSwitcher(false); CloseAutoHide(); e.Handled = true; }
             else if (_switcher is not null && e.Key == VirtualKey.Enter) { CloseSwitcher(true); e.Handled = true; }
             else if (_switcher is not null && e.Key is VirtualKey.Up or VirtualKey.Down) { _switcher.Move(e.Key == VirtualKey.Up ? -1 : 1); e.Handled = true; }
@@ -118,7 +121,8 @@ public partial class DockSite
             }
         }
         if (_preview.Target is { } target && (_dragIds.Any(id => !Manager.Allows(id, DockCapabilities.Dock)) ||
-            (target.Side == DockSide.Center && DockTree.Find(Manager.Layout, target.TargetId ?? "") is DockGroup destination && !CanDropInto(destination))))
+            (target.Side == DockSide.Center && (_dragIds.Any(id => !Manager.Allows(id, DockCapabilities.Attach)) ||
+                DockTree.Find(Manager.Layout, target.TargetId ?? "") is DockGroup destination && !CanDropInto(destination)))))
         { _preview = new([], null, floating); _tabDropIndex = -1; }
         RenderDragPreview(_preview); e.Handled = true;
     }
