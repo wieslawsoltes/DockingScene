@@ -79,6 +79,7 @@ jobs:
           RESULT=0
           node tests/browser/run.mjs || RESULT=1
           node tests/browser/tab-layout.mjs || RESULT=1
+          node tests/browser/host-review.mjs || RESULT=1
           exit "$RESULT"
       - uses: actions/upload-artifact@v4
         if: always()
@@ -153,6 +154,7 @@ jobs:
               RESULT=0
               node tests/browser/run.mjs || RESULT=1
               node tests/browser/tab-layout.mjs || RESULT=1
+              node tests/browser/host-review.mjs || RESULT=1
               exit "$RESULT"
             fi
             sleep 2

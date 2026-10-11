@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.4`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.5`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -97,13 +97,14 @@ The toolbar switches between tabbed and standard MDI. Standard MDI supports over
 
 ## Validation and artifacts
 
-`Validate` runs every `tests/*Specs` executable. `Uno application` repeats these contracts, builds desktop, publishes WebAssembly, packs all libraries, checks isolated NuGet consumers, and drives both docking and standalone-tab browser suites. Failures in either browser suite block deployment. The same two suites then run against the deployed URL and verify `build-info.json`.
+`Validate` runs every `tests/*Specs` executable. `Uno application` repeats these contracts, builds desktop, publishes WebAssembly, packs all libraries, checks isolated NuGet consumers, and drives docking, standalone-tab and retained-host browser suites. Failure in any suite blocks deployment. The same three suites then run against the deployed URL and verify `build-info.json`.
 
 ```sh
 npm install --prefix tests/browser
 cd tests/browser && npx playwright install chromium && cd ../..
 BROWSER_URL=http://localhost:8765/DockingScene/ node tests/browser/run.mjs
 BROWSER_URL=http://localhost:8765/DockingScene/ node tests/browser/tab-layout.mjs
+BROWSER_URL=http://localhost:8765/DockingScene/ node tests/browser/host-review.mjs
 ```
 
 Browser tests use actual pointer/keyboard input. Diagnostics are read-only; no JavaScript hook mutates the managed model. **Diagnostic capture is off by default.** The harness adds `?diagnostics=1`, exposing layout geometry and synthetic sample-editor observations, including text, for testing. Do not enable it around sensitive documents. Normal sessions do not perform the periodic diagnostic visual-tree walk.
@@ -115,3 +116,7 @@ Artifacts include source snapshots, browser distributions, all six alpha NuGet p
 Uno Skia renders the actual controls and original vector icon geometry. GPU selection and fallback are the host's responsibility. Chromium CI explicitly uses **SwiftShader software WebGL**: these tests validate rendering and interaction, not hardware-GPU performance.
 
 Project source is MIT licensed. Uno Platform, Skia and other dependencies retain their own licenses. No Actipro source, assemblies, proprietary assets or branding are included.
+
+## Retained-host performance and interaction
+
+Host geometry is reused across activation and non-geometric metadata changes. Splitter buttons, auto-hide rails, popup resize grips and empty-workspace presenters retain their visual identity until removed from the layout. A tab click restores the selected content's last focused control, and detached queued projections cannot reclaim transferred content. Standalone tabs support elapsed-time-based drag edge scrolling with a `CanTabsAutoScroll` toggle. The [retained-host review](docs/retained-host-review.md) documents cache inputs, focus behavior, real-input regressions and remaining costs.

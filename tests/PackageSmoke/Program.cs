@@ -19,5 +19,10 @@ using var input = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(DockLayout
 if (!(await DockLayoutStream.ReadAsync(input)).Success || !input.CanRead) throw new Exception("Package bounded stream integration failed.");
 manager.RegisterMany(Enumerable.Range(0, 100).Select(i => new DockWindow("bulk" + i, "Bulk", WindowKind.Document))).ThrowIfFailed();
 if (manager.Layout.Windows.Count != 102 || model.Windows.Count != 102) throw new Exception("Package bulk registration integration failed.");
+var cache = new DockGeometryCache();
+var first = cache.Arrange(manager.Layout, new(0, 0, 1280, 720));
+manager.Activate("bulk0").ThrowIfFailed();
+if (!ReferenceEquals(first, cache.Arrange(manager.Layout, new(0, 0, 1280, 720)))) throw new Exception("Package geometry cache integration failed.");
+if (TabEdgeScroll.NextOffset(200, 200, 1000, 300, .1) <= 300) throw new Exception("Package drag edge scroll integration failed.");
 Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");
 

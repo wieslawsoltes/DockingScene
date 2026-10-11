@@ -21,5 +21,7 @@
   <Project Path="tests/DockingScene.TabLayoutSpecs/DockingScene.TabLayoutSpecs.csproj" />
   <Project Path="tests/DockingScene.PerformanceSpecs/DockingScene.PerformanceSpecs.csproj" />
   <Project Path="tests/DockingScene.SerializationSpecs/DockingScene.SerializationSpecs.csproj" />
+  <Project Path="tests/DockingScene.GeometryCacheSpecs/DockingScene.GeometryCacheSpecs.csproj" />
+  <Project Path="tests/DockingScene.EdgeScrollSpecs/DockingScene.EdgeScrollSpecs.csproj" />
  </Folder>
 </Solution>
