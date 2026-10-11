@@ -107,11 +107,13 @@ public partial class AdvancedTabControl : UserControl
         {
             bool vertical = Placement is TabPlacement.Left or TabPlacement.Right;
             if (e.Handled || Items.Count == 0 || !(e.Key is VirtualKey.Home or VirtualKey.End || (vertical ? e.Key is VirtualKey.Up or VirtualKey.Down : e.Key is VirtualKey.Left or VirtualKey.Right))) return;
+            if (_itemsDirty) Refresh();
             var order = _plan?.Lanes.SelectMany(lane => lane.Indices).ToArray() ?? Enumerable.Range(0, Items.Count).ToArray();
             int index = Math.Max(0, Array.FindIndex(order, i => Items[i].Id == _selectedId));
             int direction = e.Key is VirtualKey.Left or VirtualKey.Up ? -1 : 1;
             index = e.Key == VirtualKey.Home ? 0 : e.Key == VirtualKey.End ? order.Length - 1 : (index + direction + order.Length) % order.Length;
             Select(Items[order[index]].Id, true);
+            RealizeHeaders(); // Keyboard focus needs the newly revealed header now.
             if (_headers.TryGetValue(_selectedId!, out var header)) header.Select.Focus(FocusState.Keyboard);
             e.Handled = true;
         }), false);
@@ -147,15 +149,7 @@ public partial class AdvancedTabControl : UserControl
         Theme = theme; Placement = placement; IsGroupActive = active;
         Refresh(); Select(selectedId);
     }
-    public void Select(string? id, bool notify = false)
-    {
-        if (_itemsDirty) Refresh();
-        var item = id is null ? null : _byId.GetValueOrDefault(id);
-        if (id is not null && item is null) throw new ArgumentException("Unknown tab id.", nameof(id));
-        _selectedId = id; item?.EnsureContent(); ContentLease.Set(_presenter, item);
-        RevealSelection(); RealizeHeaders();
-        if (notify && id is not null) Activated?.Invoke(id);
-    }
+    public void Select(string? id, bool notify = false) => SelectCore(id, notify);
     public void ReleaseContent() => ContentLease.Set(_presenter, null);
 
     private void Refresh()

@@ -88,6 +88,7 @@ public partial class AdvancedTabControl
     }
     private void RealizeHeaders()
     {
+        _headerPresentationPending = false;
         if (_itemsDirty || _plan is null || _measurements.Length != Items.Count) return;
         bool vertical = Placement is TabPlacement.Left or TabPlacement.Right;
         var visible = new HashSet<string>(StringComparer.Ordinal);

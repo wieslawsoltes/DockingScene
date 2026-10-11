@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using DockingScene.Core;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -8,7 +9,7 @@ namespace DockingScene.Controls;
 /// <summary>Bindable standalone tab content. The factory is evaluated once and the resulting visual is retained.</summary>
 public class AdvancedTabItem : ContentControl
 {
-    private static DependencyProperty Property(string name, Type type, object? value) => DependencyProperty.Register(name, type, typeof(AdvancedTabItem), new PropertyMetadata(value, Changed));
+    private static DependencyProperty Property(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties)] Type type, object? value) => DependencyProperty.Register(name, type, typeof(AdvancedTabItem), new PropertyMetadata(value, Changed));
     private static void Changed(DependencyObject sender, DependencyPropertyChangedEventArgs args) => ((AdvancedTabItem)sender).MetadataChanged?.Invoke((AdvancedTabItem)sender);
     public static readonly DependencyProperty IdProperty = Property(nameof(Id), typeof(string), "");
     public static readonly DependencyProperty HeaderProperty = Property(nameof(Header), typeof(string), "Document");
@@ -29,7 +30,20 @@ public class AdvancedTabItem : ContentControl
     public Func<object?>? ContentFactory { get; set; }
     internal event Action<AdvancedTabItem>? MetadataChanged;
     public AdvancedTabItem() => Id = Guid.NewGuid().ToString("N");
-    public void EnsureContent() { if (ContentFactory is { } factory) { Content = factory(); ContentFactory = null; } }
+    private bool _creatingContent;
+    public void EnsureContent()
+    {
+        if (ContentFactory is not { } factory) return;
+        if (_creatingContent) throw new InvalidOperationException("A tab content factory cannot recursively create itself.");
+        _creatingContent = true;
+        try
+        {
+            var content = factory();
+            Content = content;
+            if (ReferenceEquals(ContentFactory, factory)) ContentFactory = null;
+        }
+        finally { _creatingContent = false; }
+    }
 }
 public class DockingWindow : AdvancedTabItem
 {
