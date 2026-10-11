@@ -1,72 +1,50 @@
 # Validation
 
-## Executable specifications
+## Model and package gates
 
-Every `tests/*Specs/*.csproj` program returns a nonzero exit code on failure. CI runs all matching projects with shell `pipefail`; a failed test process cannot be hidden by `tee`.
+All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. CI runs every matching project under `pipefail`; logging cannot hide a failed process. There are fourteen suites:
 
-| Suite | Coverage |
+| Suite | Main coverage |
 | --- | --- |
-| DockingScene.BulkSpecs | Atomic 10,000-window registration, bounded enumeration, stale revision/cancellation, undo/redo and allocation benchmark |
-| DockingScene.GeometryReviewSpecs | Finite inputs, valid modes/ids, overflow-resistant tiling and 1,000 seeded resizes |
-| DockingScene.Specs | Engine, docking, capabilities, lifecycle, serialization and history |
-| DockingScene.LayoutSpecs | Split constraints, geometry, guide targeting, MDI and storage |
-| DockingScene.ParitySpecs | Null/deep/cyclic layouts, overflow and invalid metadata |
-| DockingScene.TransactionSpecs | Batches, rollback, stale revisions, cancellation, ordered/reentrant observers, previews and directional closing |
-| DockingScene.MvvmSpecs | Stable proxies, commands, metadata, dispatch, disposal, source collections and cancellation |
-| DockingScene.VectorSpecs | Built-in icons, SVG grammar, curves/arcs, numeric syntax, locale and budgets |
-| DockingScene.TabSpecs | Measured offsets, binary visible ranges, insertion positions, scrolling and drag index correction |
-| DockingScene.PerformanceSpecs | Indexed/independent lookup equivalence, weak-cache lifetime, sharing, no-op changes, selective MVVM notifications, MRU correctness and allocation benchmark |
-| DockingScene.SerializationSpecs | Unknown-length bounded input, byte limits, chunked encoding, cancellation, invalid options and consistent store budgets |
-| DockingScene.TabLayoutSpecs | Three-lane allocation, six overflow modes, minimum/fixed extents, large strips, filtered digits and 1,000 seeded allocation/fit checks |
+| Specs | Engine, capabilities, lifecycle, history and 2,500 seeded state transitions |
+| LayoutSpecs | Geometry, splits, guides, MDI, serialization and storage |
+| ParitySpecs | Invalid/null/deep/cyclic layouts and metadata boundaries |
+| TransactionSpecs | Atomicity, rollback, close vetoes, revisions, previews and observer ordering |
+| MvvmSpecs | Stable projections, metadata, dispatcher/disposal and source synchronization |
+| VectorSpecs | Built-in icons, bounded SVG grammar, curves/arcs, numeric syntax and locale |
+| TabSpecs | Measured offsets, visible intervals, insertion and scrolling |
+| TabLayoutSpecs | Three lanes, six overflow modes, constraints, filtered digits and seeded allocations |
+| PerformanceSpecs | Indexed lookup equivalence, weak lifetime, structural sharing, no-op changes and work/allocation checks |
+| SerializationSpecs | Bounded UTF-8 streams, byte/window budgets, cancellation and malformed data |
+| BulkSpecs | Bounded atomic batch registration, capabilities, cancellation and allocation observations |
+| GeometryReviewSpecs | Resize constraints, numerical boundaries and 1,000 seeded resize cases |
+| GeometryCacheSpecs | Cache input equivalence/invalidation, 300 comparisons with uncached results, and finite minimum-compression arithmetic |
+| EdgeScrollSpecs | Direction, speed, elapsed time, boundaries, invalid inputs and extreme finite numbers |
 
-The summaries in each artifact are authoritative for that revision. The 1,000 new allocations comprise 500 mixed constrained cases and 500 feasible-fit cases; they supplement 13 named tab-layout specifications rather than representing 1,000 UI tests.
+Current suite definitions contain 2,727 baseline assertions and 190 named focused specifications. Seeded loops supplement these summaries; they are not additional browser scenarios. The logs for the exact commit are authoritative for execution results.
 
-## Integrated docking browser suite
+The Uno workflow compiles desktop, publishes the actual WebAssembly application, and packs all six libraries from the same source revision. Two separate consumers restore the generated NuGet packages into a fresh cache: a plain .NET application executes the five non-UI packages, and a Uno library compiles the controls APIs without project references. Desktop compilation and package consumption are not native UI runtime tests.
 
-The workflow publishes the same `net10.0-browserwasm` application distributed to users and serves it under `/DockingScene/`. Chromium waits for the splash to disappear and uses real pointer and keyboard input.
+## Browser gates
 
-The 26 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
+The workflow serves the actual distribution under `/DockingScene/`. Three independent Chromium sessions use physical pointer and keyboard events. The model is never mutated through JavaScript test hooks. All three run even if an earlier suite fails; any failure prevents distribution.
 
-Five switcher regressions also cover twelve immediate Enter/Escape openings without waiting for focus, one-step arrow navigation, input-scope cleanup and absence of background editor changes. Enter-down also keeps its character dispatch inside the modal scope until release. The original twenty docking assertions remain in place. See [switcher input scope](switcher-input-scope.md) and [atomic test geometry](browser-hit-targets.md) for the two different live-check failures and their corrections.
+**Docking: 26 scenarios.** Existing startup, complete multiline text, dirty/preview lifecycle, content identity, persistence, tabbed/standard MDI, lock, drag/reorder/float/redock, splitter, auto-hide, pinned closing, themes and reset behavior remain covered. Captured drags must acquire and release actual pointer ownership. Switcher checks include immediate keys, held Enter, repeated editor-to-switcher confirmations, scope cleanup, background-text preservation and cancellation when another command changes the layout.
 
-## Standalone tab browser suite
+**Standalone tabs, performance and lifetime: 32 scenarios.** These cover lazy content, bounded header realization, independent lanes, all overflow policies, fixed/shrunk widths, physical selection of every compressed header, four placements, pinning, closing/menu callbacks, filtered digits, application versus owned content, reentrant factories, same-id replacement and coalesced unregister/register. The 2,002-tab workload checks one measure per new header, no new measures or lane plans for 200 selections, and one affected header measure for rename/replacement. PNG pixel checks inspect real rendered host-tab colors rather than DOM properties.
 
-A second fresh browser session opens **Tab options → Open standalone tab playground**. Its 32 scenarios exercise actual reusable controls, including:
+**Retained host and edge scrolling: 11 scenarios.** Twelve reset/tab-click cycles type immediately without a second content click, then also verify editor-body clicking; another check preserves caret selection across tabs. Twenty activations require zero new geometry builds and zero new auxiliary controls, including unchanged individual identities and correct PNG tab paint. Further cases cover repeated keyboard edits of one retained splitter, color-only themes, horizontal/vertical drag scrolling, cancellation and disabled scrolling. A child-directed focus transfer must remain outside the document and accept subsequent toolbar keyboard input.
 
-- Lazy creation and header virtualization; independent lane scrolling; menu access to hidden tabs.
-- Global shrinking with feasible minima; all 20 compressed headers selected through their physical label targets; fixed extents under overconstraint; all six overflow affordance sets.
-- Hidden strip space reclamation and content identity through four placements; standalone pin/unpin; closing vetoes and middle-click CanClose checks.
-- Application-added MenuOpening actions; singleton tool-strip visibility; normal/pinned/preview keyboard filtering and digit 9 selecting the last item.
-- Exception-free execution and exact deployed commit identity.
+These 69 named browser scenarios do not represent separate platforms or exhaustive vendor conformance tests. Screenshots and traces preserve successful states and failures. Report actual result counts from the final revision, not an earlier passing subset.
 
-Assertions observe the real application through read-only opt-in diagnostics. They do not invoke manager commands or replace the renderer with test stubs. Both suites run even if one fails, and either failure blocks distribution. Failed scenarios capture screenshots and JSON; traces capture the complete input session.
+## Live deployment
 
-## Diagnostics and privacy
+After a successful main-branch model/build/package/browser gate, Pages deploys that artifact. The post-deployment job verifies `build-info.json` against the exact source commit and reruns all three suites against the live URL. A successful upload is not the same as a successful live verification. Source snapshots, all packages, logs, screenshots and both local-server/live traces are retained as workflow artifacts.
 
-Normal browser sessions do not run periodic diagnostic capture. `?diagnostics=1` enables window metadata, bounds and synthetic sample-editor text/caret/identity observations. Downstream applications must not enable these observations around confidential content.
+## Diagnostic and performance interpretation
 
-Bounds are clipped by ancestor viewports, tab-lane clips and explicit rectangle clips. They do not perform sibling-occlusion analysis. Tests therefore require actual input-driven state transitions instead of treating diagnostic rectangles as proof of correct interaction.
+`?diagnostics=1` enables read-only synthetic-editor text/caret/identity observations, window metadata, focus automation IDs, clipped hit bounds and performed-work counters. It is off in normal sessions. Downstream applications must not enable it around confidential content. Bounds respect ancestor viewports and explicit clips, but not sibling occlusion; tests therefore require input-driven state transitions. The harness captures each hit rectangle atomically instead of re-reading another mutable snapshot.
 
-## Package and deployed-site gates
+Work-count assertions reject redundant computation without assuming a specific runner speed. Native lookup timing compares a defined warm workload and excludes index construction. Browser counters and timings are not FPS, input-to-photon latency, power measurements or hardware GPU results. Diagnostics themselves add overhead.
 
-All six alpha NuGet packages are built from one source snapshot. A fresh package cache restores a plain .NET consumer that executes the five UI-independent packages, followed by a separate Uno consumer that compiles the Controls surface, including tab options and events, without ProjectReferences.
-
-The distribution workflow repeats model contracts before publishing. After a green main build and both browser suites, Pages deploys the artifact. A separate job checks `build-info.json` against the source commit and reruns both suites against the live URL. Source snapshots, packages, contract logs, screenshots and local/live traces are retained as workflow artifacts.
-
-## Limits
-
-Chromium uses **ANGLE/SwiftShader software WebGL**. It exercises the actual Uno Skia renderer but is not a hardware-GPU benchmark. Desktop targets compile in CI; native desktop interaction, Windows/macOS runtime behavior, detached windows, multi-monitor integration, touch/stylus/inertial scrolling, screen readers, RTL, Firefox/WebKit and vendor visual comparison still require additional validation.
-
-A green build certifies only the exercised contracts and scenarios at its exact revision, not full Actipro compatibility. Keep the outstanding matrix in `parity.md` alongside release evidence.
-
-## Performance and content regressions
-
-Fourteen additional playground scenarios cover 2,002-tab measurement/realization, 200 selections without new measurement/allocation plans, one-header rename, same-id content replacement, actual pointer reordering, veto/disabled/Escape behavior, application versus owned content release and coalesced unregister/register. The original 18 standalone-tab scenarios remain unchanged. Read-only counters are observed through the same diagnostics as the existing suites. Native benchmark timings are printed with allocation counts; browser workload timings are recorded without machine-specific pass thresholds.
-
-## Follow-up review coverage
-
-The additional editor-to-switcher regression performs twelve immediate F8/Enter transitions without an overlay/focus wait. The held-Enter test verifies actual focus inside the switcher, not just registered handlers. A real shortcut during a captured docking drag must release capture and cancel the obsolete preview before more pointer input arrives.
-
-Rapid selection still invokes all selected content factories, but unseen intermediate header presentation is coalesced. The 200-selection test now requires fewer than 50 newly created headers, not merely bounded currently realized headers. Three application-callback tests exercise nested selection, failed factories retaining the current document and recursive factories being rejected rather than recursing indefinitely.
-
-Stream tests reject malformed/truncated UTF-8 instead of substituting replacement characters, count a UTF-8 BOM in the byte budget and preserve pre-cancelled save behavior. UTF-16/UTF-32 streams are not supported. The twelve specification suites and both browser suites remain separate validation categories; workload timings are not GPU or frame-latency guarantees.
+CI uses the actual Uno Skia renderer through **ANGLE/SwiftShader software WebGL**. Native desktop runtime, multiple monitors, detached windows, touch/stylus/inertia, screen readers, RTL, other browsers and vendor pixel comparison still require separate validation. See `parity.md`, `performance-review.md` and `retained-host-review.md` for implemented contracts and remaining scope.

@@ -27,7 +27,7 @@ public partial class AdvancedTabControl
     private int _tabInsertion = -1;
     private bool _tabDragMoved;
     private readonly Border _tabInsertionMarker = new() { IsHitTestVisible = false, Visibility = Visibility.Collapsed };
-    public static readonly DependencyProperty CanTabsDragProperty = DependencyProperty.Register(nameof(CanTabsDrag), typeof(bool), typeof(AdvancedTabControl), new PropertyMetadata(true));
+    public static readonly DependencyProperty CanTabsDragProperty = DependencyProperty.Register(nameof(CanTabsDrag), typeof(bool), typeof(AdvancedTabControl), new PropertyMetadata(true, (d, e) => { if (e.NewValue is false) ((AdvancedTabControl)d).CancelTabDrag(); }));
     public bool CanTabsDrag { get => (bool)GetValue(CanTabsDragProperty); set => SetValue(CanTabsDragProperty, value); }
     public bool IsTabDragActive => _dragTabId is not null;
     public event EventHandler<TabReorderingEventArgs>? TabReordering;

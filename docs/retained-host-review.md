@@ -6,7 +6,7 @@ This continuation reviews the docking host's remaining repeated layout/visual wo
 
 Main workflow 38156647264 compiled desktop/WebAssembly, passed the model and package gates, then failed one of 58 browser scenarios. The trace places the failure before F8: after a reset and editor selection, typed text never reached the editor. The captured state had no focused control. That is different from the earlier switcher's Enter-character dispatch issue.
 
-`AdvancedTabControl.FocusSelectedContent` restores a weakly remembered focused descendant or finds an eligible control in the already-created selected content. It runs synchronously on a simple tab pointer release, not during background projection. Selected-content pointer input also establishes focus at the content boundary, including clicks on blank editor space. A required template/layout flush is limited to explicit focus requests. Existing content factories are not invoked for unrelated windows, and background render passes never steal focus.
+`AdvancedTabControl.FocusSelectedContent` restores a weakly remembered focused descendant or finds an eligible control in the already-created selected content. It runs synchronously on a simple tab pointer release, not during background projection. Selected-content pointer input also restores missing focus at the content boundary, including clicks on blank editor space. It does not reclaim focus deliberately transferred by a child to a toolbar or popup. A required template/layout flush is limited to explicit focus requests. Existing content factories are not invoked for unrelated windows, and background render passes never steal focus.
 
 Previously loaded but now detached tab controls skip queued refreshes. This prevents a stale presenter from reclaiming a visual that another group has just acquired. The sample also removes obsolete editor/diagnostic references on release without removing a newer same-id instance. The initial focus-only commit passed all 58 existing browser cases; the final gate adds twelve immediate tab-click/typing cycles and a caret/selection restoration check.
 
@@ -38,7 +38,7 @@ Ten executable cases cover direction, speed, constraints, invalid numbers, elaps
 
 ## Validation and boundaries
 
-The existing 58 browser scenarios, including actual PNG tab-paint checks, remain unchanged. A third browser session adds ten focus/host/edge-scroll scenarios. All three suites run before deployment and against the deployed revision, with failures blocking distribution. Fourteen model specification executables and both isolated NuGet consumers remain required. Package consumers compile `FocusSelectedContent` and `CanTabsAutoScroll` and execute the geometry/edge helpers without source project references.
+The existing 58 browser scenarios, including actual PNG tab-paint checks, remain unchanged. A third browser session adds eleven focus/host/edge-scroll scenarios. All three suites run before deployment and against the deployed revision, with failures blocking distribution. Fourteen model specification executables and both isolated NuGet consumers remain required. Package consumers compile `FocusSelectedContent` and `CanTabsAutoScroll` and execute the geometry/edge helpers without source project references.
 
 Diagnostic capture remains opt-in and read-only. Added observations are focus automation IDs, geometry build/reuse counts, auxiliary identities and edge-scroll steps. Test inputs still use actual pointer and keyboard events; no script changes the managed model.
 
@@ -47,3 +47,5 @@ CI uses the real Uno Skia renderer through SwiftShader software WebGL. Neither t
 ## Expanded-run findings
 
 The first retained-host run passed eight of ten new scenarios, but Escape did not cancel after the source header was virtualized away; focus had moved to a toolbar button outside the header's key route. The drag now owns a short-lived root preview-key scope rather than relying on that disappearing header. The existing repeated editor-body click scenario also exposed the focus precondition again, so content pointer focus handling and the twelve-cycle regression were extended without removing the second click or waiting for focus before typing. The retained activation test additionally samples actual PNG tab colors after repeated changes. Final-head workflow artifacts, not an earlier partial run, determine release readiness.
+
+A child-focus handoff scenario opens a real sample document whose button focuses an external toolbar button. The test checks that subsequent Space input opens the toolbar menu rather than returning to the document. Disabling `CanTabsDrag` also cancels an in-progress standalone gesture immediately, including its timer and root Escape handler.

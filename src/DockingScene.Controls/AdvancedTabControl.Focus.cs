@@ -19,13 +19,13 @@ public partial class AdvancedTabControl
         _presenter.AddHandler(PointerPressedEvent, new PointerEventHandler((_, e) =>
         {
             _contentFocusPointer = e.GetCurrentPoint(_presenter).Properties.IsLeftButtonPressed ? e.Pointer.PointerId : null;
-            if (_contentFocusPointer is not null && FocusSelectedContent(FocusState.Pointer)) e.Handled = true;
+            if (_contentFocusPointer is not null && RestorePointerContentFocus()) e.Handled = true;
         }), true);
         _presenter.AddHandler(PointerReleasedEvent, new PointerEventHandler((_, e) =>
         {
             if (_contentFocusPointer != e.Pointer.PointerId) return;
             _contentFocusPointer = null;
-            if (FocusSelectedContent(FocusState.Pointer)) e.Handled = true;
+            if (RestorePointerContentFocus()) e.Handled = true;
         }), true);
         _presenter.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => _contentFocusPointer = null), true);
         Unloaded += (_, _) => _contentFocusPointer = null;
@@ -35,6 +35,15 @@ public partial class AdvancedTabControl
             if (FocusManager.GetFocusedElement(root) is Control focused && IsDescendant(focused, item))
             { ContentFocus.Remove(item); ContentFocus.Add(item, new(focused)); }
         };
+    }
+
+    private bool RestorePointerContentFocus()
+    {
+        if (_presenter.Content is not AdvancedTabItem item || XamlRoot is not { } root) return false;
+        // A child callback may have deliberately opened a flyout or focused a
+        // different pane. Repair missing focus, never undo that explicit transfer.
+        if (FocusManager.GetFocusedElement(root) is DependencyObject focused && !IsDescendant(focused, item)) return false;
+        return FocusSelectedContent(FocusState.Pointer);
     }
 
     /// <summary>Restore the selected content's last focused control, or focus its first

@@ -136,6 +136,16 @@ try {
     const before = (await strip()).items.map(i => i.id); await edgeDrag({ vertical: true, cancel: true });
     assert.deepEqual((await strip()).items.map(i => i.id), before); assert.equal((await strip()).placement, 'Left');
   });
+  await test('Selected content never reclaims a deliberate child focus transfer', async () => {
+    await menu('toolbar:Interaction', 'interaction:handoff'); await bounds('focus:editor');
+    await click('focus:editor'); await page.keyboard.press('Control+a'); await page.keyboard.type('handoff-stays');
+    await wait(() => globalThis.dockingScene.focusedId === 'focus:editor');
+    await click('focus:external');
+    await wait(() => globalThis.dockingScene.focusedId === 'toolbar:Interaction');
+    // Space must operate the external button, not the document's first control.
+    await page.keyboard.press('Space'); await bounds('interaction:handoff');
+    await page.keyboard.press('Escape'); await settle();
+  });
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {
