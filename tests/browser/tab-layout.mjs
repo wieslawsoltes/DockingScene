@@ -61,6 +61,14 @@ try {
     const s = await strip(); assert(s.lanes.every(l => l.contentExtent <= l.extent + .01)); assert.equal(s.realized, 20);
     await page.screenshot({ path: `${output}/shrink.png` });
   });
+  await test('Every compressed header retains a working pointer selection target', async () => {
+    const ids = ['play-pinned', 'play-preview', ...Array.from({ length: 18 }, (_, i) => 'play-' + i)];
+    for (const id of ids) {
+      const r = await bounds('tab:' + id); assert(r.width >= 20, 'A compressed tab lost its label hit target: ' + id);
+      await click('tab:' + id); await wait(id => globalThis.dockingScene.tabStrips.find(t => t.id === 'playground').selectedId === id, id);
+    }
+    assert.equal((await strip()).count, 20); assert.equal((await strip()).selectedId, 'play-17');
+  });
   await test('Fixed tab extents survive an overconstrained viewport', async () => {
     await click('play:fixed'); await settle(); const s = await strip();
     assert.equal(s.minimum, 100); assert.equal(s.maximum, 100);

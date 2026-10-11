@@ -19,7 +19,7 @@ public partial class AdvancedTabControl
         void Add(string title, string name, string glyph, Action action)
         {
             var button = DockChrome.Button(title, "tabs:" + AutomationIdPrefix + ":" + name, Theme, action, glyph);
-            button.Width = 23; button.Height = Theme.TabHeight; button.Padding = new(5); _actions.Children.Add(button);
+            button.Tag = name; button.Width = 23; button.Height = Theme.TabHeight; button.Padding = new(5); _actions.Children.Add(button);
         }
         if (TabLayoutEngine.CanScroll(OverflowBehavior))
         {
@@ -70,11 +70,15 @@ public partial class AdvancedTabControl
         lane.Offset = Math.Clamp(lane.Offset + distance, 0, Math.Max(0, plan.Metrics.Length - plan.Extent));
         RealizeHeaders();
     }
-    private void ScrollActiveLane(int direction)
+    private Lane ActiveScrollLane()
     {
         var selected = Items.FirstOrDefault(i => i.Id == _selectedId);
         var lane = selected is null ? _lanes[1] : _lanes[TabLayoutEngine.LaneIndex(Mode(selected))];
-        if (lane.Layout?.IsOverflowing != true) lane = _lanes.FirstOrDefault(l => l.Layout?.IsOverflowing == true) ?? lane;
+        return lane.Layout?.IsOverflowing == true ? lane : _lanes.FirstOrDefault(l => l.Layout?.IsOverflowing == true) ?? lane;
+    }
+    private void ScrollActiveLane(int direction)
+    {
+        var lane = ActiveScrollLane();
         ScrollLane(lane, direction * Math.Max(40, (lane.Layout?.Extent ?? 200) * .7));
     }
     private void RealizeHeaders()
@@ -94,11 +98,25 @@ public partial class AdvancedTabControl
                 var rect = vertical ? new DockRect(0, start, 155, size) : new DockRect(start, 0, size, Theme.TabHeight);
                 DockChrome.Position(header.Border, rect);
                 header.Border.Clip = new RectangleGeometry { Rect = new Rect(0, 0, rect.Width, rect.Height) };
+                // Reserve a real label target when shrinking; actions that cannot fit
+                // collapse instead of consuming the complete selection surface.
+                int capacity = Math.Clamp((int)Math.Floor(Math.Max(0, rect.Width - 30) / 23), 0, header.Actions.Count);
+                for (int action = 0; action < header.Actions.Count; action++)
+                    header.Actions[action].Visibility = action >= header.Actions.Count - capacity ? Visibility.Visible : Visibility.Collapsed;
                 PaintHeader(header, item);
             }
         }
         foreach (var id in _headers.Keys.Where(id => !visible.Contains(id)).ToArray())
         { var border = _headers[id].Border; if (border.Parent is Panel parent) parent.Children.Remove(border); _headers.Remove(id); }
+        var active = ActiveScrollLane();
+        foreach (var button in _actions.Children.OfType<Button>())
+            button.IsEnabled = (button.Tag as string) switch
+            {
+                "back" => active.Offset > .01,
+                "forward" => active.Layout is { } layout && active.Offset + layout.Extent < layout.Metrics.Length - .01,
+                "overflow" => Items.Count > 0,
+                _ => true
+            };
     }
     public bool TryGetInsertionIndex(Point point, out int index)
     {
