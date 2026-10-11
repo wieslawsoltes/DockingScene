@@ -19,7 +19,6 @@ public partial class DockSite : UserControl
     private readonly Dictionary<string, DockContainer> _groups = new(StringComparer.Ordinal);
     private readonly Dictionary<string, WindowControl> _floats = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DockingWindow> _windows = new(StringComparer.Ordinal);
-    private readonly List<UIElement> _auxiliary = [];
     private StandardMdiHost? _mdi;
     private DockContainer? _autoPopup;
     private string? _autoOpen;
@@ -72,6 +71,7 @@ public partial class DockSite : UserControl
         if (e.OldValue is DockManager old) old.Changed -= site.ModelChanged;
         site._subscribed = false;
         site.CancelInteraction();
+        site.ClearAuxiliaries();
         site.CloseSwitcher(false);
         site._hoverOpen.Stop(); site._hoverClose.Stop(); site._hoverId = null;
         site.CloseAutoHide(); site._autoPopup?.Tabs.ReleaseContent();
@@ -169,17 +169,17 @@ public partial class DockSite : UserControl
         {
             var layout = manager.Layout;
             var index = DockLayoutIndex.For(layout);
-            _geometry = DockLayoutEngine.Arrange(layout, new(0, 0, ActualWidth, ActualHeight), new() { TabHeight = Theme.TabHeight, TitleHeight = Theme.TitleHeight, Splitter = Theme.SplitterSize, DpiScale = XamlRoot?.RasterizationScale ?? 1 });
+            _geometry = _geometryCache.Arrange(layout, new(0, 0, ActualWidth, ActualHeight), new() { TabHeight = Theme.TabHeight, TitleHeight = Theme.TitleHeight, Splitter = Theme.SplitterSize, DpiScale = XamlRoot?.RasterizationScale ?? 1 });
             _canvas.Background = DockChrome.Brush(Theme.Background);
             _canvas.Clip = new RectangleGeometry { Rect = new(0, 0, ActualWidth, ActualHeight) };
-            foreach (var element in _auxiliary) _canvas.Children.Remove(element); _auxiliary.Clear();
+            _usedAuxiliaries.Clear();
             var standardIds = layout.MdiMode == MdiMode.Standard ? DockTree.Descendants(layout.Root).OfType<DockWorkspace>().SelectMany(w => DockTree.WindowIds(w.Content)).ToHashSet(StringComparer.Ordinal) : [];
             var groups = DockTree.Groups(layout).Where(g => !g.Windows.All(standardIds.Contains)).ToArray();
             var validGroups = groups.Select(g => g.Id).ToHashSet(StringComparer.Ordinal);
             foreach (var key in _groups.Keys.Where(k => !validGroups.Contains(k)).ToArray()) { _groups[key].Tabs.ReleaseContent(); _canvas.Children.Remove(_groups[key]); _groups.Remove(key); }
             var hostOrder = layout.FloatingHosts.OrderByDescending(h => DockTree.WindowIds(h.Root).Select(id => index.ActivationRank(id) is var i && i >= 0 ? i : int.MaxValue).DefaultIfEmpty(int.MaxValue).Min()).ToArray();
             var z = hostOrder.Select((h, i) => (h.Id, Z: 100 + i * 10)).ToDictionary(p => p.Id, p => p.Z);
-            foreach (var key in _floats.Keys.Where(k => !layout.FloatingHosts.Any(h => h.Id == k)).ToArray()) { _canvas.Children.Remove(_floats[key]); _floats.Remove(key); }
+            foreach (var key in _floats.Keys.Where(k => !z.ContainsKey(k)).ToArray()) { _canvas.Children.Remove(_floats[key]); _floats.Remove(key); }
             foreach (var host in hostOrder)
             {
                 if (!_floats.TryGetValue(host.Id, out var window))
@@ -212,21 +212,7 @@ public partial class DockSite : UserControl
                 DockChrome.Position(view, _geometry.Nodes[group.Id], host is null ? 1 : z[host] + 2);
                 view.Update(group, group.Windows.Select(id => (AdvancedTabItem)Window(id)).ToArray(), layout, Theme, allowed: manager.Policy.AllowedCapabilities);
             }
-            foreach (var split in _geometry.Splitters)
-            {
-                var node = DockTree.Find(layout, split.Id)!;
-                if (DockTree.WindowIds(node).Any() && DockTree.WindowIds(node).All(standardIds.Contains)) continue;
-                var thumb = DockChrome.Button("Resize splitter", "splitter:" + split.Id, Theme, () => { });
-                thumb.Content = null; thumb.Padding = new(0); thumb.IsEnabled = !layout.IsLayoutLocked;
-                thumb.AddHandler(PointerPressedEvent, new PointerEventHandler((_, e) => BeginSplitDrag(split, e)), true);
-                thumb.KeyDown += (_, e) =>
-                {
-                    int direction = e.Key is Windows.System.VirtualKey.Left or Windows.System.VirtualKey.Up ? -1 : e.Key is Windows.System.VirtualKey.Right or Windows.System.VirtualKey.Down ? 1 : 0;
-                    if (direction != 0) { Submit(Manager.ResizeSplit(split.Id, split.Ratio + direction * .025)); e.Handled = true; }
-                };
-                string? host = DockTree.WindowIds(node).Select(id => DockTree.Locate(layout, id).HostId).FirstOrDefault(id => id is not null);
-                DockChrome.Position(thumb, split.Bounds, host is null ? 4 : z[host] + 3); AddAuxiliary(thumb);
-            }
+            RenderSplitters(layout, standardIds, z);
             if (layout.MdiMode == MdiMode.Standard && standardIds.Count > 0)
             {
                 var workspace = DockTree.Descendants(layout.Root).OfType<DockWorkspace>().First();
@@ -237,45 +223,26 @@ public partial class DockSite : UserControl
             else if (_mdi is not null) { _mdi.ReleaseContent(); _mdi.Visibility = Visibility.Collapsed; }
             foreach (var workspace in DockTree.Descendants(layout.Root).OfType<DockWorkspace>().Where(w => w.Content is null))
             {
-                var presenter = new ContentPresenter { Content = WorkspaceContent ?? DockChrome.Text("Drag documents here or create a new document.", Theme, 16), HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center };
-                DockChrome.Position(presenter, _geometry.Nodes[workspace.Id], 0); AddAuxiliary(presenter);
+                var presenter = UseAuxiliary("workspace:" + workspace.Id, () => new ContentPresenter { HorizontalContentAlignment = HorizontalAlignment.Center, VerticalContentAlignment = VerticalAlignment.Center });
+                if (WorkspaceContent is not null) { ContentLease.Set(presenter, WorkspaceContent); presenter.Tag = true; }
+                else if (presenter.Tag is not true && presenter.Content is TextBlock placeholder) placeholder.Foreground = DockChrome.Brush(Theme.Text);
+                else { ContentLease.Set(presenter, DockChrome.Text("Drag documents here or create a new document.", Theme, 16)); presenter.Tag = null; }
+                DockChrome.Position(presenter, _geometry.Nodes[workspace.Id], 0);
             }
             RenderAutoHide(layout);
             ReleaseWindowContent(_windows.Keys.Where(id => !layout.Windows.ContainsKey(id)).ToArray());
             VisualsUpdated?.Invoke();
+            PruneAuxiliaries();
         }
         finally { _rendering = false; }
     }
-    private void AddAuxiliary(UIElement element) { _auxiliary.Add(element); _canvas.Children.Add(element); }
 
     public void OpenAutoHide(string id) { if (!Manager.Layout.AutoHideGroups.Any(g => g.Windows.Contains(id))) return; _autoOpen = id; Submit(Manager.Activate(id)); QueueRender(); }
     public void CloseAutoHide() { if (_autoOpen is null) return; _autoOpen = null; QueueRender(); }
     private void RenderAutoHide(DockLayout layout)
     {
         if (_geometry is null) return;
-        foreach (var (side, rail) in _geometry.AutoHideRails)
-        {
-            double offset = 4;
-            foreach (var group in layout.AutoHideGroups.Where(g => g.Side == side))
-            foreach (var id in group.Windows)
-            {
-                var model = layout.Windows[id];
-                double length = Math.Clamp(model.Title.Length * Theme.FontSize * .57 + 24, 80, 190);
-                var button = DockChrome.Button(model.Title, "autohide:" + id, Theme, () => OpenAutoHide(id));
-                button.BorderBrush = DockChrome.Brush(Theme.Border); button.BorderThickness = new(0, 0, 0, 2);
-                if (side is DockSide.Left or DockSide.Right)
-                {
-                    var content = new Canvas { Width = rail.Width, Height = length };
-                    var text = DockChrome.Text(model.Title, Theme); text.Width = length; text.Height = rail.Width;
-                    text.RenderTransform = new RotateTransform { Angle = 90 }; Canvas.SetLeft(text, rail.Width); content.Children.Add(text); button.Content = content; button.Padding = new(0);
-                    DockChrome.Position(button, new(rail.X, rail.Y + offset, rail.Width, length), 2000);
-                }
-                else DockChrome.Position(button, new(rail.X + offset, rail.Y, length, rail.Height), 2000);
-                button.PointerEntered += (_, _) => { _hoverClose.Stop(); if (OpenAutoHideOnHover) { _hoverId = id; _hoverOpen.Start(); } };
-                button.PointerExited += (_, _) => { _hoverOpen.Stop(); if (_autoOpen == id) _hoverClose.Start(); };
-                AddAuxiliary(button); offset += length + 5;
-            }
-        }
+        RenderAutoHideRails(layout);
         var current = _autoOpen is null ? null : layout.AutoHideGroups.FirstOrDefault(g => g.Windows.Contains(_autoOpen));
         if (current is null)
         {

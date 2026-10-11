@@ -19,17 +19,24 @@ public partial class DockSite
         if (_autoOpen is not { } id || _autoPopup is null || Manager.Layout.IsLayoutLocked || !Manager.Allows(id, DockCapabilities.Resize)) return;
         var group = Manager.Layout.AutoHideGroups.FirstOrDefault(group => group.Windows.Contains(id));
         if (group is null) return;
-        var grip = DockChrome.Identify(new Border { Background = DockChrome.Brush(Theme.Border) }, "autohide-resize:" + id, "Resize auto-hide popup");
-        _autoGrip = grip; DockChrome.Position(grip, AutoHideGripBounds(_autoBounds, group.Side), 6000); AddAuxiliary(grip);
-        grip.PointerPressed += (_, e) =>
+        var grip = UseAuxiliary("auto-resize:" + id, () =>
         {
-            if (!e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed) return;
-            if (!_canvas.CapturePointer(e.Pointer)) return;
-            _hoverClose.Stop(); _hoverOpen.Stop(); _autoResizeId = id; _autoResizeSide = group.Side;
-            _autoResizeSize = Manager.Layout.Windows[id].AutoHideSize; _autoResizeRevision = Manager.Layout.Revision;
-            e.Handled = true;
-        };
+            var element = DockChrome.Identify(new Border(), "autohide-resize:" + id, "Resize auto-hide popup");
+            element.PointerPressed += (_, e) =>
+            {
+                if (!e.GetCurrentPoint(_canvas).Properties.IsLeftButtonPressed || Manager.Layout.IsLayoutLocked || !Manager.Allows(id, DockCapabilities.Resize)) return;
+                var current = Manager.Layout.AutoHideGroups.FirstOrDefault(g => g.Windows.Contains(id));
+                if (current is null || _autoOpen != id || !_canvas.CapturePointer(e.Pointer)) return;
+                _hoverClose.Stop(); _hoverOpen.Stop(); _autoResizeId = id; _autoResizeSide = current.Side;
+                _autoResizeSize = Manager.Layout.Windows[id].AutoHideSize; _autoResizeRevision = Manager.Layout.Revision;
+                e.Handled = true;
+            };
+            return element;
+        });
+        _autoGrip = grip; grip.Background = DockChrome.Brush(Theme.Border);
+        DockChrome.Position(grip, AutoHideGripBounds(_autoBounds, group.Side), 6000);
     }
+
     private static DockRect AutoHideGripBounds(DockRect bounds, DockSide side) => side switch
     {
         DockSide.Left => new(bounds.Right - 5, bounds.Y, 5, bounds.Height),
