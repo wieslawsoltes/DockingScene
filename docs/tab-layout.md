@@ -85,6 +85,6 @@ This increment does not implement full Actipro templates, slanted/overlapping bo
 
 ## Standalone reordering and diagnostics
 
-`CanTabsDrag` enables real pointer reordering within a display-mode lane. `ReorderTab(id, finalIndex)` offers the same operation directly. `TabReordering` can veto the mutation; `TabReordered` reports its final indexes. Escape, capture loss, unload or intervening collection changes cancel the drag. Content identity is preserved. Cross-lane promotion, edge-autoscroll and detached/cross-site transfers remain separate scope.
+`CanTabsDrag` enables real pointer reordering within a display-mode lane. `ReorderTab(id, finalIndex)` offers the same operation directly. `TabReordering` can veto the mutation; `TabReordered` reports its final indexes. Escape, capture loss, unload or intervening collection changes cancel the drag. Content identity is preserved. Cross-lane promotion and detached/cross-site transfers remain separate scope. Standalone same-lane edge scrolling is implemented by `CanTabsAutoScroll`; see the retained-host review.
 
 `TextMeasurementCount`, `HeaderLayoutCount`, `HeaderCreationCount` and `RealizedHeaderCount` expose the performed work without claiming a hardware frame rate. The performance playground and tests use these counters to reject redundant remeasurement and unbounded header realization.

@@ -6,6 +6,7 @@ namespace DockingScene.PackageValidation;
 
 public static class ControlConsumer
 {
+    public static bool Focus(AdvancedTabControl tabs) => tabs.FocusSelectedContent();
     public static DockSite Create(DockManager manager) => new()
     {
         Manager = manager,
@@ -20,6 +21,7 @@ public static class ControlConsumer
         var tabs = new AdvancedTabControl { OverflowBehavior = TabOverflowBehavior.ShrinkWithMenu, MinTabExtent = 60, MaxTabExtent = 200, HasTabPinButtons = true };
         tabs.Items.Add(new() { Id = "preview", Header = "Preview", IsPreview = true, ContentFactory = () => new Microsoft.UI.Xaml.Controls.TextBox() });
         tabs.CanTabsDrag = true;
+        tabs.CanTabsAutoScroll = true;
         tabs.TabReordering += (_, e) => e.Cancel = e.Item.IsModified;
         tabs.TabReordered += (_, e) => System.Console.WriteLine($"Moved {e.Item.Id} from {e.OldIndex} to {e.NewIndex}");
         tabs.TabClosing += (_, e) => e.Cancel = e.Item.IsModified;

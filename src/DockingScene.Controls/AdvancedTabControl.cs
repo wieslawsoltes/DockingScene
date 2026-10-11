@@ -26,6 +26,7 @@ public partial class AdvancedTabControl : UserControl
     private readonly Dictionary<string, AdvancedTabItem> _byId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (int Lane, int Slot)> _slots = new(StringComparer.Ordinal);
     private bool _itemsDirty = true;
+    private bool _hasBeenLoaded;
     private long _itemsRevision, _measuresRevision, _arrangedRevision = -1;
     private double _arrangedExtent = -1;
     private TabOverflowBehavior _arrangedOverflow;
@@ -95,7 +96,7 @@ public partial class AdvancedTabControl : UserControl
             if (!_batch) QueueRefresh();
         };
         SizeChanged += (_, _) => ArrangeHeaders(true);
-        Loaded += (_, _) => { _itemsDirty = true; Refresh(); Select(_selectedId ?? Items.FirstOrDefault()?.Id); };
+        Loaded += (_, _) => { _hasBeenLoaded = true; _itemsDirty = true; Refresh(); Select(_selectedId ?? Items.FirstOrDefault()?.Id); };
         Unloaded += (_, _) =>
         {
             CancelTabDrag();
@@ -103,6 +104,7 @@ public partial class AdvancedTabControl : UserControl
             _observed.Clear(); _itemsDirty = true;
         };
         ConfigureTabDragging();
+        ConfigureContentFocus();
         _header.AddHandler(KeyDownEvent, new KeyEventHandler((_, e) =>
         {
             bool vertical = Placement is TabPlacement.Left or TabPlacement.Right;
@@ -135,7 +137,9 @@ public partial class AdvancedTabControl : UserControl
         _refreshQueued = true;
         if (!DispatcherQueue.TryEnqueue(() =>
         {
-            _refreshQueued = false; Refresh();
+            _refreshQueued = false;
+            if (_hasBeenLoaded && !IsLoaded) return; // Detached panes must not reclaim a transferred editor.
+            Refresh();
             Select(_selectedId is not null && _byId.ContainsKey(_selectedId) ? _selectedId : Items.FirstOrDefault()?.Id);
         })) _refreshQueued = false;
     }

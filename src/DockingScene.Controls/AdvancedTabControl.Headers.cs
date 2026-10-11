@@ -7,6 +7,17 @@ namespace DockingScene.Controls;
 
 public partial class AdvancedTabControl
 {
+    private Style? _tabButtonStyle;
+    private Button CreateTabButton(string title, string id, Action action, string? glyph = null)
+    {
+        // The native Button input/automation contract is retained. Only its
+        // template changes: state transitions cannot replace a tab-owned fill.
+        _tabButtonStyle ??= (Style)new TabHeaderResources()["DockTabButtonStyle"];
+        var button = DockChrome.Button(title, id, Theme, action, glyph);
+        button.Style = _tabButtonStyle;
+        return button;
+    }
+
     private HeaderVisual CreateHeader(AdvancedTabItem item)
     {
         HeaderCreationCount++;
@@ -17,7 +28,7 @@ public partial class AdvancedTabControl
         label.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); label.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
         if (item.IsReadOnly) { var icon = DockChrome.Glyph(DockGlyphs.Lock, Theme.MutedText, 11); icon.Margin = new(0, 0, 5, 0); label.Children.Add(icon); }
         label.Children.Add(text); Grid.SetColumn(text, 1);
-        var select = DockChrome.Button(item.Header, "tab:" + item.Id, Theme, () => Select(item.Id, true)); select.Content = label;
+        var select = CreateTabButton(item.Header, "tab:" + item.Id, () => Select(item.Id, true)); select.Content = label;
         select.HorizontalAlignment = HorizontalAlignment.Stretch; select.HorizontalContentAlignment = HorizontalAlignment.Stretch;
         select.Height = double.NaN; select.VerticalAlignment = VerticalAlignment.Stretch;
         select.AddHandler(PointerPressedEvent, new PointerEventHandler((_, e) =>
@@ -37,7 +48,7 @@ public partial class AdvancedTabControl
         var buttons = new List<Button>();
         void Add(string name, string id, string glyph, Action action)
         {
-            var button = DockChrome.Button(name, id, Theme, action, glyph); button.Width = 23; button.Padding = new(4);
+            var button = CreateTabButton(name, id, action, glyph); button.Width = 23; button.Padding = new(4);
             button.Height = double.NaN; button.VerticalAlignment = VerticalAlignment.Stretch; actionsPanel.Children.Add(button); buttons.Add(button);
         }
         if (!IsToolGroup && (item.IsPinned || HasTabPinButtons && !item.IsPreview))

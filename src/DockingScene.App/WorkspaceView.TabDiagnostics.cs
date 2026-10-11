@@ -1,6 +1,9 @@
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using DockingScene.Controls;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation;
+using Microsoft.UI.Xaml.Input;
 
 namespace DockingScene.App;
 
@@ -12,6 +15,13 @@ public sealed partial class WorkspaceView
         writer.WriteBoolean("recursiveFactoryRejected", _recursiveFactoryRejected);
         writer.WriteNumber("factoryCallbackCount", _factoryCallbackCount);
         writer.WriteBoolean("switcherHasInputFocus", _site.SwitcherHasInputFocus);
+        writer.WriteString("focusedId", FocusManager.GetFocusedElement(XamlRoot) is DependencyObject focused ? AutomationProperties.GetAutomationId(focused) : null);
+        writer.WriteNumber("geometryBuilds", _site.GeometryBuildCount);
+        writer.WriteNumber("geometryReuses", _site.GeometryReuseCount);
+        writer.WriteNumber("auxiliaryCreated", _site.AuxiliaryCreationCount);
+        writer.WriteStartObject("auxiliaryIdentities");
+        foreach (var (key, identity) in _site.AuxiliaryIdentities) writer.WriteNumber(key, identity);
+        writer.WriteEndObject();
         writer.WriteString("switcherSelection", _site.SwitcherSelectedId);
         writer.WriteBoolean("switcherInputScoped", _site.IsSwitcherInputScoped);
         writer.WriteNumber("tabReorderRequests", _tabReorderRequests); writer.WriteNumber("tabReorders", _tabReorders);
@@ -34,6 +44,7 @@ public sealed partial class WorkspaceView
         writer.WriteBoolean("visible", tabs.IsTabStripVisible); writer.WriteNumber("realized", tabs.RealizedHeaderCount);
         writer.WriteNumber("textMeasurements", tabs.TextMeasurementCount); writer.WriteNumber("layoutPasses", tabs.HeaderLayoutCount);
         writer.WriteNumber("headersCreated", tabs.HeaderCreationCount); writer.WriteNumber("refreshes", tabs.RefreshCount);
+        writer.WriteNumber("autoScrollSteps", tabs.DragAutoScrollSteps); writer.WriteBoolean("canAutoScroll", tabs.CanTabsAutoScroll);
         writer.WriteBoolean("dragActive", tabs.IsTabDragActive); writer.WriteBoolean("canDrag", tabs.CanTabsDrag);
         writer.WriteNumber("count", tabs.Items.Count); writer.WriteNumber("minimum", tabs.MinTabExtent); writer.WriteNumber("maximum", tabs.MaxTabExtent);
         writer.WriteStartArray("lanes");
