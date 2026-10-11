@@ -13,6 +13,7 @@ public sealed partial class WorkspaceView
     private readonly TextBlock _statusDetails = new() { FontSize = 12, Margin = new(8, 0, 10, 0), VerticalAlignment = VerticalAlignment.Center };
     private Button? _appearanceMenu;
     private Button? _activateMenu;
+    private ComboBox? _mdiSelector;
     private bool _metroEnabled;
     private DockTheme? _metroTheme;
     private string[] _inspectorWindowIds = [];
@@ -45,6 +46,11 @@ public sealed partial class WorkspaceView
         _status.Foreground = _statusDetails.Foreground;
         _status.Text = _lastMessage;
         var layout = _site.Manager.Layout;
+        if (_mdiSelector?.Parent != _toolbar)
+            _mdiSelector = _toolbar.Children.OfType<ComboBox>().FirstOrDefault(control =>
+                Microsoft.UI.Xaml.Automation.AutomationProperties.GetAutomationId(control) == "toolbar:mdi");
+        if (_mdiSelector is not null && _mdiSelector.SelectedIndex != (int)layout.MdiMode)
+            _mdiSelector.SelectedIndex = (int)layout.MdiMode;
         _statusDetails.Text = layout.Windows.Values.Count(w => w.Kind == WindowKind.Document) + " documents    |    " +
             (layout.MdiMode == MdiMode.Tabbed ? "Tabbed MDI" : "Standard MDI");
         if (_appearanceMenu?.Parent != _toolbar)
@@ -89,6 +95,7 @@ public sealed partial class WorkspaceView
     }
     private void WriteMetroDiagnostics(Utf8JsonWriter writer)
     {
+        writer.WriteString("mdiModeSelection", _mdiSelector?.SelectedItem as string);
         writer.WriteString("inspectorWindowId", _inspectorWindowId);
         writer.WriteStartArray("inspectorWindowIds"); foreach (string id in _inspectorWindowIds) writer.WriteStringValue(id); writer.WriteEndArray();
         writer.WriteBoolean("documentButtonsAlwaysVisible", _site.AreDocumentTabEmbeddedButtonsAlwaysVisible);

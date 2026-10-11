@@ -9,6 +9,7 @@ export async function runMdiReviewTests({page, state, test, reset, click, wait, 
   const system = (id, command) => menu('window:' + id + ':system', 'window-menu:' + id + ':' + command);
   await test('Standard MDI retains caption buttons across repeated activation', async () => {
     await reset(); await menu('menubar:Window', 'appmenu:Standard MDI'); await settle();
+    assert.equal((await state()).mdiModeSelection, 'Standard MDI');
     const before = (await state()).mdiFrames;
     for (const id of ['main', 'code', 'main', 'code']) await activate(id);
     await menu('menubar:Window', 'appmenu:Tile grid');
@@ -92,6 +93,7 @@ export async function runMdiReviewTests({page, state, test, reset, click, wait, 
     await activate('code'); await click('window-title:code', {button: 'right'}); await settle();
     await click('window-menu:code:close'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').placement === 'Hidden' && !globalThis.dockingScene.mdiFrames.code);
     assert.notEqual((await win('main')).placement, 'Hidden');
-    await reset(); await settle(); await page.screenshot({path: `${output}/mdi-review-final.png`});
+    await reset(); await settle(); assert.equal((await state()).mdiModeSelection, 'Tabbed MDI');
+    await page.screenshot({path: `${output}/mdi-review-final.png`});
   });
 }
