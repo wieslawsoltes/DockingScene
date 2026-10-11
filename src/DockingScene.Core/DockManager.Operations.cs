@@ -125,15 +125,17 @@ public sealed partial class DockManager
         var after = update(before);
         if (after is null || after.Id != id || after.Kind != before.Kind) throw new InvalidOperationException("Window identity and kind cannot change.");
         if (after.IsModified && after.DisplayMode == TabDisplayMode.Preview) after = after with { DisplayMode = TabDisplayMode.Normal };
-        layout = layout with { Windows = layout.Windows.SetItem(id, after) };
+        if (after == before) return layout;
         var group = DockTree.GroupOf(layout, id);
-        if (group is not null)
+        layout = layout with { Windows = layout.Windows.SetItem(id, after) };
+        if (group is not null && after.DisplayMode != before.DisplayMode)
         {
             if (after.DisplayMode == TabDisplayMode.Preview)
                 foreach (var other in group.Windows.Where(key => key != id && layout.Windows[key].DisplayMode == TabDisplayMode.Preview))
                     layout = layout with { Windows = layout.Windows.SetItem(other, layout.Windows[other] with { DisplayMode = TabDisplayMode.Normal }) };
             var sorted = SortTabs(layout, group.Windows);
-            layout = DockTree.Map(layout, node => node.Id == group.Id ? group with { Windows = sorted } : node);
+            if (!sorted.SequenceEqual(group.Windows))
+                layout = DockTree.Map(layout, node => node.Id == group.Id ? group with { Windows = sorted } : node);
         }
         return layout;
     });

@@ -28,9 +28,9 @@ public static class DockLayoutEngine
     public static DockGeometry Arrange(DockLayout layout, DockRect bounds, DockMetrics? metrics = null)
     {
         metrics ??= new();
-        if (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) || !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) || bounds.Width < 0 || bounds.Height < 0)
+        if (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) || !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) || bounds.Width < 0 || bounds.Height < 0 || !double.IsFinite(bounds.Right) || !double.IsFinite(bounds.Bottom))
             throw new ArgumentException("Invalid viewport.", nameof(bounds));
-        if (metrics.DpiScale <= 0 || !double.IsFinite(metrics.DpiScale) || metrics.Splitter < 0 || metrics.TitleHeight < 0 || metrics.TabHeight < 0 || metrics.Border < 0 || metrics.AutoHideRail < 0)
+        if (metrics.DpiScale <= 0 || !double.IsFinite(metrics.DpiScale) || metrics.Splitter < 0 || metrics.TitleHeight < 0 || metrics.TabHeight < 0 || metrics.Border < 0 || metrics.AutoHideRail < 0 || !double.IsFinite(metrics.Splitter) || !double.IsFinite(metrics.TitleHeight) || !double.IsFinite(metrics.TabHeight) || !double.IsFinite(metrics.Border) || !double.IsFinite(metrics.AutoHideRail))
             throw new ArgumentException("Invalid metrics.", nameof(metrics));
         var nodes = ImmutableDictionary.CreateBuilder<string, DockRect>();
         var splitters = ImmutableArray.CreateBuilder<SplitterGeometry>();
@@ -38,7 +38,7 @@ public static class DockLayoutEngine
         var rails = ImmutableDictionary.CreateBuilder<DockSide, DockRect>();
         var warnings = ImmutableArray.CreateBuilder<string>();
         var measures = new Dictionary<string, DockMeasure>(StringComparer.Ordinal);
-        double Round(double v) => Math.Round(v * metrics.DpiScale) / metrics.DpiScale;
+        double Round(double v) => double.IsFinite(v * metrics.DpiScale) ? Math.Round(v * metrics.DpiScale) / metrics.DpiScale : v;
         DockMeasure Measure(DockNode node)
         {
             DockMeasure result;
@@ -62,6 +62,7 @@ public static class DockLayoutEngine
                     break;
                 default: throw new InvalidOperationException("Unknown layout node.");
             }
+            if (!result.Minimum.IsFinite || !result.Maximum.IsFinite) throw new InvalidOperationException("Layout size arithmetic overflowed.");
             measures[node.Id] = result;
             return result;
         }

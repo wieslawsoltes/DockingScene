@@ -8,7 +8,7 @@ public sealed class DockWindowViewModel : INotifyPropertyChanged
     private readonly DockWorkspaceViewModel _owner;
     private DockWindow _model;
     private WindowLocation _location = new(WindowPlacement.Hidden, null, null, DockSide.Center, -1);
-    private bool _active, _detached;
+    private bool _active, _detached, _layoutLocked;
     private object? _content;
     public string Id => _model.Id;
     public WindowKind Kind => _model.Kind;
@@ -51,7 +51,9 @@ public sealed class DockWindowViewModel : INotifyPropertyChanged
     private void Update(Func<DockWindow, DockWindow> update) { EnsureRegistered(); _owner.Execute(_owner.Manager.UpdateWindow(Id, update)); }
     internal void Refresh(DockLayout snapshot)
     {
-        _model = snapshot.Windows[Id]; _location = DockTree.Locate(snapshot, Id); _active = snapshot.ActiveWindowId == Id;
+        var model = snapshot.Windows[Id]; var location = DockTree.Locate(snapshot, Id); bool active = snapshot.ActiveWindowId == Id;
+        if (_model == model && _location == location && _active == active && _layoutLocked == snapshot.IsLayoutLocked) return;
+        _model = model; _location = location; _active = active; _layoutLocked = snapshot.IsLayoutLocked;
         PropertyChanged?.Invoke(this, new(null)); NotifyCommands();
     }
     internal void Detach() { _detached = true; PropertyChanged?.Invoke(this, new(null)); NotifyCommands(); }
