@@ -90,7 +90,7 @@ export async function runMdiReviewTests({page, state, test, reset, click, wait, 
   });
   await test('MDI title context menu closes only its target and returns cleanly to tabbed mode', async () => {
     await activate('code'); await click('window-title:code', {button: 'right'}); await settle();
-    await click('window-menu:code:close'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').placement === 'Hidden');
+    await click('window-menu:code:close'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').placement === 'Hidden' && !globalThis.dockingScene.mdiFrames.code);
     assert.notEqual((await win('main')).placement, 'Hidden');
     await reset(); await settle(); await page.screenshot({path: `${output}/mdi-review-final.png`});
   });

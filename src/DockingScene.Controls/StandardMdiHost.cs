@@ -54,7 +54,7 @@ public sealed class StandardMdiHost : UserControl
     public IReadOnlyList<DockWindow> GetDocuments()
     {
         var layout = _manager?.Layout;
-        return layout is null ? [] : _ids.Where(layout.Windows.ContainsKey).Select(id => layout.Windows[id]).ToArray();
+        return layout is null ? [] : _ids.Where(id => layout.Windows.ContainsKey(id) && DockTree.Locate(layout, id).Placement != WindowPlacement.Hidden).Select(id => layout.Windows[id]).ToArray();
     }
     public void ArrangeMinimizedWindows() => Refresh();
     public DockResult Arrange(MdiArrangement arrangement) => _manager is null ? new(false, 0, "No manager.") :
@@ -83,7 +83,7 @@ public sealed class StandardMdiHost : UserControl
         {
             var manager = _manager; var layout = manager.Layout;
             var index = DockLayoutIndex.For(layout);
-            var ordered = _ids.Where(layout.Windows.ContainsKey).ToArray(); var ids = ordered.ToHashSet(StringComparer.Ordinal);
+            var ordered = _ids.Where(id => layout.Windows.ContainsKey(id) && index.Locate(id).Placement != WindowPlacement.Hidden).ToArray(); var ids = ordered.ToHashSet(StringComparer.Ordinal);
             _canvas.Background = DockChrome.Brush(_theme.InactiveTab);
             _canvas.Clip = new RectangleGeometry { Rect = new(0, 0, Math.Max(0, ActualWidth), Math.Max(0, ActualHeight)) };
             foreach (string id in _windows.Keys.Where(id => !ids.Contains(id)).ToArray())
