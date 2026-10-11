@@ -2,7 +2,7 @@
 
 ## Model and package gates
 
-All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. CI runs every matching project under `pipefail`; logging cannot hide a failed process. There are fourteen suites:
+All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. CI runs every matching project under `pipefail`; logging cannot hide a failed process. There are fifteen suites:
 
 | Suite | Main coverage |
 | --- | --- |
@@ -10,6 +10,7 @@ All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. C
 | LayoutSpecs | Geometry, splits, guides, MDI, serialization and storage |
 | ParitySpecs | Invalid/null/deep/cyclic layouts and metadata boundaries |
 | TransactionSpecs | Atomicity, rollback, close vetoes, revisions, previews and observer ordering |
+| SourceBindingSpecs | Bounded source enumeration, callback revisions and reentrant disposal/subscription cleanup |
 | MvvmSpecs | Stable projections, metadata, dispatcher/disposal and source synchronization |
 | VectorSpecs | Built-in icons, bounded SVG grammar, curves/arcs, numeric syntax and locale |
 | TabSpecs | Measured offsets, visible intervals, insertion and scrolling |
@@ -21,7 +22,7 @@ All `tests/*Specs/*.csproj` executables return a nonzero exit code on failure. C
 | GeometryCacheSpecs | Cache input equivalence/invalidation, 300 comparisons with uncached results, and finite minimum-compression arithmetic |
 | EdgeScrollSpecs | Direction, speed, elapsed time, boundaries, invalid inputs and extreme finite numbers |
 
-Current suite definitions contain 2,727 baseline assertions and 190 named focused specifications. Seeded loops supplement these summaries; they are not additional browser scenarios. The logs for the exact commit are authoritative for execution results.
+Current suite definitions contain 2,727 baseline assertions and 196 named focused specifications. Seeded loops supplement these summaries; they are not additional browser scenarios. The logs for the exact commit are authoritative for execution results.
 
 The Uno workflow compiles desktop, publishes the actual WebAssembly application, and packs all six libraries from the same source revision. Two separate consumers restore the generated NuGet packages into a fresh cache: a plain .NET application executes the five non-UI packages, and a Uno library compiles the controls APIs without project references. Desktop compilation and package consumption are not native UI runtime tests.
 
