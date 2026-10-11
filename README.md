@@ -17,14 +17,14 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.3`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.4`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
 The repository pins Uno SDK **6.7.30** and uses **.NET 10**. Install the .NET 10 SDK and the platform prerequisites required by Uno's desktop target.
 
 ```sh
-# Eight UI-independent executable specification suites
+# Ten UI-independent executable specification suites
 for project in tests/*Specs/*.csproj; do
   dotnet run --project "$project" -c Release || exit 1
 done
@@ -80,6 +80,12 @@ manager.Undo().ThrowIfFailed();
 The control supports close cancellation, `CanClose`, optional middle-click closing, application customization of its overflow menu, pin/unpin, preview promotion, four placements and strip visibility without recreating selected content. Header virtualization does not instantiate off-screen document content.
 
 Choose **Tab options → Open standalone tab playground** to try these features with 20 synthetic documents. The toolbar also configures document overflow and single-tool-tab visibility. Read [the tab-layout guide](docs/tab-layout.md) for reusable APIs, allocation details and boundaries.
+
+## Performance and ownership
+
+The engine caches immutable layout lookups by snapshot identity. Tab controls retain measured headers and lane plans across selection, scrolling and unrelated layout changes, and report measurement/realization counters for profiling. The playground includes 2,002-tab workloads, cancellable standalone reordering and content-lifetime examples. See [the performance review](docs/performance-review.md) for the measured workload, fixes, API contracts and remaining costs.
+
+Application content is not disposed by default. Set `DockSite.DisposeContentOnUnregister = true` only for exclusively owned factory results. Close/hide continues to retain content. `DockLayoutStream.ReadAsync` adds bounded, cancellable JSON stream loading without taking ownership of the input stream.
 
 ## Docking interactions
 

@@ -13,6 +13,8 @@ Every `tests/*Specs/*.csproj` program returns a nonzero exit code on failure. CI
 | DockingScene.MvvmSpecs | Stable proxies, commands, metadata, dispatch, disposal, source collections and cancellation |
 | DockingScene.VectorSpecs | Built-in icons, SVG grammar, curves/arcs, numeric syntax, locale and budgets |
 | DockingScene.TabSpecs | Measured offsets, binary visible ranges, insertion positions, scrolling and drag index correction |
+| DockingScene.PerformanceSpecs | Indexed/independent lookup equivalence, weak-cache lifetime, sharing, no-op changes, selective MVVM notifications, MRU correctness and allocation benchmark |
+| DockingScene.SerializationSpecs | Unknown-length bounded input, byte limits, chunked encoding, cancellation, invalid options and consistent store budgets |
 | DockingScene.TabLayoutSpecs | Three-lane allocation, six overflow modes, minimum/fixed extents, large strips, filtered digits and 1,000 seeded allocation/fit checks |
 
 The summaries in each artifact are authoritative for that revision. The 1,000 new allocations comprise 500 mixed constrained cases and 500 feasible-fit cases; they supplement 13 named tab-layout specifications rather than representing 1,000 UI tests.
@@ -21,13 +23,13 @@ The summaries in each artifact are authoritative for that revision. The 1,000 ne
 
 The workflow publishes the same `net10.0-browserwasm` application distributed to users and serves it under `/DockingScene/`. Chromium waits for the splash to disappear and uses real pointer and keyboard input.
 
-The 23 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
+The 24 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
 
-Three switcher regressions also cover twelve immediate Enter/Escape openings without waiting for focus, one-step arrow navigation, input-scope cleanup and absence of background editor changes. The original twenty docking assertions remain in place. See [switcher input scope](switcher-input-scope.md) and [atomic test geometry](browser-hit-targets.md) for the two different live-check failures and their corrections.
+Four switcher regressions also cover twelve immediate Enter/Escape openings without waiting for focus, one-step arrow navigation, input-scope cleanup and absence of background editor changes. Enter-down also keeps its character dispatch inside the modal scope until release. The original twenty docking assertions remain in place. See [switcher input scope](switcher-input-scope.md) and [atomic test geometry](browser-hit-targets.md) for the two different live-check failures and their corrections.
 
 ## Standalone tab browser suite
 
-A second fresh browser session opens **Tab options → Open standalone tab playground**. Its 18 scenarios exercise actual reusable controls, including:
+A second fresh browser session opens **Tab options → Open standalone tab playground**. Its 29 scenarios exercise actual reusable controls, including:
 
 - Lazy creation and header virtualization; independent lane scrolling; menu access to hidden tabs.
 - Global shrinking with feasible minima; all 20 compressed headers selected through their physical label targets; fixed extents under overconstraint; all six overflow affordance sets.
@@ -54,3 +56,7 @@ The distribution workflow repeats model contracts before publishing. After a gre
 Chromium uses **ANGLE/SwiftShader software WebGL**. It exercises the actual Uno Skia renderer but is not a hardware-GPU benchmark. Desktop targets compile in CI; native desktop interaction, Windows/macOS runtime behavior, detached windows, multi-monitor integration, touch/stylus/inertial scrolling, screen readers, RTL, Firefox/WebKit and vendor visual comparison still require additional validation.
 
 A green build certifies only the exercised contracts and scenarios at its exact revision, not full Actipro compatibility. Keep the outstanding matrix in `parity.md` alongside release evidence.
+
+## Performance and content regressions
+
+Eleven additional playground scenarios cover 2,002-tab measurement/realization, 200 selections without new measurement/allocation plans, one-header rename, same-id content replacement, actual pointer reordering, veto/disabled/Escape behavior, application versus owned content release and coalesced unregister/register. The original 18 standalone-tab scenarios remain unchanged. Read-only counters are observed through the same diagnostics as the existing suites. Native benchmark timings are printed with allocation counts; browser workload timings are recorded without machine-specific pass thresholds.

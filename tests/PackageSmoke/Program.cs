@@ -15,5 +15,7 @@ if (!loaded.Success || loaded.Layout!.Windows.Count != 2) throw new Exception("P
 if (VectorPath.Parse(DockGlyphs.Close).Length == 0) throw new Exception("Package vector integration failed.");
 manager.Float("document").ThrowIfFailed();
 if (model.Find("document")!.Placement != WindowPlacement.Floating) throw new Exception("Package notification integration failed.");
+using var input = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(DockLayoutSerializer.Serialize(manager.Layout)));
+if (!(await DockLayoutStream.ReadAsync(input)).Success || !input.CanRead) throw new Exception("Package bounded stream integration failed.");
 Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");
 

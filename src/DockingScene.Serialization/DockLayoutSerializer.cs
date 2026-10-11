@@ -37,8 +37,7 @@ public static class DockLayoutSerializer
 
     public static LayoutLoadResult Deserialize(string json, LayoutLoadOptions? options = null)
     {
-        options ??= new();
-        if (options.MaximumBytes < 1 || options.MaximumWindows < 1) throw new ArgumentOutOfRangeException(nameof(options));
+        options = ValidateOptions(options ?? new());
         if (json is null || json.Length > options.MaximumBytes || Encoding.UTF8.GetByteCount(json) > options.MaximumBytes)
             return new(null, "Layout exceeds the configured size limit.");
         try
@@ -65,6 +64,13 @@ public static class DockLayoutSerializer
         { return new(null, "Invalid docking layout: " + e.Message); }
     }
 
+    internal static LayoutLoadOptions ValidateOptions(LayoutLoadOptions options)
+    {
+        if (options.MaximumBytes < 1 || options.MaximumWindows < 1 || !Enum.IsDefined(options.UnknownWindows))
+            throw new ArgumentOutOfRangeException(nameof(options));
+        return options;
+    }
+
     public static DockResult Restore(DockManager manager, string json, LayoutLoadOptions? options = null)
     {
         var revision = manager.Layout.Revision;
@@ -87,7 +93,7 @@ public interface IDockLayoutStore
 public sealed class FileDockLayoutStore(string directory, LayoutLoadOptions? options = null) : IDockLayoutStore
 {
     private readonly string _directory = Path.GetFullPath(directory);
-    private readonly LayoutLoadOptions _options = options ?? new();
+    private readonly LayoutLoadOptions _options = DockLayoutSerializer.ValidateOptions(options ?? new());
     private readonly SemaphoreSlim _gate = new(1, 1);
     private string GetPath(string name)
     {
@@ -98,6 +104,7 @@ public sealed class FileDockLayoutStore(string directory, LayoutLoadOptions? opt
     public async Task SaveAsync(string name, DockLayout layout, CancellationToken cancellationToken = default)
     {
         var path = GetPath(name);
+        DockLayoutValidator.Validate(layout, _options.MaximumWindows);
         var bytes = Encoding.UTF8.GetBytes(DockLayoutSerializer.Serialize(layout));
         if (bytes.Length > _options.MaximumBytes) throw new InvalidOperationException("Layout exceeds the storage limit.");
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -125,8 +132,7 @@ public sealed class FileDockLayoutStore(string directory, LayoutLoadOptions? opt
             if (!File.Exists(path)) return new(null, "Layout profile does not exist.");
             await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 16384, FileOptions.Asynchronous);
             if (stream.Length > _options.MaximumBytes) return new(null, "Stored layout exceeds the configured size limit.");
-            using var reader = new StreamReader(stream, Encoding.UTF8, true);
-            return DockLayoutSerializer.Deserialize(await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false), _options);
+            return await DockLayoutStream.ReadAsync(stream, _options, cancellationToken).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
     }

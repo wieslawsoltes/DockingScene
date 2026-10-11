@@ -18,5 +18,6 @@
   <Project Path="tests/DockingScene.TabSpecs/DockingScene.TabSpecs.csproj" />
   <Project Path="tests/DockingScene.TabLayoutSpecs/DockingScene.TabLayoutSpecs.csproj" />
   <Project Path="tests/DockingScene.PerformanceSpecs/DockingScene.PerformanceSpecs.csproj" />
+  <Project Path="tests/DockingScene.SerializationSpecs/DockingScene.SerializationSpecs.csproj" />
  </Folder>
 </Solution>
