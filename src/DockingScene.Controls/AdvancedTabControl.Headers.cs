@@ -1,4 +1,5 @@
 using DockingScene.Themes;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
@@ -59,7 +60,19 @@ public partial class AdvancedTabControl
             });
         if (item.IsPreview && CanTabsPromote) Add("Keep " + item.Header + " open", "keep-open:" + item.Id, DockGlyphs.Pin, () => Promote(item));
         if (HasTabCloseButtons && item.CanClose) Add("Close " + item.Header, "close:" + item.Id, DockGlyphs.Close, () => RequestClose(item));
-        return new(new Border { Child = grid, BorderThickness = new(0, 0, 1, 0), BorderBrush = DockChrome.Brush(Theme.Border) }, select, text, buttons);
+        var header = new HeaderVisual(new Border { Child = grid, BorderThickness = new(0, 0, 1, 0), BorderBrush = DockChrome.Brush(Theme.Border) }, select, text, buttons);
+        header.Border.PointerEntered += (_, _) => { header.IsPointerOver = true; PaintHeader(header, item); };
+        header.Border.PointerExited += (_, _) => { header.IsPointerOver = false; PaintHeader(header, item); };
+        header.Border.GotFocus += (_, _) => { header.HasKeyboardFocus = true; PaintHeader(header, item); };
+        header.Border.LostFocus += (_, _) =>
+        {
+            var focused = XamlRoot is null ? null : FocusManager.GetFocusedElement(XamlRoot) as DependencyObject;
+            header.HasKeyboardFocus = false;
+            for (var node = focused; node is not null; node = VisualTreeHelper.GetParent(node))
+                if (ReferenceEquals(node, header.Border)) { header.HasKeyboardFocus = true; break; }
+            PaintHeader(header, item);
+        };
+        return header;
     }
     private void RequestClose(AdvancedTabItem item)
     {
@@ -75,9 +88,11 @@ public partial class AdvancedTabControl
     }
     private void PaintHeader(HeaderVisual header, AdvancedTabItem item)
     {
+        UpdateHeaderActions(header, item);
         bool selected = item.Id == _selectedId;
         string color = selected ? IsGroupActive && !IsToolGroup ? Theme.Accent : Theme.Surface : Theme.InactiveTab;
         if (!selected && item.TabColor is { Length: 7 or 9 } custom && custom[0] == '#' && custom.Skip(1).All(Uri.IsHexDigit)) color = custom;
+        if (!selected && header.IsPointerOver && (IsGroupActive || CanTabsHighlightOnPointerOverWhenInactive)) color = Theme.Hover;
         string foreground = selected && IsGroupActive && !IsToolGroup ? Theme.AccentText : selected && IsToolGroup ? Theme.Accent : Theme.Text;
         if (header.Paint == (color, foreground)) return;
         header.Paint = (color, foreground);

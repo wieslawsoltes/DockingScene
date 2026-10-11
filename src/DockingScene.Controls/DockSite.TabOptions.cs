@@ -37,6 +37,7 @@ public partial class DockSite
                 _tabAdapters.Add(tabs, new());
                 tabs.PinRequested += (id, pinned) => Submit(Manager.SetPinned(id, pinned));
             }
+            ApplyTabAppearance(tabs);
             bool identityChanged = tabs.AutomationIdPrefix != groupId;
             tabs.AutomationIdPrefix = groupId;
             tabs.OverflowBehavior = tabs.IsToolGroup ? ToolTabOverflowBehavior : DocumentTabOverflowBehavior;
