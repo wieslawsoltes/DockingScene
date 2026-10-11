@@ -9,6 +9,8 @@
   <Project Path="src/DockingScene.App/DockingScene.App.csproj" />
  </Folder>
  <Folder Name="/tests/">
+  <Project Path="tests/DockingScene.BulkSpecs/DockingScene.BulkSpecs.csproj" />
+  <Project Path="tests/DockingScene.GeometryReviewSpecs/DockingScene.GeometryReviewSpecs.csproj" />
   <Project Path="tests/DockingScene.Specs/DockingScene.Specs.csproj" />
   <Project Path="tests/DockingScene.LayoutSpecs/DockingScene.LayoutSpecs.csproj" />
   <Project Path="tests/DockingScene.ParitySpecs/DockingScene.ParitySpecs.csproj" />

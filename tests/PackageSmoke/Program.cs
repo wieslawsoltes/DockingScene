@@ -17,5 +17,7 @@ manager.Float("document").ThrowIfFailed();
 if (model.Find("document")!.Placement != WindowPlacement.Floating) throw new Exception("Package notification integration failed.");
 using var input = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(DockLayoutSerializer.Serialize(manager.Layout)));
 if (!(await DockLayoutStream.ReadAsync(input)).Success || !input.CanRead) throw new Exception("Package bounded stream integration failed.");
+manager.RegisterMany(Enumerable.Range(0, 100).Select(i => new DockWindow("bulk" + i, "Bulk", WindowKind.Document))).ThrowIfFailed();
+if (manager.Layout.Windows.Count != 102 || model.Windows.Count != 102) throw new Exception("Package bulk registration integration failed.");
 Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");
 

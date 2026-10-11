@@ -24,7 +24,7 @@ All six packages use **`0.1.0-alpha.4`** and are packed from the same commit. Is
 The repository pins Uno SDK **6.7.30** and uses **.NET 10**. Install the .NET 10 SDK and the platform prerequisites required by Uno's desktop target.
 
 ```sh
-# Ten UI-independent executable specification suites
+# All UI-independent executable specification suites
 for project in tests/*Specs/*.csproj; do
   dotnet run --project "$project" -c Release || exit 1
 done

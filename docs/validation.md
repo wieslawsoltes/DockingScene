@@ -6,6 +6,8 @@ Every `tests/*Specs/*.csproj` program returns a nonzero exit code on failure. CI
 
 | Suite | Coverage |
 | --- | --- |
+| DockingScene.BulkSpecs | Atomic 10,000-window registration, bounded enumeration, stale revision/cancellation, undo/redo and allocation benchmark |
+| DockingScene.GeometryReviewSpecs | Finite inputs, valid modes/ids, overflow-resistant tiling and 1,000 seeded resizes |
 | DockingScene.Specs | Engine, docking, capabilities, lifecycle, serialization and history |
 | DockingScene.LayoutSpecs | Split constraints, geometry, guide targeting, MDI and storage |
 | DockingScene.ParitySpecs | Null/deep/cyclic layouts, overflow and invalid metadata |
@@ -23,13 +25,13 @@ The summaries in each artifact are authoritative for that revision. The 1,000 ne
 
 The workflow publishes the same `net10.0-browserwasm` application distributed to users and serves it under `/DockingScene/`. Chromium waits for the splash to disappear and uses real pointer and keyboard input.
 
-The 24 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
+The 26 docking scenarios cover startup, initially unmodified multiline documents, content identity through close/reopen, persistence restore, standard/tabbed MDI, locking, editor caret behavior, preview promotion, keep-open, tab reordering, floating/redocking, splitters, auto-hide resizing/pinning, pinned close-others, switcher cancel/commit, themes and reset. Captured gestures must own a real pointer capture and release it on outside-site mouse-up or Escape. Redocking requires a floating source rather than treating a no-op as a pass.
 
-Four switcher regressions also cover twelve immediate Enter/Escape openings without waiting for focus, one-step arrow navigation, input-scope cleanup and absence of background editor changes. Enter-down also keeps its character dispatch inside the modal scope until release. The original twenty docking assertions remain in place. See [switcher input scope](switcher-input-scope.md) and [atomic test geometry](browser-hit-targets.md) for the two different live-check failures and their corrections.
+Five switcher regressions also cover twelve immediate Enter/Escape openings without waiting for focus, one-step arrow navigation, input-scope cleanup and absence of background editor changes. Enter-down also keeps its character dispatch inside the modal scope until release. The original twenty docking assertions remain in place. See [switcher input scope](switcher-input-scope.md) and [atomic test geometry](browser-hit-targets.md) for the two different live-check failures and their corrections.
 
 ## Standalone tab browser suite
 
-A second fresh browser session opens **Tab options → Open standalone tab playground**. Its 29 scenarios exercise actual reusable controls, including:
+A second fresh browser session opens **Tab options → Open standalone tab playground**. Its 32 scenarios exercise actual reusable controls, including:
 
 - Lazy creation and header virtualization; independent lane scrolling; menu access to hidden tabs.
 - Global shrinking with feasible minima; all 20 compressed headers selected through their physical label targets; fixed extents under overconstraint; all six overflow affordance sets.
@@ -59,4 +61,12 @@ A green build certifies only the exercised contracts and scenarios at its exact 
 
 ## Performance and content regressions
 
-Eleven additional playground scenarios cover 2,002-tab measurement/realization, 200 selections without new measurement/allocation plans, one-header rename, same-id content replacement, actual pointer reordering, veto/disabled/Escape behavior, application versus owned content release and coalesced unregister/register. The original 18 standalone-tab scenarios remain unchanged. Read-only counters are observed through the same diagnostics as the existing suites. Native benchmark timings are printed with allocation counts; browser workload timings are recorded without machine-specific pass thresholds.
+Fourteen additional playground scenarios cover 2,002-tab measurement/realization, 200 selections without new measurement/allocation plans, one-header rename, same-id content replacement, actual pointer reordering, veto/disabled/Escape behavior, application versus owned content release and coalesced unregister/register. The original 18 standalone-tab scenarios remain unchanged. Read-only counters are observed through the same diagnostics as the existing suites. Native benchmark timings are printed with allocation counts; browser workload timings are recorded without machine-specific pass thresholds.
+
+## Follow-up review coverage
+
+The additional editor-to-switcher regression performs twelve immediate F8/Enter transitions without an overlay/focus wait. The held-Enter test verifies actual focus inside the switcher, not just registered handlers. A real shortcut during a captured docking drag must release capture and cancel the obsolete preview before more pointer input arrives.
+
+Rapid selection still invokes all selected content factories, but unseen intermediate header presentation is coalesced. The 200-selection test now requires fewer than 50 newly created headers, not merely bounded currently realized headers. Three application-callback tests exercise nested selection, failed factories retaining the current document and recursive factories being rejected rather than recursing indefinitely.
+
+Stream tests reject malformed/truncated UTF-8 instead of substituting replacement characters, count a UTF-8 BOM in the byte budget and preserve pre-cancelled save behavior. UTF-16/UTF-32 streams are not supported. The twelve specification suites and both browser suites remain separate validation categories; workload timings are not GPU or frame-latency guarantees.
