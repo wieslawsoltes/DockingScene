@@ -126,6 +126,7 @@ public partial class DockSite
         // leaves an external toolbar, even though the overlay is already painted.
         _switcher.AcquireInputScope(XamlRoot?.Content);
         if (direction < 0) _switcher.Move(-2); _root.Children.Add(_switcher);
+        _switcher.TakeInputFocus();
     }
     private void CloseSwitcher(bool commit)
     {

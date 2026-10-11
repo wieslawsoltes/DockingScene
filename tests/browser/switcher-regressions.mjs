@@ -48,10 +48,24 @@ export async function runSwitcherRegressions({ page, state, test, reset, click, 
     await page.keyboard.press('F8'); await page.keyboard.down('Enter');
     try {
       await wait(() => globalThis.dockingScene.switcherInputScoped && globalThis.dockingScene.bounds['window-switcher']);
+      assert.equal((await state()).switcherHasInputFocus, true);
       assert.equal((await state()).editors.code.text, 'unchanged');
     } finally { await page.keyboard.up('Enter'); }
     await wait(() => !globalThis.dockingScene.switcherInputScoped && globalThis.dockingScene.activeWindowId === 'welcome');
     assert.equal((await state()).editors.code.text, 'unchanged');
+  });
+
+  await test('Immediate editor-to-switcher confirmation never edits the source', async () => {
+    for (let iteration = 0; iteration < 12; iteration++) {
+      await reset(); await click('tab:code'); await click('editor:code');
+      await page.keyboard.press('Control+a'); await page.keyboard.type('retained-' + iteration);
+      await wait(text => globalThis.dockingScene.editors.code.text === text, 'retained-' + iteration);
+      await page.keyboard.press('F8');
+      // No overlay, Loaded, focus, or render wait before the confirmation key.
+      await page.keyboard.press('Enter');
+      await wait(() => !globalThis.dockingScene.switcherInputScoped && globalThis.dockingScene.activeWindowId === 'welcome');
+      assert.equal((await state()).editors.code.text, 'retained-' + iteration);
+    }
   });
 
 }

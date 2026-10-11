@@ -43,7 +43,7 @@ public sealed partial class StandardSwitcher
                 // CharacterReceived can follow a handled KeyDown. Keep the modal
                 // visual focused through that character dispatch; complete on KeyUp.
                 e.Handled = true; _enterPending = true;
-                if (IsLoaded) Focus(FocusState.Programmatic);
+                TakeInputFocus();
                 break;
             case VirtualKey.Escape: e.Handled = true; Cancel(); break;
             case VirtualKey.Up: e.Handled = true; Move(-1); break;

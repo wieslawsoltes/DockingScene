@@ -46,7 +46,7 @@ public sealed partial class StandardSwitcher : UserControl
             AcquireInputScope(XamlRoot?.Content);
             // Do not defer focus past the input that opened the switcher. The
             // root preview scope also covers the interval before Loaded fires.
-            Focus(FocusState.Programmatic);
+            TakeInputFocus();
         };
         Unloaded += (_, _) => DetachInputScope();
         Move(_ids.Length > 1 ? 1 : 0);
