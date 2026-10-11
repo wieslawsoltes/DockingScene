@@ -67,6 +67,7 @@ public sealed partial class WorkspaceView
         root.RowDefinitions.Add(new() { Height = GridLength.Auto });
         root.RowDefinitions.Add(new() { Height = GridLength.Auto });
         root.RowDefinitions.Add(new() { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new() { Height = GridLength.Auto });
         root.RowDefinitions.Add(new() { Height = new(1, GridUnitType.Star) });
         var modes = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
         var options = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 3 };
@@ -74,7 +75,8 @@ public sealed partial class WorkspaceView
         var tabs = DockChrome.Identify(new AdvancedTabControl { AutomationIdPrefix = "playground", HasTabPinButtons = true }, "play:tabs");
         _tabPlayground = tabs; _vetoPlaygroundClose = true; _lastPlaygroundClosingId = null; _playgroundClosingCount = 0;
         var performance = PerformanceActions(tabs); root.Children.Add(performance); Grid.SetRow(performance, 2);
-        Grid.SetRow(tabs, 3); root.Children.Add(tabs);
+        var review = FactoryReviewActions(tabs); root.Children.Add(review); Grid.SetRow(review, 3);
+        Grid.SetRow(tabs, 4); root.Children.Add(tabs);
         var items = new List<AdvancedTabItem>();
         void Add(string id, string header, bool pinned = false, bool preview = false)
         {

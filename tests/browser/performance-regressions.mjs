@@ -36,6 +36,8 @@ export async function runPerformanceRegressions({ page, state, strip, test, wait
     const after = await strip();
     assert.equal(after.textMeasurements, before.textMeasurements);
     assert.equal(after.layoutPasses, before.layoutPasses);
+    assert(after.headersCreated - before.headersCreated < 50,
+      'Unpainted intermediate selections should not construct hundreds of headers.');
     assert(after.realized < 50);
     assert.equal(after.items.filter(i => i.contentCreated).length, 200);
     await remember('select-200');
@@ -107,6 +109,20 @@ export async function runPerformanceRegressions({ page, state, strip, test, wait
       globalThis.dockingScene.contentReleases === before.contentReleases + 1 &&
       globalThis.dockingScene.contentDisposals === before.contentDisposals + 1, before);
     await bounds('lifetime:editor'); assert.notEqual((await state()).trackedContent, before.trackedContent);
+  });
+  await test('Nested factory selection wins over the obsolete outer request', async () => {
+    await setting('Open standalone tab playground'); await click('review:reentrant'); await settle();
+    assert.equal((await strip()).selectedId, 'callback-target');
+    assert.equal((await state()).factoryCallbackCount, 1); await bounds('review:target-content');
+  });
+  await test('A failed factory preserves the previous selection and content', async () => {
+    await click('review:failure'); await settle();
+    assert.equal((await state()).factoryFailureRetained, true);
+    assert.equal((await strip()).selectedId, 'failure-target'); await bounds('review:retained-content');
+  });
+  await test('Recursive content creation fails without stack recursion', async () => {
+    await click('review:recursive'); await settle();
+    assert.equal((await state()).recursiveFactoryRejected, true);
   });
   console.log('PERFORMANCE_OBSERVATIONS ' + JSON.stringify(measurements));
   return measurements;

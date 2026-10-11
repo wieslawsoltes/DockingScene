@@ -8,6 +8,9 @@ public sealed partial class WorkspaceView
 {
     private void WriteTabDiagnostics(Utf8JsonWriter writer)
     {
+        writer.WriteBoolean("factoryFailureRetained", _factoryFailureRetained);
+        writer.WriteBoolean("recursiveFactoryRejected", _recursiveFactoryRejected);
+        writer.WriteNumber("factoryCallbackCount", _factoryCallbackCount);
         writer.WriteBoolean("switcherHasInputFocus", _site.SwitcherHasInputFocus);
         writer.WriteString("switcherSelection", _site.SwitcherSelectedId);
         writer.WriteBoolean("switcherInputScoped", _site.IsSwitcherInputScoped);
