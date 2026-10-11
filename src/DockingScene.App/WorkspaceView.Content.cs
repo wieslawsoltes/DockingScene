@@ -84,7 +84,9 @@ public sealed partial class WorkspaceView
         };
         var editor = DockChrome.Identify(new TextBox
         {
-            Text = source, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, IsReadOnly = window.IsReadOnly,
+            // Configure multiline behavior before assigning Text; otherwise the default single-line
+            // coercion can truncate the initial value before the TextChanged observer is attached.
+            AcceptsReturn = true, Text = source, TextWrapping = TextWrapping.NoWrap, IsReadOnly = window.IsReadOnly,
             FontFamily = new FontFamily("Consolas, monospace"), FontSize = 13, Padding = new(14, 10, 14, 10), BorderThickness = new(0),
             Background = DockChrome.Brush(_theme.EditorBackground), Foreground = DockChrome.Brush(_theme.Text), HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch
         }, "editor:" + window.Id, window.Title + " editor");
@@ -154,7 +156,7 @@ public sealed partial class WorkspaceView
     }
     private FrameworkElement Output()
     {
-        _output = new TextBox { Text = string.Join('\n', _events.Reverse()), IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.NoWrap, FontFamily = new FontFamily("Consolas, monospace"), FontSize = 12, Padding = new(8, 5, 8, 5), BorderThickness = new(0), Background = DockChrome.Brush(_theme.Surface), Foreground = DockChrome.Brush(_theme.Text) };
+        _output = new TextBox { AcceptsReturn = true, Text = string.Join('\n', _events.Reverse()), IsReadOnly = true, TextWrapping = TextWrapping.NoWrap, FontFamily = new FontFamily("Consolas, monospace"), FontSize = 12, Padding = new(8, 5, 8, 5), BorderThickness = new(0), Background = DockChrome.Brush(_theme.Surface), Foreground = DockChrome.Brush(_theme.Text) };
         DockChrome.Identify(_output, "output:log"); return _output;
     }
     private FrameworkElement Errors()

@@ -40,8 +40,12 @@ async function contextMenu(id, item) {
   await click(`menu:${item}`); await menusGone(); await settle();
 }
 async function reset() {
-  await page.keyboard.press('Escape'); await menusGone(); await click('toolbar:Reset');
-  await wait(() => globalThis.dockingScene.windows.length === 12 && globalThis.dockingScene.activeWindowId === 'welcome'); await settle();
+  await page.keyboard.press('Escape'); await menusGone();
+  const generation = (await state()).workspaceGeneration;
+  await click('toolbar:Reset');
+  await wait(generation => globalThis.dockingScene.workspaceGeneration > generation &&
+    globalThis.dockingScene.windows.length === 12 && globalThis.dockingScene.activeWindowId === 'welcome', generation);
+  await settle();
 }
 async function drag(id, destination, modifiers = []) {
   const r = await bounds(id); const x = r.x + Math.min(r.width / 2, 45), y = r.y + r.height / 2;
@@ -51,6 +55,7 @@ async function drag(id, destination, modifiers = []) {
     await page.mouse.move(destination.x, destination.y, { steps: 18 });
     await page.mouse.up();
   } finally { for (const modifier of [...modifiers].reverse()) await page.keyboard.up(modifier); }
+  await wait(() => globalThis.dockingScene.interactionActive === false);
   await settle();
 }
 async function test(name, action) {
@@ -76,6 +81,8 @@ try {
   await test('New document is initially unmodified', async () => {
     await click('toolbar:New'); await wait(() => globalThis.dockingScene.windows.some(w => w.id === 'new-1')); await settle();
     assert.equal((await state()).activeWindowId, 'new-1'); assert.equal((await windowState('new-1')).isModified, false);
+    assert.equal((await state()).editors['new-1'].text,
+      '// new-1\n// This editor instance is retained while docking, floating and hiding.\n');
   });
   await test('Close and reopen through a menu preserves registered identity', async () => {
     const instance = (await state()).editors['new-1'].instance;
@@ -105,7 +112,10 @@ try {
     assert.equal((await windowState('preview')).displayMode, 'Preview'); assert.equal((await windowState('preview')).isModified, false);
     await click('editor:preview'); await page.keyboard.press('Control+a'); await page.keyboard.type('abcde');
     await page.keyboard.press('End'); await page.keyboard.press('ArrowLeft'); await page.keyboard.type('X');
-    await wait(() => globalThis.dockingScene.editors.preview.text === 'abcdXe');
+    // Text updates and the corresponding managed metadata notification need not
+    // appear in the same diagnostic tick. Wait for the whole expected transition.
+    await wait(() => globalThis.dockingScene.editors.preview.text === 'abcdXe' &&
+      globalThis.dockingScene.windows.some(w => w.id === 'preview' && w.isModified && w.displayMode === 'Normal'));
     assert.equal((await state()).activeWindowId, 'preview'); assert.equal((await windowState('preview')).displayMode, 'Normal');
     assert.equal((await windowState('preview')).isModified, true);
   });
@@ -126,6 +136,9 @@ try {
     await page.screenshot({ path: `${output}/floating.png` });
   });
   await test('Floating tab can be dragged back into a document header', async () => {
+    // Without this precondition, a failed preceding Float test can produce a false pass.
+    assert.equal((await windowState('code')).placement, 'Floating', 'Redocking requires an actually floating source');
+    assert.equal((await state()).floatingHosts.length, 1);
     const instance = (await state()).editors.code.instance; const target = await bounds('tab:main');
     await drag('tab:code', { x: target.x + target.width / 2, y: target.y + target.height / 2 });
     await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').placement === 'Document');
@@ -163,7 +176,12 @@ try {
     await page.screenshot({ path: `${output}/dark.png` }); await menu('Theme', 'Metro Light');
   });
   await test('Final reset and exception-free browser session', async () => {
-    await reset(); assert.equal((await state()).floatingHosts.length, 0); assert.deepEqual(errors, []);
+    await reset();
+    assert.equal((await state()).floatingHosts.length, 0);
+    assert.equal((await state()).interactionActive, false);
+    assert.equal((await state()).bounds['window-switcher'], undefined);
+    assert.equal((await state()).autoHideWindowId, null);
+    assert.deepEqual(errors, []);
     const diagnostics = await captureDiagnostics(page); assert.equal(diagnostics.diagnosticError, null); assert.equal(diagnostics.startup?.error, null);
     await page.screenshot({ path: `${output}/workspace-final.png` });
   });

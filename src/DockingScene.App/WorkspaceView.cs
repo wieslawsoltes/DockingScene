@@ -25,6 +25,7 @@ public sealed partial class WorkspaceView : UserControl
     private DockTheme _theme = DockTheme.MetroLight;
     private DockLayout? _saved;
     private int _nextDocument = 1;
+    private long _workspaceGeneration;
     private string _lastMessage = "Ready";
     private bool _modified;
     private readonly Dictionary<string, string> _documents = new(StringComparer.Ordinal);
@@ -81,6 +82,7 @@ public sealed partial class WorkspaceView : UserControl
         manager.Activate("explorer").ThrowIfFailed(); manager.Activate("output").ThrowIfFailed(); manager.Activate("welcome").ThrowIfFailed();
         _models?.Dispose();
         _models = new DockWorkspaceViewModel(manager, action => { if (DispatcherQueue.HasThreadAccess) action(); else DispatcherQueue.TryEnqueue(() => action()); });
+        _workspaceGeneration++;
         _site.Manager = manager;
         SetTheme(_theme); Log("Ready — drag a document tab or tool-window title to rearrange the workspace");
     }
