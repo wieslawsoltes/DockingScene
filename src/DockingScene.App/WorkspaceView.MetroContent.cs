@@ -110,6 +110,7 @@ public sealed partial class WorkspaceView
             }));
         });
         apply.HorizontalAlignment = HorizontalAlignment.Right; Add(null, apply, 24);
+        bool reconcilingChoices = false;
         DockWindow? shown = null;
         object? previousWindows = null; string[] previousIds = [];
         void Load()
@@ -128,12 +129,18 @@ public sealed partial class WorkspaceView
                 if (!ids.SequenceEqual(previousIds))
                 {
                     string selected = choices.SelectedItem as string ?? "main";
-                    _inspectorWindowIds = ids; previousIds = ids; choices.ItemsSource = ids; choices.SelectedItem = windows.ContainsKey(selected) ? selected : ids.FirstOrDefault();
+                    _inspectorWindowIds = ids; previousIds = ids;
+                    // ItemsSource changes emit transient SelectionChanged events.
+                    // Preserve a same-window draft instead of reloading its fields.
+                    reconcilingChoices = true;
+                    try { choices.ItemsSource = ids; choices.SelectedItem = windows.ContainsKey(selected) ? selected : ids.FirstOrDefault(); }
+                    finally { reconcilingChoices = false; }
+                    if (choices.SelectedItem as string != selected) shown = null;
                 }
             }
             Load();
         }
-        choices.SelectionChanged += (_, _) => { shown = null; Load(); };
+        choices.SelectionChanged += (_, _) => { if (reconcilingChoices) return; shown = null; Load(); };
         panel.Loaded += (_, _) => { _site.VisualsUpdated += Refresh; Refresh(); };
         panel.Unloaded += (_, _) => _site.VisualsUpdated -= Refresh;
         Refresh();
