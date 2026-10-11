@@ -10,6 +10,11 @@ public sealed partial class WorkspaceView
     {
         writer.WriteString("switcherSelection", _site.SwitcherSelectedId);
         writer.WriteBoolean("switcherInputScoped", _site.IsSwitcherInputScoped);
+        writer.WriteNumber("tabReorderRequests", _tabReorderRequests); writer.WriteNumber("tabReorders", _tabReorders);
+        writer.WriteBoolean("tabReorderVeto", _vetoTabReorder); writer.WriteNumber("tabWorkloadMs", _lastTabWorkloadMs);
+        writer.WriteNumber("contentCreations", _contentCreations); writer.WriteNumber("contentDisposals", _contentDisposals);
+        writer.WriteNumber("contentReleases", _contentReleases); writer.WriteBoolean("ownsContent", _ownershipSite?.DisposeContentOnUnregister == true);
+        writer.WriteNumber("trackedContent", _trackedContent is null ? 0 : RuntimeHelpers.GetHashCode(_trackedContent));
         writer.WriteStartArray("tabStrips");
         foreach (var (groupId, tabs) in _site.TabControls) WriteTabStrip(writer, groupId, tabs);
         if (_tabPlayground is { } playground && _site.Manager.Layout.Windows.ContainsKey("tab-playground")) WriteTabStrip(writer, "playground", playground);
@@ -23,6 +28,9 @@ public sealed partial class WorkspaceView
         writer.WriteStartObject(); writer.WriteString("id", id); writer.WriteString("overflow", tabs.OverflowBehavior.ToString());
         writer.WriteString("placement", tabs.Placement.ToString()); writer.WriteString("selectedId", tabs.SelectedId);
         writer.WriteBoolean("visible", tabs.IsTabStripVisible); writer.WriteNumber("realized", tabs.RealizedHeaderCount);
+        writer.WriteNumber("textMeasurements", tabs.TextMeasurementCount); writer.WriteNumber("layoutPasses", tabs.HeaderLayoutCount);
+        writer.WriteNumber("headersCreated", tabs.HeaderCreationCount); writer.WriteNumber("refreshes", tabs.RefreshCount);
+        writer.WriteBoolean("dragActive", tabs.IsTabDragActive); writer.WriteBoolean("canDrag", tabs.CanTabsDrag);
         writer.WriteNumber("count", tabs.Items.Count); writer.WriteNumber("minimum", tabs.MinTabExtent); writer.WriteNumber("maximum", tabs.MaxTabExtent);
         writer.WriteStartArray("lanes");
         foreach (var lane in tabs.HeaderLayout?.Lanes ?? [])

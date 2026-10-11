@@ -32,6 +32,9 @@ public class WindowControl : UserControl
     public DockSize MinimumSize { get; set; } = new(100, 70);
     public DockSize MaximumSize { get; set; } = DockSize.Maximum;
     public bool CanResize { get; set; } = true;
+    public bool CanMove { get; set; } = true;
+    public bool CanClose { get; set; } = true;
+    private (string Id, string Title, DockTheme Theme, bool Active, bool Minimize, bool Maximize, bool Maximized, bool Close)? _chrome;
     public bool ShowMinimize { get; set; }
     public bool ShowMaximize { get; set; } = true;
     public bool IsMaximized { get; set; }
@@ -55,7 +58,7 @@ public class WindowControl : UserControl
             if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
             Activated?.Invoke();
             var request = new WindowDragEventArgs(e); HeaderDragStarting?.Invoke(this, request);
-            if (!request.Handled && !IsMaximized) Begin(e, DockSide.Center, DockSide.Center);
+            if (!request.Handled && !IsMaximized && CanMove) Begin(e, DockSide.Center, DockSide.Center);
             e.Handled = true;
         };
         _titleText.DoubleTapped += (_, e) => { if (ShowMaximize) MaximizeRequested?.Invoke(); e.Handled = true; };
@@ -81,6 +84,7 @@ public class WindowControl : UserControl
         PointerMoved += (_, e) =>
         {
             if (!_moving || _coordinateRoot is null) return;
+            if (_resizeX == DockSide.Center && _resizeY == DockSide.Center ? !CanMove : !CanResize) { CancelMovement(); return; }
             var point = e.GetCurrentPoint(_coordinateRoot).Position;
             double dx = point.X - _start.X, dy = point.Y - _start.Y;
             var rect = _resizeX == DockSide.Center && _resizeY == DockSide.Center ? _original with { X = _original.X + dx, Y = _original.Y + dy } : WindowGeometry.Resize(_original, dx, dy, _resizeX, _resizeY, MinimumSize, MaximumSize);
@@ -97,10 +101,13 @@ public class WindowControl : UserControl
         _moving = CapturePointer(e.Pointer);
     }
     public void CancelMovement() { if (!_moving) return; _moving = false; SetBounds(_original); ReleasePointerCaptures(); }
-    public void SetBounds(DockRect bounds) { Bounds = bounds; DockChrome.Position(this, bounds); }
+    public void SetBounds(DockRect bounds) { if (Bounds == bounds && Width == bounds.Width && Height == bounds.Height) return; Bounds = bounds; DockChrome.Position(this, bounds); }
     public void SetWindowContent(object? content) => ContentLease.Set(_content, content);
     public void UpdateChrome(string title, DockTheme theme, bool active)
     {
+        var chrome = (WindowId, title, theme, active, ShowMinimize, ShowMaximize, IsMaximized, CanClose);
+        if (_chrome == chrome) return;
+        _chrome = chrome;
         _root.Background = DockChrome.Brush(theme.Surface); _root.BorderBrush = DockChrome.Brush(active ? theme.Accent : theme.Border); _root.BorderThickness = new(1);
         _root.RowDefinitions[0].Height = new(theme.TitleHeight);
         _title.Background = DockChrome.Brush(active ? theme.ActiveToolTitle : theme.Background);
@@ -112,6 +119,7 @@ public class WindowControl : UserControl
             var button = DockChrome.Button(name, "window:" + WindowId + ":" + name.ToLowerInvariant(), theme, action, glyph);
             button.Width = 26; button.Height = theme.TitleHeight; button.Padding = new(5); button.Background = _title.Background;
             button.Content = DockChrome.Glyph(glyph, active ? theme.AccentText : theme.Text);
+            if (name == "Close") button.IsEnabled = CanClose;
             _buttons.Children.Add(button);
         }
         if (ShowMinimize) Add("Minimize", DockGlyphs.Minimize, () => MinimizeRequested?.Invoke());

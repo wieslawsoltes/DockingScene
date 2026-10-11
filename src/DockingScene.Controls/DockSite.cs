@@ -24,7 +24,7 @@ public partial class DockSite : UserControl
     private DockContainer? _autoPopup;
     private string? _autoOpen;
     private DockRect _autoBounds;
-    private bool _queued;
+    private int _queued;
     private bool _rendering;
     private bool _subscribed;
     private DockGeometry? _geometry;
@@ -77,17 +77,24 @@ public partial class DockSite : UserControl
         site.CloseAutoHide(); site._autoPopup?.Tabs.ReleaseContent();
         foreach (var group in site._groups.Values) group.Tabs.ReleaseContent();
         site._mdi?.ReleaseContent();
-        site._windows.Clear();
+        site.ReleaseWindowContent(site._windows.Keys.ToArray());
         site.Subscribe(); site.QueueRender();
     }
     private void Subscribe() { if (!_subscribed && GetValue(ManagerProperty) is DockManager manager) { manager.Changed += ModelChanged; _subscribed = true; } }
     private void Unsubscribe() { if (_subscribed) { Manager.Changed -= ModelChanged; _subscribed = false; } }
-    private void ModelChanged(object? sender, DockChangedEventArgs e) { QueueRender(); LayoutChanged?.Invoke(this, e); }
+    private void ModelChanged(object? sender, DockChangedEventArgs e)
+    {
+        void Notify()
+        {
+            if (!ReferenceEquals(sender, GetValue(ManagerProperty))) return;
+            QueueRender(); LayoutChanged?.Invoke(this, e);
+        }
+        if (DispatcherQueue.HasThreadAccess) Notify(); else DispatcherQueue.TryEnqueue(Notify);
+    }
     private void QueueRender()
     {
-        if (_queued) return;
-        _queued = true;
-        if (!DispatcherQueue.TryEnqueue(() => { _queued = false; Render(); })) _queued = false;
+        if (Interlocked.Exchange(ref _queued, 1) != 0) return;
+        if (!DispatcherQueue.TryEnqueue(() => { Interlocked.Exchange(ref _queued, 0); Render(); })) Interlocked.Exchange(ref _queued, 0);
     }
     public void Refresh() => QueueRender();
     private void Submit(DockResult result) { if (!result.Success) OperationRejected?.Invoke(result.Error ?? "Operation rejected."); }
@@ -152,11 +159,12 @@ public partial class DockSite : UserControl
 
     private void Render()
     {
-        if (_rendering || ActualWidth <= 0 || ActualHeight <= 0 || GetValue(ManagerProperty) is not DockManager manager) return;
+        if (!IsLoaded || _rendering || ActualWidth <= 0 || ActualHeight <= 0 || GetValue(ManagerProperty) is not DockManager manager) return;
         _rendering = true;
         try
         {
             var layout = manager.Layout;
+            var index = DockLayoutIndex.For(layout);
             _geometry = DockLayoutEngine.Arrange(layout, new(0, 0, ActualWidth, ActualHeight), new() { TabHeight = Theme.TabHeight, TitleHeight = Theme.TitleHeight, Splitter = Theme.SplitterSize, DpiScale = XamlRoot?.RasterizationScale ?? 1 });
             _canvas.Background = DockChrome.Brush(Theme.Background);
             _canvas.Clip = new RectangleGeometry { Rect = new(0, 0, ActualWidth, ActualHeight) };
@@ -165,7 +173,7 @@ public partial class DockSite : UserControl
             var groups = DockTree.Groups(layout).Where(g => !g.Windows.All(standardIds.Contains)).ToArray();
             var validGroups = groups.Select(g => g.Id).ToHashSet(StringComparer.Ordinal);
             foreach (var key in _groups.Keys.Where(k => !validGroups.Contains(k)).ToArray()) { _groups[key].Tabs.ReleaseContent(); _canvas.Children.Remove(_groups[key]); _groups.Remove(key); }
-            var hostOrder = layout.FloatingHosts.OrderByDescending(h => DockTree.WindowIds(h.Root).Select(id => layout.ActivationHistory.IndexOf(id) is var i && i >= 0 ? i : int.MaxValue).DefaultIfEmpty(int.MaxValue).Min()).ToArray();
+            var hostOrder = layout.FloatingHosts.OrderByDescending(h => DockTree.WindowIds(h.Root).Select(id => index.ActivationRank(id) is var i && i >= 0 ? i : int.MaxValue).DefaultIfEmpty(int.MaxValue).Min()).ToArray();
             var z = hostOrder.Select((h, i) => (h.Id, Z: 100 + i * 10)).ToDictionary(p => p.Id, p => p.Z);
             foreach (var key in _floats.Keys.Where(k => !layout.FloatingHosts.Any(h => h.Id == k)).ToArray()) { _canvas.Children.Remove(_floats[key]); _floats.Remove(key); }
             foreach (var host in hostOrder)
@@ -186,6 +194,9 @@ public partial class DockSite : UserControl
                 }
                 var ids = DockTree.WindowIds(host.Root).ToArray();
                 string selected = ids.FirstOrDefault(id => id == layout.ActiveWindowId) ?? ids[0];
+                window.CanMove = !layout.IsLayoutLocked && ids.All(id => manager.Allows(id, DockCapabilities.Drag));
+                window.CanClose = ids.All(id => manager.Allows(id, DockCapabilities.Close));
+                window.ShowMaximize = !layout.IsLayoutLocked && ids.All(id => manager.Allows(id, DockCapabilities.Resize));
                 window.IsMaximized = host.IsMaximized; window.CanResize = !layout.IsLayoutLocked && ids.All(id => manager.Allows(id, DockCapabilities.Resize));
                 window.SetBounds(_geometry.FloatingHosts[host.Id]); Canvas.SetZIndex(window, z[host.Id]);
                 window.UpdateChrome(layout.Windows[selected].Title, Theme, ids.Contains(layout.ActiveWindowId));
@@ -195,7 +206,7 @@ public partial class DockSite : UserControl
                 if (!_groups.TryGetValue(group.Id, out var view)) { view = CreateContainer(group.Kind == GroupKind.Tools); _groups.Add(group.Id, view); _canvas.Children.Add(view); }
                 var host = DockTree.Locate(layout, group.Windows[0]).HostId;
                 DockChrome.Position(view, _geometry.Nodes[group.Id], host is null ? 1 : z[host] + 2);
-                view.Update(group, group.Windows.Select(id => (AdvancedTabItem)Window(id)).ToArray(), layout, Theme);
+                view.Update(group, group.Windows.Select(id => (AdvancedTabItem)Window(id)).ToArray(), layout, Theme, allowed: manager.Policy.AllowedCapabilities);
             }
             foreach (var split in _geometry.Splitters)
             {
@@ -226,7 +237,7 @@ public partial class DockSite : UserControl
                 DockChrome.Position(presenter, _geometry.Nodes[workspace.Id], 0); AddAuxiliary(presenter);
             }
             RenderAutoHide(layout);
-            foreach (var id in _windows.Keys.Where(id => !layout.Windows.ContainsKey(id)).ToArray()) { if (_windows[id].Content is IDisposable disposable) disposable.Dispose(); _windows.Remove(id); }
+            ReleaseWindowContent(_windows.Keys.Where(id => !layout.Windows.ContainsKey(id)).ToArray());
             VisualsUpdated?.Invoke();
         }
         finally { _rendering = false; }
@@ -283,7 +294,7 @@ public partial class DockSite : UserControl
             _ => new(area.X, area.Bottom - Math.Min(size, area.Height), area.Width, Math.Min(size, area.Height))
         };
         var popupGroup = new DockGroup(current.Id, GroupKind.Tools, current.Windows, _autoOpen) { TabPlacement = TabPlacement.Bottom };
-        _autoPopup.Update(popupGroup, current.Windows.Select(id => (AdvancedTabItem)Window(id)).ToArray(), layout, Theme, true);
+        _autoPopup.Update(popupGroup, current.Windows.Select(id => (AdvancedTabItem)Window(id)).ToArray(), layout, Theme, true, Manager.Policy.AllowedCapabilities);
         DockChrome.Position(_autoPopup, _autoBounds, 5000);
     }
 }
