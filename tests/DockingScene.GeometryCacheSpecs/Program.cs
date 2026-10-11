@@ -88,5 +88,16 @@ Test("Seeded transitions match uncached rectangles and warnings", () => {
         Check(expected.AutoHideRails.Count == actual.AutoHideRails.Count && expected.AutoHideRails.All(p => actual.AutoHideRails[p.Key] == p.Value));
     }
 });
+Test("Extreme finite minimums shrink proportionally without intermediate overflow", () => {
+    var m = new DockManager();
+    m.Register(new("a", "A", WindowKind.Tool) { MinimumSize = new(3e307, 50), MaximumSize = new(4e307, 1000) }, targetId: "workspace", side: DockSide.Left).ThrowIfFailed();
+    m.Register(new("b", "B", WindowKind.Tool) { MinimumSize = new(3e307, 50), MaximumSize = new(4e307, 1000) }, targetId: "a", side: DockSide.Right).ThrowIfFailed();
+    var rect = new DockRect(0, 0, 5e307, 800);
+    var actual = new DockGeometryCache().Arrange(m.Layout, rect);
+    var a = actual.Nodes[DockTree.GroupOf(m.Layout, "a")!.Id];
+    var b = actual.Nodes[DockTree.GroupOf(m.Layout, "b")!.Id];
+    Check(double.IsFinite(a.Width) && double.IsFinite(b.Width) && a.Width > 0 && b.Width > 0);
+    Check(Math.Abs(a.Width / b.Width - 1) < .00001);
+});
 Console.WriteLine($"{passed}/{passed + failed} geometry cache specifications passed.");
 return failed == 0 ? 0 : 1;

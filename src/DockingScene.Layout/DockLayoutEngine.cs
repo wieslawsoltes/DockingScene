@@ -84,7 +84,7 @@ public static class DockLayoutEngine
             double size;
             if (minA + minB > available)
             {
-                size = minA + minB == 0 ? 0 : available * minA / (minA + minB);
+                size = minA + minB == 0 ? 0 : available * (minA / (minA + minB));
                 warnings.Add(split.Id + ": viewport is smaller than combined minimum sizes");
             }
             else
