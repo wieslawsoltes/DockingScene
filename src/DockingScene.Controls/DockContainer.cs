@@ -7,7 +7,7 @@ using Microsoft.UI.Xaml.Shapes;
 
 namespace DockingScene.Controls;
 
-public class DockContainer : UserControl
+public partial class DockContainer : UserControl
 {
     private readonly Grid _root = new();
     private readonly Grid _title = new();
@@ -34,7 +34,7 @@ public class DockContainer : UserControl
         _title.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         _title.Children.Add(_caption); _title.Children.Add(_grip); _title.Children.Add(_buttons);
         Grid.SetColumn(_grip, 1); Grid.SetColumn(_buttons, 2);
-        _title.SizeChanged += (_, _) => _caption.MaxWidth = Math.Max(0, _title.ActualWidth - 100);
+        ConfigureToolTitleContext();
         foreach (var surface in new FrameworkElement[] { _caption, _grip })
         {
             surface.PointerPressed += (_, e) => { if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) { HeaderPointerPressed?.Invoke(this, new(e)); e.Handled = true; } };
@@ -91,6 +91,7 @@ public class DockContainer : UserControl
                 Paint(2, "Close", DockGlyphs.Close, capabilities.HasFlag(DockCapabilities.Close));
             }
         }
+        SelectToolTitleContext(title ? items.FirstOrDefault(item => item.Id == group.SelectedId) as ToolWindow : null);
         Tabs.IsToolGroup = tools; Tabs.ShowNewTabButton = !tools;
         Tabs.Update(items, group.SelectedId, theme, group.TabPlacement, active);
     }

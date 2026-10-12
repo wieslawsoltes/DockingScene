@@ -56,7 +56,7 @@ public partial class DockingWindow : AdvancedTabItem
     }
 }
 public sealed class DocumentWindow : DockingWindow { }
-public sealed class ToolWindow : DockingWindow { }
+public sealed partial class ToolWindow : DockingWindow { }
 public sealed class TabPointerEventArgs(string id, FrameworkElement source, PointerRoutedEventArgs pointer) : EventArgs
 {
     public string Id { get; } = id;

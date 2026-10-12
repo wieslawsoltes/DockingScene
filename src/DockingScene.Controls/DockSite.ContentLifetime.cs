@@ -14,6 +14,7 @@ public partial class DockSite
         {
             if (!_windows.Remove(id, out var window)) continue;
             var content = window.Content; window.ContentFactory = null; window.Content = null;
+            if (window is ToolWindow tool) tool.ToolWindowContainerTitleBarContextContentTemplate = null;
             window.StandardMdiTitleBarContextContentTemplate = null; window.DataContext = null;
             released.Add((id, content));
         }
