@@ -27,5 +27,9 @@ if (TabEdgeScroll.NextOffset(200, 200, 1000, 300, .1) <= 300) throw new Exceptio
 var minimized = MinimizedWindowLayout.Arrange(new[] { "document", "bulk0" }, new(0, 0, 170, 100));
 if (minimized.Windows["bulk0"].Y >= minimized.Windows["document"].Y) throw new Exception("Minimized captions did not wrap.");
 manager.MoveMdiWindow("bulk0", 40, 60).ThrowIfFailed();
-Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");
 
+
+var keyboard = new WindowKeyboardSession(new(10,20,200,100), WindowKeyboardMode.Move);
+keyboard.Step(WindowKeyboardDirection.Right, 8, new(1,1), new(1000,1000));
+if (keyboard.Complete(true).X != 18) throw new Exception("Packaged keyboard geometry failed.");
+Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");

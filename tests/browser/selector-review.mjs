@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+
+// No wait for popup geometry or focus between the opening click and keys.
+export async function runSelectorReview({ page, state, test, reset, click, wait, settle }) {
+  await test('Native inspector selector handles immediate opening keys for twelve fresh workspaces', async () => {
+    for (let iteration = 0; iteration < 12; iteration++) {
+      await reset();
+      await click('properties:title'); await page.keyboard.press('Control+a'); await page.keyboard.type('Selector-' + iteration + '.xaml');
+      await click('properties:readonly'); await click('properties:apply');
+      await wait(title => globalThis.dockingScene.windows.some(w => w.id === 'main' && w.title === title && w.isReadOnly), 'Selector-' + iteration + '.xaml');
+      await click('toolbar:New'); await settle();
+      const s = await state(), id = s.activeWindowId;
+      const index = s.inspectorWindowIds.indexOf(id); assert(index >= 0);
+      await click('properties:window'); await page.keyboard.press('Home');
+      for (let i = 0; i < index; i++) await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Enter');
+      await wait(id => globalThis.dockingScene.inspectorWindowId === id, id);
+      assert.equal((await state()).activeWindowId, 'properties');
+    }
+    await reset();
+  });
+  await test('Immediate Escape cancels popup navigation and the next opening handles one step once', async () => {
+    for (let iteration = 0; iteration < 6; iteration++) {
+      await reset();
+      const before = await state();
+      await click('properties:window');
+      await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Escape');
+      await wait(id => !globalThis.dockingScene.inspectorSelector.open && globalThis.dockingScene.inspectorWindowId === id, before.inspectorWindowId);
+      // No readiness wait: a queued Escape must not leave cancellation stuck.
+      await click('properties:window');
+      await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      await wait(id => !globalThis.dockingScene.inspectorSelector.open && globalThis.dockingScene.inspectorWindowId === id, before.inspectorWindowIds[1]);
+    }
+    await reset();
+  });
+}

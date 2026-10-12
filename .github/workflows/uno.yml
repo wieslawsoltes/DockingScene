@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    name: Compile and package
     runs-on: ubuntu-latest
     timeout-minutes: 35
     outputs:
@@ -45,7 +46,7 @@ jobs:
             dotnet pack "$project" -c Release -o artifacts/packages
           done
           test "$(find artifacts/packages -maxdepth 1 -name '*.nupkg' | wc -l)" -eq 6
-      - name: Compile and run an isolated package-only consumer
+      - name: Compile and run isolated package-only consumers
         shell: bash
         run: |
           set -euo pipefail
@@ -56,6 +57,7 @@ jobs:
           dotnet build tests/ControlsPackageSmoke/ControlsPackageSmoke.csproj -c Release --no-restore
       - name: Prepare browser distribution and source snapshot
         id: source
+        shell: bash
         run: |
           set -euo pipefail
           test -f artifacts/browser/wwwroot/index.html
@@ -65,32 +67,11 @@ jobs:
           echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           printf '{"commit":"%s"}\n' "$(git rev-parse HEAD)" > artifacts/site/DockingScene/build-info.json
           git archive --format=zip HEAD -o artifacts/DockingScene-source.zip
-      - name: Install browser test dependencies
-        run: |
-          npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
-          cd tests/browser
-          npx playwright install --with-deps chromium
-      - name: Validate docking and standalone tab controls in the real browser application
-        run: |
-          set -euo pipefail
-          python3 -m http.server 8765 --bind 127.0.0.1 --directory artifacts/site > artifacts/server.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill "$SERVER_PID" || true' EXIT
-          RESULT=0
-          FOCUS_ITERATIONS=100 node tests/browser/focus-investigation.mjs || RESULT=1
-          node tests/browser/run.mjs || RESULT=1
-          node tests/browser/tab-layout.mjs || RESULT=1
-          node tests/browser/host-review.mjs || RESULT=1
-          exit "$RESULT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: browser-validation
-          path: |
-            artifacts/browser-results
-            artifacts/focus-investigation
-            artifacts/server.log
-            artifacts/contracts
+          name: build-contracts
+          path: artifacts/contracts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -98,22 +79,94 @@ jobs:
           path: artifacts/DockingScene-source.zip
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: browser-application
-          path: artifacts/browser
-          if-no-files-found: ignore
+          name: browser-test-site
+          path: artifacts/site
+          include-hidden-files: true
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: packages-all
           path: artifacts/packages
+          if-no-files-found: error
       - uses: actions/upload-pages-artifact@v3
         if: github.ref == 'refs/heads/main'
         with:
           path: artifacts/site/DockingScene
+  browser-tests:
+    name: Browser (${{ matrix.suite }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: docking
+            script: run.mjs
+          - suite: tabs
+            script: tab-layout.mjs
+          - suite: host
+            script: host-review.mjs
+          - suite: focus
+            script: focus-investigation.mjs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: browser-test-site
+          path: artifacts/site
+      - name: Install browser test dependencies
+        run: |
+          npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
+          cd tests/browser
+          npx playwright install --with-deps chromium
+      - name: Run exact-revision browser suite
+        env:
+          BROWSER_URL: http://127.0.0.1:8765/DockingScene/
+          EXPECTED_BUILD_COMMIT: ${{ needs.build.outputs.commit }}
+          BROWSER_RESULTS: artifacts/browser-results
+          FOCUS_ITERATIONS: '100'
+          TEST_SCRIPT: ${{ matrix.script }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f artifacts/site/DockingScene/index.html
+          jq -e --arg commit "$EXPECTED_BUILD_COMMIT" '.commit == $commit' artifacts/site/DockingScene/build-info.json
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory artifacts/site > artifacts/server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          node "tests/browser/$TEST_SCRIPT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-validation-${{ matrix.suite }}
+          path: |
+            artifacts/browser-results
+            artifacts/server.log
+  validated:
+    # Preserve the original required check name: it certifies ALL browser jobs,
+    # not merely compilation, after moving the suites onto independent runners.
+    name: build
+    if: always()
+    needs: [build, browser-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful build and every browser suite
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          BROWSER_RESULT: ${{ needs.browser-tests.result }}
+        run: |
+          test "$BUILD_RESULT" = success
+          test "$BROWSER_RESULT" = success
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: build
+    needs: [build, browser-tests, validated]
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -128,12 +181,27 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v4
   verify-deployment:
+    name: Live (${{ matrix.suite }})
     if: github.ref == 'refs/heads/main'
     needs: [build, deploy]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: docking
+            script: run.mjs
+          - suite: tabs
+            script: tab-layout.mjs
+          - suite: host
+            script: host-review.mjs
+          - suite: focus
+            script: focus-investigation.mjs
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.build.outputs.commit }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -142,22 +210,21 @@ jobs:
           npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
           cd tests/browser
           npx playwright install --with-deps chromium
-      - name: Verify the deployed revision and real browser interactions
+      - name: Verify deployed revision and real browser interactions
         env:
           BROWSER_URL: ${{ needs.deploy.outputs.page_url }}
           EXPECTED_BUILD_COMMIT: ${{ needs.build.outputs.commit }}
           BROWSER_RESULTS: artifacts/deployed-browser-results
+          FOCUS_ITERATIONS: '100'
+          TEST_SCRIPT: ${{ matrix.script }}
         shell: bash
         run: |
           set -euo pipefail
           test -n "$BROWSER_URL"
           for attempt in $(seq 1 30); do
             if curl -fsS --max-time 10 "${BROWSER_URL%/}/build-info.json?revision=$EXPECTED_BUILD_COMMIT" | jq -e --arg commit "$EXPECTED_BUILD_COMMIT" '.commit == $commit'; then
-              RESULT=0
-              node tests/browser/run.mjs || RESULT=1
-              node tests/browser/tab-layout.mjs || RESULT=1
-              node tests/browser/host-review.mjs || RESULT=1
-              exit "$RESULT"
+              node "tests/browser/$TEST_SCRIPT"
+              exit $?
             fi
             sleep 2
           done
@@ -166,5 +233,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: deployed-browser-validation
+          name: deployed-browser-validation-${{ matrix.suite }}
           path: artifacts/deployed-browser-results

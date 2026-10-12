@@ -1,3 +1,5 @@
+import { runWindowKeyboardTests } from './window-keyboard.mjs';
+import { runSelectorReview } from './selector-review.mjs';
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -148,8 +150,10 @@ try {
     await page.keyboard.press('Space'); await bounds('interaction:handoff');
     await page.keyboard.press('Escape'); await settle();
   });
+  await runSelectorReview({page, state, test, reset, click, wait, settle});
   await runMetroChromeTests({ page, state, test, reset, click, wait, bounds, settle, menu, output });
   await runMdiReviewTests({ page, state, test, reset, click, wait, bounds, settle, menu, output });
+  await runWindowKeyboardTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {

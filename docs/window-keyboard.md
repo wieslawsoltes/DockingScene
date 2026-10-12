@@ -1,0 +1,15 @@
+# Window keyboard movement and sizing
+
+WindowControl's real system menu now contains Move and Size beside Restore, Minimize, Maximize and Close. These are active operations, not placeholder menu entries. The independent implementation follows the window-like MDI interaction described by the public Actipro Standard MDI reference. It is not a complete vendor keyboard/native-window conformance claim.
+
+`BeginKeyboardMove()` previews eight-logical-unit arrow movement. `BeginKeyboardResize()` uses the first horizontal/vertical arrow to choose that axis's edge. Further arrows move the chosen edge while its opposite edge stays anchored. Selecting both axes permits corner resizing; reversal remains immediate at minimum/maximum constraints. Untouched axes retain their existing extent even when a small host cannot meet content constraints.
+
+`WindowKeyboardSession` in the renderer-independent Layout package owns these provisional rectangles. It validates input and finite edges, never changes the manager itself, and completes or cancels exactly once. WindowControl exposes the active keyboard mode and applies the geometry through its existing retained frame, not a replacement overlay control.
+
+Enter-down keeps the input scope until Enter-up so character dispatch cannot leak a newline into the previous editor. Enter-up commits one final change; unchanged sessions create no history entry. Escape, a pointer interaction, unload, manager replacement or a newer host revision cancel and restore the original rectangle. The short-lived root handlers and temporary focusability are removed on completion. Maximized/minimized frames and unavailable capabilities reject Move/Size.
+
+Standard MDI uses its existing revision-guarded bounds transaction. Floating hosts now have an independent `MoveFloatingHost` command requiring Drag rather than Resize and preserving every contained window's floating-bounds metadata. Floating resize still requires Resize. Their gestures capture a revision, reject obsolete commits, preserve stacking order, and do not reset during unrelated presentation updates. Replacing a DockSite manager dismisses old floating menus and frames before same-id windows can be projected.
+
+Fourteen executable model cases cover direction, anchored edges, reversibility, exact cancellation, no-op history, invalid/overflow input, 500 seeded keyboard sequences and move-only floating capabilities. Seven actual-input browser cases cover menu commands, held Enter, Escape/no-op, resizing, stale/pointer cancellation, unavailable state, input-scope cleanup and floating movement/undo. Existing model, package, real-pixel, selector and 100-cycle focus tests remain.
+
+The UI retains its compiled Metro caption template and native buttons. These tests are not a hardware-GPU or native desktop benchmark. Pointer-driven Move/Size tracking after keyboard selection, system cursor repositioning, OS message compatibility, full accessibility/RTL and complete vendor API parity remain separate work. Reference: https://www.actiprosoftware.com/docs/controls/wpf/docking/workspace-mdi-features/standard-mdi .
