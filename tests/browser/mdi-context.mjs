@@ -10,7 +10,7 @@ export async function runMdiContextTests({page,state,test,reset,click,wait,bound
     await bounds('mdi-context:note:code');
     const before=await state(), rect=before.windows.find(w=>w.id==='code').mdiBounds;
     await click('mdi-context:note:code'); await page.keyboard.press('Control+a'); await page.keyboard.type('Reviewed');
-    await wait(()=>globalThis.dockingScene.mdiContexts.code.note==='Reviewed');
+    await wait(()=>globalThis.dockingScene.mdiContexts.code.note==='Reviewed' && globalThis.dockingScene.mdiContexts.code.description==='Reviewed');
     await click('mdi-context:track:code'); await wait(()=>globalThis.dockingScene.mdiContexts.code.tracked);
     assert.equal((await state()).activeWindowId,'code'); assert.equal((await state()).mdiFrames.code.moving,false);
     assert.deepEqual((await state()).windows.find(w=>w.id==='code').mdiBounds,rect);

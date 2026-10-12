@@ -57,6 +57,7 @@ public sealed partial class WorkspaceView
         {
             var presenter = frame.TitleBarContextPresenter;
             writer.WriteStartObject(id);
+            writer.WriteString("description", _site.Manager.Layout.Windows.GetValueOrDefault(id)?.Description);
             writer.WriteNumber("builds", presenter.TemplateBuildCount);
             writer.WriteNumber("instance", presenter.PresentedContent is { } content ? RuntimeHelpers.GetHashCode(content) : 0);
             writer.WriteBoolean("visualDataSuppressed", presenter.Context is UIElement && (presenter.PresentedContent as FrameworkElement)?.DataContext is null);
