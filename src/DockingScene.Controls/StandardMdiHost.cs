@@ -55,7 +55,7 @@ public sealed partial class StandardMdiHost : UserControl
     public void ReleaseContent()
     {
         _active = false;
-        foreach (var window in _windows.Values) { window.CancelMovement(); window.DismissSystemMenu(); window.SetWindowContent(null); }
+        foreach (var window in _windows.Values) { window.CancelMovement(); window.DismissSystemMenu(); window.SetTitleContextOwner(null); window.SetWindowContent(null); }
         _gestureRevisions.Clear(); _minimizedCache.Clear(); MinimizedLayout = null; NotifyProjection();
     }
     public IReadOnlyList<DockWindow> GetDocuments()
@@ -64,8 +64,19 @@ public sealed partial class StandardMdiHost : UserControl
         return layout is null || !_active ? [] : _ids.Where(id => layout.Windows.ContainsKey(id) && DockTree.Locate(layout, id).Placement != WindowPlacement.Hidden).Select(id => layout.Windows[id]).ToArray();
     }
     public void ArrangeMinimizedWindows() => Refresh();
-    public DockResult Arrange(MdiArrangement arrangement) => _manager is null ? new(false, 0, "No manager.") :
-        WindowGeometry.ArrangeMdi(_manager, new(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight)), arrangement);
+    public DockResult Arrange(MdiArrangement arrangement)
+    {
+        if (!_active || _manager is null) return new(false, _manager?.Layout.Revision ?? 0, "No active MDI host.");
+        var manager = _manager; var layout = manager.Layout; var index = DockLayoutIndex.For(layout);
+        var ids = _ids.Where(id => layout.Windows.ContainsKey(id) && index.Locate(id).Placement != WindowPlacement.Hidden).ToArray();
+        var result = WindowGeometry.ArrangeMdi(manager, ids, new(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight)),
+            arrangement, _theme.TitleHeight + 2, layout.Revision);
+        Submit(result);
+        return result;
+    }
+    public DockResult Cascade() => Arrange(MdiArrangement.Cascade);
+    public DockResult TileHorizontally() => Arrange(MdiArrangement.TileHorizontally);
+    public DockResult TileVertically() => Arrange(MdiArrangement.TileVertically);
     private void Submit(DockResult result)
     {
         if (!result.Success) OperationRejected?.Invoke(result.Error ?? "MDI operation rejected.");
@@ -95,7 +106,7 @@ public sealed partial class StandardMdiHost : UserControl
             _canvas.Clip = new RectangleGeometry { Rect = new(0, 0, Math.Max(0, ActualWidth), Math.Max(0, ActualHeight)) };
             foreach (string id in _windows.Keys.Where(id => !ids.Contains(id)).ToArray())
             {
-                _windows[id].CancelMovement(); _windows[id].DismissSystemMenu(); _windows[id].SetWindowContent(null); _canvas.Children.Remove(_windows[id]);
+                _windows[id].CancelMovement(); _windows[id].DismissSystemMenu(); _windows[id].SetTitleContextOwner(null); _windows[id].SetWindowContent(null); _canvas.Children.Remove(_windows[id]);
                 _windows.Remove(id); _gestureRevisions.Remove(id);
             }
             var viewport = new DockRect(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight));
@@ -143,7 +154,18 @@ public sealed partial class StandardMdiHost : UserControl
                 Canvas.SetZIndex(window, rank < 0 ? 0 : layout.ActivationHistory.Length - rank + 1);
                 window.UpdateChrome(model.Title + (model.IsModified ? " *" : ""), _theme, layout.ActiveWindowId == id);
                 if (window.IsMinimized) window.SetWindowContent(null);
-                else { var content = _content(id); content.EnsureContent(); if (_active && ReferenceEquals(manager, _manager) && manager.Layout.Revision == layout.Revision) window.SetWindowContent(content); else QueueRefresh(); }
+                else
+                {
+                    bool Current() => _active && ReferenceEquals(manager, _manager) &&
+                        ReferenceEquals(manager.Layout, layout) && _windows.TryGetValue(id, out var current) && ReferenceEquals(current, window);
+                    var content = _content(id);
+                    if (!Current()) { QueueRefresh(); break; }
+                    content.EnsureContent();
+                    if (!Current()) { QueueRefresh(); break; }
+                    window.SetTitleContextOwner(content as DockingWindow);
+                    if (!Current()) { QueueRefresh(); break; }
+                    window.SetWindowContent(content);
+                }
             }
             NotifyProjection();
         }

@@ -47,6 +47,9 @@ public partial class DockSite : UserControl
     public event Action? NewDocumentRequested;
     public event EventHandler<DockChangedEventArgs>? LayoutChanged;
     public event Action? VisualsUpdated;
+    /// <summary>Configure a newly created window container before its editor is
+    /// materialized. Not raised on ordinary metadata, theme or activation refresh.</summary>
+    public event Action<DockingWindow>? WindowCreated;
 
     public DockSite()
     {
@@ -115,6 +118,8 @@ public partial class DockSite : UserControl
             string key = id;
             window.ContentFactory = () => ContentFactory?.Invoke(Manager.Layout.Windows[key]) ?? DockChrome.Text(Manager.Layout.Windows[key].Title, Theme, 18);
             _windows[id] = window;
+            window.Update(model);
+            WindowCreated?.Invoke(window);
         }
         window.Update(model); window.Background = DockChrome.Brush(Theme.Surface); window.Foreground = DockChrome.Brush(Theme.Text);
         return window;
@@ -213,7 +218,13 @@ public partial class DockSite : UserControl
                 if (!_groups.TryGetValue(group.Id, out var view)) { view = CreateContainer(group.Kind == GroupKind.Tools); _groups.Add(group.Id, view); _canvas.Children.Add(view); }
                 var host = DockTree.Locate(layout, group.Windows[0]).HostId;
                 DockChrome.Position(view, _geometry.Nodes[group.Id], host is null ? 1 : z[host] + 2);
-                view.Update(group, group.Windows.Select(id => (AdvancedTabItem)Window(id)).ToArray(), layout, Theme, allowed: manager.Policy.AllowedCapabilities);
+                var items = new List<AdvancedTabItem>(group.Windows.Length);
+                foreach (var id in group.Windows)
+                {
+                    items.Add(Window(id));
+                    if (!ReferenceEquals(manager, Manager) || !ReferenceEquals(layout, manager.Layout)) { QueueRender(); return; }
+                }
+                view.Update(group, items, layout, Theme, allowed: manager.Policy.AllowedCapabilities);
             }
             RenderSplitters(layout, standardIds, z);
             if (layout.MdiMode == MdiMode.Standard && standardIds.Count > 0)

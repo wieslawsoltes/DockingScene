@@ -56,6 +56,7 @@ public partial class WindowControl : UserControl
         _title.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) }); _title.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
         _title.Children.Add(_titleText); _title.Children.Add(_buttons); Grid.SetColumn(_titleText, 1); Grid.SetColumn(_buttons, 2);
         ConfigureWindowChrome();
+        ConfigureTitleContext();
         _content.AddHandler(PointerPressedEvent, new PointerEventHandler((_, e) =>
         { if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) Activated?.Invoke(); }), true);
         _titleText.PointerPressed += (_, e) =>

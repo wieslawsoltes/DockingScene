@@ -1,3 +1,4 @@
+import { runMdiContextTests } from './mdi-context.mjs';
 import { runMdiPolicyTests } from './mdi-policy.mjs';
 import { runWindowKeyboardTests } from './window-keyboard.mjs';
 import { runSelectorReview } from './selector-review.mjs';
@@ -156,6 +157,7 @@ try {
   await runMdiReviewTests({ page, state, test, reset, click, wait, bounds, settle, menu, output });
   await runWindowKeyboardTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await runMdiPolicyTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
+  await runMdiContextTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {

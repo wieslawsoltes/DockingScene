@@ -1,0 +1,9 @@
+# Theme round-trip text visibility review
+
+The 01948d4 candidate passed all 118 named browser scenarios. Manual review of its actual dark/light screenshots nevertheless found white-on-white editor, tree and inspector text after returning to Metro Light. The tests checked retained model text and selected chrome pixels but not glyph ink in those content areas. This was a real visual defect, not a successful full visual verification.
+
+ApplyContentTheme previously searched one combined foreground/background color table while mutating the same tree it was walking. Metro Light Text and Metro Dark Surface both use #252526. A TreeView foreground callback updates retained labels immediately, and a later visit could then treat their new text color as an old surface and translate it again to white. Native template children could also acquire unwanted local foreground overrides.
+
+The update now separates foreground and background roles, captures changes before applying them, and only updates locally assigned brushes. Inherited/style/ThemeResource values remain under native theme ownership. Retained content roots are visited once, and palette colors/brushes are resolved once per transition rather than allocating comparison brushes per visited property. This addresses role collisions and double translation without rebuilding controls or editors.
+
+The existing contextual-title theme/state scenarios now also inspect real PNG glyph ink in the editor, a Solution Explorer filename and the Properties title field in both Metro Dark and Metro Light. Existing model, identity, binding, popup, highlight and focus assertions remain. The scenario count stays 118; the assertions are stronger. Main/runtime evidence must come from the corrected head, not the earlier green run. Other palettes and exhaustive vendor pixel equivalence remain broader validation scope.

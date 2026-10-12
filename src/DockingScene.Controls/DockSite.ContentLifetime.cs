@@ -14,6 +14,7 @@ public partial class DockSite
         {
             if (!_windows.Remove(id, out var window)) continue;
             var content = window.Content; window.ContentFactory = null; window.Content = null;
+            window.StandardMdiTitleBarContextContentTemplate = null; window.DataContext = null;
             released.Add((id, content));
         }
         // Detach the whole batch before callbacks can register a replacement.
