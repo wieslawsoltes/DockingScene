@@ -77,6 +77,7 @@ jobs:
           SERVER_PID=$!
           trap 'kill "$SERVER_PID" || true' EXIT
           RESULT=0
+          FOCUS_ITERATIONS=100 node tests/browser/focus-investigation.mjs || RESULT=1
           node tests/browser/run.mjs || RESULT=1
           node tests/browser/tab-layout.mjs || RESULT=1
           node tests/browser/host-review.mjs || RESULT=1
@@ -87,6 +88,7 @@ jobs:
           name: browser-validation
           path: |
             artifacts/browser-results
+            artifacts/focus-investigation
             artifacts/server.log
             artifacts/contracts
       - uses: actions/upload-artifact@v4

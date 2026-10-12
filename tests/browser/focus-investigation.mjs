@@ -51,6 +51,7 @@ try {
 finally {
   await page.screenshot({path:`${output}/focus.png`}).catch(()=>{});
   await writeFile(`${output}/focus.json`,JSON.stringify({stage,completed,failed,diagnostics:await captureDiagnostics(page),
+    managedEvents:await page.evaluate(()=>globalThis.dockingSceneManagedFocusTrace ?? []).catch(()=>[]),
     events:await page.evaluate(()=>globalThis.dockingSceneNativeFocusTrace ?? []).catch(()=>[])},null,2));
   await browser.close();
 }

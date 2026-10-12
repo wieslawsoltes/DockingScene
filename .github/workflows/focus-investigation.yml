@@ -1,9 +1,5 @@
 name: Focus investigation
 on:
-  pull_request:
-    paths:
-      - 'tests/browser/focus-investigation.mjs'
-      - '.github/workflows/focus-investigation.yml'
   workflow_dispatch:
     inputs:
       artifact_run:
