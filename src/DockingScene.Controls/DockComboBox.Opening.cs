@@ -17,7 +17,7 @@ public partial class DockComboBox
 
     private static bool IsOpeningKey(VirtualKey key) => key is
         VirtualKey.Home or VirtualKey.End or VirtualKey.Up or VirtualKey.Down or
-        VirtualKey.PageUp or VirtualKey.PageDown or VirtualKey.Enter or VirtualKey.Escape;
+        VirtualKey.PageUp or VirtualKey.PageDown or VirtualKey.Enter;
     private bool HasOpeningContainer() => Items.Count == 0 ||
         ContainerFromIndex(Math.Max(0, SelectedIndex)) is Control { IsLoaded: true };
 
@@ -26,9 +26,10 @@ public partial class DockComboBox
         if (_drainingOpeningKeys) return false;
         if (!IsOpeningKey(e.Key))
         {
-            // A modifier/text interaction starts a different native operation;
-            // never dispatch old navigation under a new modifier state.
-            if (down) DiscardOpeningKeys();
+            // Escape cancels immediately, even before containers exist. Its
+            // real KeyUp must clear native cancellation state on the normal route.
+            // Modifier/text input must not inherit old buffered navigation.
+            DiscardOpeningKeys();
             return false;
         }
         if (_openingKeys.Count == 0 && HasOpeningContainer()) return false;

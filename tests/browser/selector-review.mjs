@@ -19,4 +19,18 @@ export async function runSelectorReview({ page, state, test, reset, click, wait,
     }
     await reset();
   });
+  await test('Immediate Escape cancels popup navigation and the next opening handles one step once', async () => {
+    for (let iteration = 0; iteration < 6; iteration++) {
+      await reset();
+      const before = await state();
+      await click('properties:window');
+      await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Escape');
+      await wait(id => !globalThis.dockingScene.inspectorSelector.open && globalThis.dockingScene.inspectorWindowId === id, before.inspectorWindowId);
+      // No readiness wait: a queued Escape must not leave cancellation stuck.
+      await click('properties:window');
+      await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Enter');
+      await wait(id => !globalThis.dockingScene.inspectorSelector.open && globalThis.dockingScene.inspectorWindowId === id, before.inspectorWindowIds[1]);
+    }
+    await reset();
+  });
 }
