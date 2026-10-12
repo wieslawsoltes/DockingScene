@@ -1,0 +1,28 @@
+name: Inspect saved browser evidence
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run:
+        description: Same-repository completed run containing deployed-browser-validation
+        required: true
+        default: '38221791001'
+  push:
+    branches: [investigate/browser-evidence]
+    paths: ['.github/workflows/browser-evidence.yml', 'tools/inspect_browser_evidence.py']
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: deployed-browser-validation
+          run-id: ${{ inputs.artifact_run || '38221791001' }}
+          github-token: ${{ github.token }}
+          path: artifacts/evidence
+      - name: Summarize failure states and failed trace calls without running the app
+        run: python3 tools/inspect_browser_evidence.py artifacts/evidence
