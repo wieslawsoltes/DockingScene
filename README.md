@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.11`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.12`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -140,3 +140,7 @@ Per-document `CanStandardMdiMinimize` and `CanStandardMdiMaximize` metadata comb
 ## Contextual MDI titles and independent hosts
 
 `DockingWindow.StandardMdiTitleBarContextContentTemplate` hosts ordinary Uno controls beside an MDI title. Configure the template and `DataContext` in `DockSite.WindowCreated`. The reusable `DockContextPresenter` retains the instantiated template when the data or activation changes. The sample Window menu demonstrates editable title content and status templates. Its independent-host sample exercises two `StandardMdiHost` controls sharing one manager; cascade/tiling commands now affect only the invoking host. See [contextual MDI and host scoping](docs/mdi-context-and-scope.md).
+
+## Contextual tool titles
+
+`ToolWindow.ToolWindowContainerTitleBarContextContentTemplate` adds retained native controls to a tool title. `DockSite.ToolWindowsTitleBarContextContentAlignment` selects Near or Far placement. The sample Appearance menu demonstrates Explorer title controls; their local state follows the tool through tab selection and auto-hide/pin transitions. See [tool title context](docs/tool-title-context.md).

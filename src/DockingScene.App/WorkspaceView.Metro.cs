@@ -69,6 +69,7 @@ public sealed partial class WorkspaceView
                 Add("Show tool tab close buttons", "tool-close", () => _site.HasToolTabCloseButtons = true);
                 Add("Hide tool tab close buttons", "tool-no-close", () => _site.HasToolTabCloseButtons = false);
                 Add("Toggle document strip highlight", "highlight", () => _site.HasDocumentTabStripHighlight = !_site.HasDocumentTabStripHighlight);
+                AddToolTitleContextCommands(menu);
                 menu.ShowAt(button!);
             });
             _appearanceMenu = button; _toolbar.Children.Add(button);
@@ -95,6 +96,7 @@ public sealed partial class WorkspaceView
     }
     private void WriteMetroDiagnostics(Utf8JsonWriter writer)
     {
+        WriteToolTitleContextDiagnostics(writer);
         writer.WriteString("mdiModeSelection", _mdiSelector?.SelectedItem as string);
         writer.WriteString("inspectorWindowId", _inspectorWindowId);
         writer.WriteStartArray("inspectorWindowIds"); foreach (string id in _inspectorWindowIds) writer.WriteStringValue(id); writer.WriteEndArray();

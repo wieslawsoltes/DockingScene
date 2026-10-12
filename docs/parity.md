@@ -42,3 +42,5 @@ The alpha.7 increment adds minimized bottom-up row placement, state/close window
 The keyboard-window increment adds real Move/Size system-menu operations and atomic floating movement, with explicit cancellation and constraints. See [window-keyboard.md](window-keyboard.md) for contracts and remaining native-system boundaries.
 
 Individual standard-MDI minimize/maximize policies now apply per DockWindow and intersect with the host settings. MVVM/source descriptors, additive JSON persistence, caption buttons and external commands use the same policy; Restore and direct model transitions retain their documented behavior. This model-first API does not claim the complete WPF dependency-property surface. See [individual-mdi-policies.md](individual-mdi-policies.md).
+
+Contextual content now includes Standard MDI titles and tool-window titles (including an auto-hide popup title). The other three contextual tab locations remain unfinished. Tool contexts support near/far alignment and retain roots per window across selection and container moves. See [tool-title-context.md](tool-title-context.md).
