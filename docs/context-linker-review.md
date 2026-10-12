@@ -1,0 +1,9 @@
+# Published contextual bindings and linker metadata
+
+Inspection of the actual 439f browser artifact identified the binding failure more precisely: DockingScene.Mvvm.dscogx7grt.wasm contains neither get_Description nor set_Description, while both are present in lib/net10.0/DockingScene.Mvvm.dll in the same revision's NuGet package. The native caption TextBox accepted input, but the published runtime Binding had no accessor to resolve. The status template was blank for the same reason. Thus the earlier ContentPresenter-based explanation alone was not established as the root cause of Description writeback failure.
+
+MdiContextResources now declares a DynamicDependency on DockWindowViewModel's public properties at its live constructor. This is the UI composition point that creates runtime-bound templates for the UI-neutral referenced model. x:DataType by itself does not replace Binding with compiled x:Bind or guarantee reflection metadata retention. The generic controls and model package gain no application-specific dependency, no manual TextChanged writeback handler, and no global linker-disable setting.
+
+The existing browser test requires both visible text and actual model Description to become Reviewed. It remains an end-to-end release-build test, so a debug build or untrimmed package consumer cannot hide this regression. All previous context retention, explicit-null visual-data, host isolation, popup and exact-pixel tests remain mandatory. Local source and archive inspection became available again during recovery; a local .NET/Uno runtime is still unavailable.
+
+References: Uno's performance/data-binding guidance (https://platform.uno/docs/articles/Uno-UI-Performance.html) and Microsoft trimming guidance (https://learn.microsoft.com/en-us/dotnet/core/deploying/trimming/prepare-libraries-for-trimming). The annotation retains binding metadata; it is not a GPU/FPS measurement or a full vendor-template parity claim.
