@@ -52,8 +52,7 @@ public sealed partial class MdiScopeSample : UserControl
         _manager.RegisterMany(new[] { "a", "b", "c", "d" }.Select(id => new DockWindow(id, "Document " + id, WindowKind.Document)
             { MdiBounds = new(id is "a" or "c" ? 8 : 35, id is "a" or "c" ? 8 : 40, 190, 130) })).ThrowIfFailed();
         _manager.SetMdiMode(MdiMode.Standard).ThrowIfFailed();
-        foreach (string id in new[] { "a", "b", "c", "d" })
-            _content[id] = new() { Id = id, Header = id, Content = new TextBox { AcceptsReturn = true, Text = "Independent editor " + id } };
+        foreach (string id in new[] { "a", "b", "c", "d" }) _content[id] = CreateSampleDocument(id, "Independent editor " + id);
         _manager.Changed += (_, _) => Project();
         Loaded += (_, _) => Project();
         Unloaded += (_, _) => { _left.ReleaseContent(); _right.ReleaseContent(); };

@@ -30,6 +30,8 @@ export async function runMdiMagnetismTests({page,state,test,reset,click,wait,bou
     const after=await scope();assert.equal(after.windows.a.x,59);assert.equal(after.windows.a.width,160);
     assert.equal(after.leftFrames.a.magnetic,false);assert.equal(after.leftFrames.a.contentInstance,before.leftFrames.a.contentInstance);
     assert.deepEqual(after.leftFrames.a.buttons,before.leftFrames.a.buttons);
+    assert(after.leftFrames.a.editorWidth>=after.leftFrames.a.width-4,'Standalone editor must fill its document width');
+    assert(after.leftFrames.a.editorHeight>=after.leftFrames.a.height-32,'Standalone editor must fill below the caption');
     assert.deepEqual(after.windows.c,before.windows.c);assert.deepEqual(after.windows.d,before.windows.d);
     await page.screenshot({path:`${output}/mdi-magnetism-gap1.png`});
     await click('scope:undo');await wait(()=>globalThis.dockingScene.scopedMdi.windows.a.x===16);

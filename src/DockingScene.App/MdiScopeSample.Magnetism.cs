@@ -5,11 +5,29 @@ using DockingScene.Core;
 using DockingScene.Themes;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace DockingScene.App;
 
 public sealed partial class MdiScopeSample
 {
+    private static AdvancedTabItem CreateSampleDocument(string id, string text)
+    {
+        var editor = new TextBox
+        {
+            AcceptsReturn = true, Text = text, TextWrapping = TextWrapping.NoWrap,
+            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Stretch,
+            FontFamily = new FontFamily("Consolas, monospace"), FontSize = 12, Padding = new(8), BorderThickness = new(0),
+            Background = DockChrome.Brush(DockTheme.MetroLight.EditorBackground), Foreground = DockChrome.Brush(DockTheme.MetroLight.Text)
+        };
+        ScrollViewer.SetHorizontalScrollBarVisibility(editor, ScrollBarVisibility.Auto);
+        ScrollViewer.SetVerticalScrollBarVisibility(editor, ScrollBarVisibility.Auto);
+        return new()
+        {
+            Id = id, Header = id, Content = editor,
+            HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch
+        };
+    }
     private void ConfigureMagnetismSample(Grid grid)
     {
         grid.RowDefinitions.Insert(1, new() { Height = GridLength.Auto });
@@ -28,8 +46,7 @@ public sealed partial class MdiScopeSample
     {
         _leftActive = false; _left.ReleaseContent();
         _releasedDocument = null;
-        foreach (string id in new[] { "a", "b" })
-            _content[id] = new() { Id = id, Header = id, Content = new TextBox { AcceptsReturn = true, Text = "Snap document " + id } };
+        foreach (string id in new[] { "a", "b" }) _content[id] = CreateSampleDocument(id, "Snap document " + id);
         _left.MagnetismSnapDistance = 5; _left.MagnetismGapDistance = 1;
         _leftActive = true;
         _lastResult = _manager.Transaction("Prepare magnetism example", new Func<DockManager,DockResult>[]
@@ -56,6 +73,8 @@ public sealed partial class MdiScopeSample
             writer.WriteNumber("queries", frame.MagnetismQueryCount);
             writer.WriteNumber("rawX", frame.RawPointerBounds.X); writer.WriteNumber("rawWidth", frame.RawPointerBounds.Width);
             writer.WriteNumber("contentInstance", _content.TryGetValue(id, out var content) ? RuntimeHelpers.GetHashCode(content) : 0);
+            if (content?.Content is TextBox editor)
+            { writer.WriteNumber("editorWidth", editor.ActualWidth); writer.WriteNumber("editorHeight", editor.ActualHeight); }
             writer.WriteStartObject("buttons"); foreach (var (name, identity) in frame.CaptionButtonIdentities) writer.WriteNumber(name, identity); writer.WriteEndObject();
             writer.WriteEndObject();
         }
