@@ -51,7 +51,7 @@ public sealed partial class WorkspaceView
             else { var text = DockChrome.Text(label, _theme); Grid.SetRow(text, row); panel.Children.Add(text); Grid.SetColumn(field, 1); }
             panel.Children.Add(field); row++;
         }
-        var choices = DockChrome.Identify(new ComboBox { MinHeight = 25, FontSize = 12, Padding = new(5, 0, 22, 0), HorizontalAlignment = HorizontalAlignment.Stretch }, "properties:window");
+        var choices = DockChrome.Identify(new DockComboBox { MinHeight = 25, FontSize = 12, Padding = new(5, 0, 22, 0), HorizontalAlignment = HorizontalAlignment.Stretch }, "properties:window");
         Add(null, choices, 26);
         var category = new Border { Background = DockChrome.Brush(_theme.Background), Child = DockChrome.Text("  General", _theme) }; Add(null, category, 20);
         var title = DockChrome.Identify(new TextBox { MinHeight = 24, FontSize = 12, Padding = new(5, 1, 5, 1) }, "properties:title"); Add("Title", title, 25);

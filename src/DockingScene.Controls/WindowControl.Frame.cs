@@ -5,6 +5,7 @@ namespace DockingScene.Controls;
 
 public partial class WindowControl
 {
+    private bool _appliedFrameVisible = true;
     public static readonly DependencyProperty IsFrameVisibleProperty = DependencyProperty.Register(nameof(IsFrameVisible), typeof(bool), typeof(WindowControl),
         new PropertyMetadata(true, (d, _) => ((WindowControl)d).ApplyFrameVisibility()));
     /// <summary>Hide the caption, border and resize grips without replacing content.
@@ -13,7 +14,8 @@ public partial class WindowControl
     private void ApplyFrameVisibility()
     {
         bool visible = IsFrameVisible;
-        if (!visible) CancelMovement();
+        if (!visible && _appliedFrameVisible) { CancelMovement(); DismissSystemMenu(); }
+        _appliedFrameVisible = visible;
         if (_root.RowDefinitions.Count == 0) return;
         _root.RowDefinitions[0].Height = new(visible ? _theme.TitleHeight : 0);
         _root.BorderThickness = new(visible ? 1 : 0);

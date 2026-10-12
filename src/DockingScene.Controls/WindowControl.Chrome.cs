@@ -12,6 +12,8 @@ public partial class WindowControl
 {
     private readonly Dictionary<string, Button> _captionButtons = new(StringComparer.Ordinal);
     private Button? _systemButton;
+    private MenuFlyout? _systemMenu;
+    private long _systemMenuGeneration;
     private DockTheme _theme = DockTheme.MetroLight;
     private UIElement? _movementInputRoot;
     private KeyEventHandler? _movementEscape;
@@ -38,18 +40,34 @@ public partial class WindowControl
     private void RequestMinimize() { if (ShowMinimize && !IsMinimized) MinimizeRequested?.Invoke(); }
     private void RequestClose() { if (CanClose) CloseRequested?.Invoke(); }
 
+    public void DismissSystemMenu()
+    {
+        _systemMenuGeneration++;
+        var menu = _systemMenu; _systemMenu = null; menu?.Hide();
+    }
     public void ShowSystemMenu() => ShowSystemMenu(_systemButton);
     /// <summary>Open state/close commands at a caption or an external command bar.
     /// Callbacks recheck current flags rather than the menu's original snapshot.</summary>
     public void ShowSystemMenu(FrameworkElement? anchor)
     {
         if (!HasSystemMenu || anchor is null || !anchor.IsLoaded || !IsLoaded || anchor.XamlRoot != XamlRoot) return;
+        DismissSystemMenu();
+        long generation = _systemMenuGeneration;
+        string idAtOpen = WindowId;
+        var root = XamlRoot;
         Activated?.Invoke();
-        var menu = new MenuFlyout();
+        if (generation != _systemMenuGeneration || !IsLoaded || !anchor.IsLoaded || XamlRoot != root) return;
+        var menu = new MenuFlyout(); _systemMenu = menu;
+        menu.Closed += (_, _) => { if (ReferenceEquals(_systemMenu, menu)) _systemMenu = null; };
         void Item(string text, string id, bool enabled, Action action)
         {
             var item = DockChrome.Identify(new MenuFlyoutItem { Text = text, IsEnabled = enabled, FontSize = _theme.FontSize, MinHeight = 26 }, "window-menu:" + WindowId + ":" + id);
-            item.Click += (_, _) => action(); menu.Items.Add(item);
+            item.Click += (_, _) =>
+            {
+                if (generation == _systemMenuGeneration && WindowId == idAtOpen && HasSystemMenu &&
+                    IsLoaded && anchor.IsLoaded && XamlRoot == root && anchor.XamlRoot == root) action();
+            };
+            menu.Items.Add(item);
         }
         Item("Restore", "restore", CanRestore && (IsMaximized || IsMinimized), RequestRestore);
         Item("Minimize", "minimize", ShowMinimize && !IsMinimized, RequestMinimize);

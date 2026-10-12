@@ -18,7 +18,8 @@ public static class MdiPrimaryWindow
         int bestRank = int.MaxValue;
         foreach (string id in windowIds)
         {
-            if (id is null || !layout.Windows.TryGetValue(id, out var window) || index.Locate(id).Placement == WindowPlacement.Hidden) continue;
+            if (id is null || !layout.Windows.TryGetValue(id, out var window) || index.Locate(id).Placement == WindowPlacement.Hidden ||
+                window.Kind == WindowKind.Tool && index.GroupOf(id)?.Kind != GroupKind.Documents) continue;
             if (layout.ActiveWindowId == id) { primary = window; break; }
             int rank = index.ActivationRank(id); if (rank < 0) rank = int.MaxValue;
             if (primary is null || rank < bestRank) { primary = window; bestRank = rank; }

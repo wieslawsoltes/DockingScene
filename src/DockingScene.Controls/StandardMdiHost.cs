@@ -46,13 +46,16 @@ public sealed partial class StandardMdiHost : UserControl
         var next = ids.ToArray();
         if (next.Any(id => string.IsNullOrWhiteSpace(id) || !layout.Windows.ContainsKey(id)) || next.Distinct(StringComparer.Ordinal).Count() != next.Length)
             throw new ArgumentException("MDI ids must be registered, nonempty and unique.", nameof(ids));
-        if (!ReferenceEquals(_manager, manager)) ReleaseContent();
-        _manager = manager; _ids = next; _content = content; _theme = theme; _active = true; Refresh();
+        if (!ReferenceEquals(_manager, manager))
+        {
+            ReleaseContent(); _canvas.Children.Clear(); _windows.Clear();
+        }
+        _manager = manager; _ids = _ids.AsSpan().SequenceEqual(next) ? _ids : next; _content = content; _theme = theme; _active = true; Refresh();
     }
     public void ReleaseContent()
     {
         _active = false;
-        foreach (var window in _windows.Values) { window.CancelMovement(); window.SetWindowContent(null); }
+        foreach (var window in _windows.Values) { window.CancelMovement(); window.DismissSystemMenu(); window.SetWindowContent(null); }
         _gestureRevisions.Clear(); _minimizedCache.Clear(); MinimizedLayout = null; NotifyProjection();
     }
     public IReadOnlyList<DockWindow> GetDocuments()
@@ -92,7 +95,7 @@ public sealed partial class StandardMdiHost : UserControl
             _canvas.Clip = new RectangleGeometry { Rect = new(0, 0, Math.Max(0, ActualWidth), Math.Max(0, ActualHeight)) };
             foreach (string id in _windows.Keys.Where(id => !ids.Contains(id)).ToArray())
             {
-                _windows[id].CancelMovement(); _windows[id].SetWindowContent(null); _canvas.Children.Remove(_windows[id]);
+                _windows[id].CancelMovement(); _windows[id].DismissSystemMenu(); _windows[id].SetWindowContent(null); _canvas.Children.Remove(_windows[id]);
                 _windows.Remove(id); _gestureRevisions.Remove(id);
             }
             var viewport = new DockRect(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight));
@@ -104,14 +107,17 @@ public sealed partial class StandardMdiHost : UserControl
                 if (!_windows.TryGetValue(id, out var window))
                 {
                     window = new() { WindowId = id, ShowMinimize = true };
-                    string key = id;
-                    window.Activated += () => { if (_active) Submit(_manager!.Activate(key)); };
-                    window.MovementStarted += () => _gestureRevisions[key] = _manager!.Layout.Revision;
-                    window.BoundsChanged += rect => CommitBounds(key, rect);
-                    window.CloseRequested += () => { if (_active) Submit(_manager!.Close(key)); };
-                    window.RestoreRequested += () => { if (_active) Submit(_manager!.SetMdiState(key, MdiWindowState.Normal)); };
-                    window.MaximizeRequested += () => { if (_active && CanWindowsMaximize) Submit(_manager!.SetMdiState(key, MdiWindowState.Maximized)); };
-                    window.MinimizeRequested += () => { if (_active && CanWindowsMinimize) Submit(_manager!.SetMdiState(key, MdiWindowState.Minimized)); };
+                    string key = id; var owner = manager; var frame = window;
+                    bool IsCurrent() => _active && ReferenceEquals(_manager, owner) &&
+                        _windows.TryGetValue(key, out var current) && ReferenceEquals(current, frame) &&
+                        owner.Layout.Windows.ContainsKey(key) && DockTree.Locate(owner.Layout, key).Placement != WindowPlacement.Hidden;
+                    window.Activated += () => { if (IsCurrent()) Submit(owner.Activate(key)); };
+                    window.MovementStarted += () => { if (IsCurrent()) _gestureRevisions[key] = owner.Layout.Revision; else frame.CancelMovement(); };
+                    window.BoundsChanged += rect => { if (IsCurrent()) CommitBounds(key, rect); };
+                    window.CloseRequested += () => { if (IsCurrent()) Submit(owner.Close(key)); };
+                    window.RestoreRequested += () => { if (IsCurrent()) Submit(owner.SetMdiState(key, MdiWindowState.Normal)); };
+                    window.MaximizeRequested += () => { if (IsCurrent() && CanWindowsMaximize) Submit(owner.SetMdiState(key, MdiWindowState.Maximized)); };
+                    window.MinimizeRequested += () => { if (IsCurrent() && CanWindowsMinimize) Submit(owner.SetMdiState(key, MdiWindowState.Minimized)); };
                     _windows.Add(id, window); _canvas.Children.Add(window);
                 }
                 if (window.IsMoving && _gestureRevisions.GetValueOrDefault(id, -1) != layout.Revision)

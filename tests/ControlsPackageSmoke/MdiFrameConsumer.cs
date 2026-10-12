@@ -6,6 +6,8 @@ namespace DockingScene.PackageValidation;
 
 public static class MdiFrameConsumer
 {
+    public static DockComboBox Selector() => new();
+
     public static StandardMdiControlBar Create(DockManager manager)
     {
         var host = new StandardMdiHost { AreMaximizedWindowFramesVisible = false };
