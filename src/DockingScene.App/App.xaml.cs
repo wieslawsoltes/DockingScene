@@ -24,6 +24,7 @@ public sealed partial class App : Application
             view.EnableTabDemo();
             view.EnableHostReview();
             view.EnableMetroChrome();
+            view.EnableFocusTracing();
             view.Loaded += (_, _) => ReportStartup("Workspace loaded");
             _window.Content = view;
             ReportStartup("Activating application window");

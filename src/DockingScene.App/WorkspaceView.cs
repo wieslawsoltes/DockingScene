@@ -157,6 +157,7 @@ public sealed partial class WorkspaceView : UserControl
             Item(m, "Cascade", () => Arrange(MdiArrangement.Cascade)); Item(m, "Tile horizontally", () => Arrange(MdiArrangement.TileHorizontally));
             Item(m, "Tile vertically", () => Arrange(MdiArrangement.TileVertically)); Item(m, "Tile grid", () => Arrange(MdiArrangement.TileGrid));
             Item(m, _site.Manager.Layout.IsLayoutLocked ? "Unlock layout" : "Lock layout", () => Execute(_site.Manager.SetLayoutLocked(!_site.Manager.Layout.IsLayoutLocked)));
+            AddMdiReviewCommands(m);
             Item(m, "Window switcher", () => _site.ShowSwitcher());
             Item(m, "Close all documents", () => Execute(_site.Manager.CloseMany(_site.Manager.Layout.Windows.Values.Where(w => w.Kind == WindowKind.Document && w.DisplayMode != TabDisplayMode.Pinned).Select(w => w.Id))));
         });

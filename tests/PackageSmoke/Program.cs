@@ -24,5 +24,8 @@ var first = cache.Arrange(manager.Layout, new(0, 0, 1280, 720));
 manager.Activate("bulk0").ThrowIfFailed();
 if (!ReferenceEquals(first, cache.Arrange(manager.Layout, new(0, 0, 1280, 720)))) throw new Exception("Package geometry cache integration failed.");
 if (TabEdgeScroll.NextOffset(200, 200, 1000, 300, .1) <= 300) throw new Exception("Package drag edge scroll integration failed.");
+var minimized = MinimizedWindowLayout.Arrange(new[] { "document", "bulk0" }, new(0, 0, 170, 100));
+if (minimized.Windows["bulk0"].Y >= minimized.Windows["document"].Y) throw new Exception("Minimized captions did not wrap.");
+manager.MoveMdiWindow("bulk0", 40, 60).ThrowIfFailed();
 Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");
 

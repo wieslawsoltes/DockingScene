@@ -1,0 +1,112 @@
+using System.Runtime.CompilerServices;
+using DockingScene.Themes;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
+using Windows.System;
+
+namespace DockingScene.Controls;
+
+public partial class WindowControl
+{
+    private readonly Dictionary<string, Button> _captionButtons = new(StringComparer.Ordinal);
+    private Button? _systemButton;
+    private DockTheme _theme = DockTheme.MetroLight;
+    private UIElement? _movementInputRoot;
+    private KeyEventHandler? _movementEscape;
+    private WindowChromeState? _chrome;
+    private sealed record WindowChromeState(string Id, string Title, DockTheme Theme, bool Active,
+        bool Minimize, bool Maximize, bool Maximized, bool Minimized, bool Close, bool Restore, bool SystemMenu);
+    public bool IsMinimized { get; set; }
+    public bool CanRestore { get; set; } = true;
+    public bool HasSystemMenu { get; set; } = true;
+    public event Action? RestoreRequested;
+    public IReadOnlyDictionary<string, int> CaptionButtonIdentities => _captionButtons.ToDictionary(p => p.Key, p => RuntimeHelpers.GetHashCode(p.Value));
+
+    private void ConfigureWindowChrome()
+    {
+        SizeChanged += (_, _) => Clip = new RectangleGeometry { Rect = new(0, 0, ActualWidth, ActualHeight) };
+    }
+    private void RequestRestore()
+    {
+        if (!CanRestore || !(IsMaximized || IsMinimized)) return;
+        if (RestoreRequested is { } restore) restore();
+        else if (IsMaximized) MaximizeRequested?.Invoke(); // Existing floating-host adapter toggles maximization.
+    }
+    private void RequestMaximize() { if (ShowMaximize && !IsMaximized) MaximizeRequested?.Invoke(); }
+    private void RequestMinimize() { if (ShowMinimize && !IsMinimized) MinimizeRequested?.Invoke(); }
+    private void RequestClose() { if (CanClose) CloseRequested?.Invoke(); }
+
+    /// <summary>State/close system commands for this retained frame. Callbacks check
+    /// current capability flags again, not only the flags when the menu was opened.</summary>
+    public void ShowSystemMenu()
+    {
+        if (!HasSystemMenu || _systemButton is null || !IsLoaded) return;
+        Activated?.Invoke();
+        var menu = new MenuFlyout();
+        void Item(string text, string id, bool enabled, Action action)
+        {
+            var item = DockChrome.Identify(new MenuFlyoutItem { Text = text, IsEnabled = enabled, FontSize = _theme.FontSize, MinHeight = 26 }, "window-menu:" + WindowId + ":" + id);
+            item.Click += (_, _) => action(); menu.Items.Add(item);
+        }
+        Item("Restore", "restore", CanRestore && (IsMaximized || IsMinimized), RequestRestore);
+        Item("Minimize", "minimize", ShowMinimize && !IsMinimized, RequestMinimize);
+        Item("Maximize", "maximize", ShowMaximize && !IsMaximized, RequestMaximize);
+        menu.Items.Add(new MenuFlyoutSeparator());
+        Item("Close", "close", CanClose, RequestClose);
+        menu.ShowAt(_systemButton);
+    }
+    public void UpdateChrome(string title, DockTheme theme, bool active)
+    {
+        var chrome = new WindowChromeState(WindowId, title, theme, active, ShowMinimize, ShowMaximize, IsMaximized, IsMinimized, CanClose, CanRestore, HasSystemMenu);
+        if (_chrome == chrome) return;
+        _chrome = chrome; _theme = theme;
+        _root.Background = DockChrome.Brush(theme.Surface); _root.BorderBrush = DockChrome.Brush(active ? theme.Accent : theme.Border); _root.BorderThickness = new(1);
+        _root.RowDefinitions[0].Height = new(theme.TitleHeight);
+        _title.Background = DockChrome.Brush(active ? theme.ActiveToolTitle : theme.Background);
+        string foreground = active ? theme.AccentText : theme.Text;
+        _titleText.Text = title; _titleText.FontSize = theme.FontSize; _titleText.Foreground = DockChrome.Brush(foreground);
+        DockChrome.Identify(_titleText, "window-title:" + WindowId, title);
+        if (_systemButton is null)
+        {
+            var style = (Style)new TabHeaderResources()["DockTabButtonStyle"];
+            _systemButton = DockChrome.Button("Window menu", "", theme, ShowSystemMenu, DockGlyphs.Document);
+            _systemButton.Style = style; _systemButton.Width = 23; _systemButton.Padding = new(5); _title.Children.Insert(0, _systemButton);
+            void Add(string key, Action action)
+            {
+                var button = DockChrome.Button("", "", theme, action);
+                button.Style = style; button.Width = 26; button.Padding = new(5);
+                _captionButtons.Add(key, button); _buttons.Children.Add(button);
+            }
+            Add("restore", RequestRestore); Add("minimize", RequestMinimize);
+            Add("maximize", () => { if (IsMaximized) RequestRestore(); else RequestMaximize(); }); Add("close", RequestClose);
+        }
+        void Paint(Button button, string name, string suffix, string glyph, bool visible, bool enabled)
+        {
+            DockChrome.Identify(button, "window:" + WindowId + ":" + suffix, name); ToolTipService.SetToolTip(button, name);
+            button.Visibility = visible ? Visibility.Visible : Visibility.Collapsed; button.IsEnabled = enabled;
+            button.Height = theme.TitleHeight; button.Background = _title.Background; button.Foreground = DockChrome.Brush(foreground);
+            if (button.Tag as string != glyph) { button.Tag = glyph; button.Content = DockChrome.Glyph(glyph, foreground); }
+            else if (button.Content is Microsoft.UI.Xaml.Shapes.Path icon) icon.Stroke = button.Foreground;
+        }
+        Paint(_systemButton, "Window menu", "system", DockGlyphs.Document, HasSystemMenu, true);
+        Paint(_captionButtons["restore"], "Restore", "restore", DockGlyphs.Restore, IsMinimized, CanRestore);
+        Paint(_captionButtons["minimize"], "Minimize", "minimize", DockGlyphs.Minimize, ShowMinimize && !IsMinimized, true);
+        Paint(_captionButtons["maximize"], IsMaximized ? "Restore" : "Maximize", IsMaximized ? "restore" : "maximize",
+            IsMaximized ? DockGlyphs.Restore : DockGlyphs.Maximize, ShowMaximize || IsMaximized, IsMaximized ? CanRestore : ShowMaximize);
+        Paint(_captionButtons["close"], "Close", "close", DockGlyphs.Close, true, CanClose);
+    }
+    private void AcquireMovementInput()
+    {
+        if (XamlRoot?.Content is not { } root || _movementInputRoot is not null) return;
+        _movementInputRoot = root;
+        _movementEscape ??= (_, e) => { if (_moving && e.Key == VirtualKey.Escape) { e.Handled = true; CancelMovement(); } };
+        root.AddHandler(PreviewKeyDownEvent, _movementEscape, true);
+    }
+    private void ReleaseMovementInput()
+    {
+        if (_movementInputRoot is not { } root) return;
+        _movementInputRoot = null; root.RemoveHandler(PreviewKeyDownEvent, _movementEscape!);
+    }
+}

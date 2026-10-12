@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { runCanvasFocusReview } from './canvas-focus-review.mjs';
 import { readHitBounds } from './hit-targets.mjs';
 
 /** Actual input regressions; no focus mutation hook or readiness delay before keys. */
@@ -83,5 +84,7 @@ export async function runSwitcherRegressions({ page, state, test, reset, click, 
     assert.equal((await state()).floatingHosts.length, 0);
     assert.deepEqual((await state()).groups.find(g => g.windows.includes('code')).windows, order);
   });
+
+  await runCanvasFocusReview({ page, state, test, reset, click, wait });
 
 }

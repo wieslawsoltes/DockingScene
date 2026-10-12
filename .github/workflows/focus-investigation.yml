@@ -1,0 +1,50 @@
+name: Focus investigation
+on:
+  workflow_dispatch:
+    inputs:
+      artifact_run:
+        description: Existing same-repository Uno run containing browser-application
+        required: true
+        default: '38205092479'
+      iterations:
+        description: Reset and immediate pointer/keyboard cycles (1-500)
+        required: true
+        default: '100'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: browser-application
+          run-id: ${{ inputs.artifact_run || '38205092479' }}
+          github-token: ${{ github.token }}
+          path: artifacts/browser
+      - name: Install browser runner
+        run: |
+          npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
+          cd tests/browser && npx playwright install --with-deps chromium
+      - name: Inspect the existing compiled artifact without rebuilding it
+        env:
+          FOCUS_ITERATIONS: ${{ inputs.iterations || '100' }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/site/DockingScene
+          cp -a artifacts/browser/wwwroot/. artifacts/site/DockingScene/
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory artifacts/site > artifacts/server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          node tests/browser/focus-investigation.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: focus-investigation
+          path: artifacts/focus-investigation

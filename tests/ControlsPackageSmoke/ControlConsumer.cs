@@ -6,11 +6,14 @@ namespace DockingScene.PackageValidation;
 
 public static class ControlConsumer
 {
+    public static StandardMdiHost MdiHost() => new() { CanWindowsMinimize = true, CanWindowsMaximize = false };
     public static bool Focus(AdvancedTabControl tabs) => tabs.FocusSelectedContent();
     public static DockSite Create(DockManager manager) => new()
     {
         Manager = manager,
         DisposeContentOnUnregister = false,
+        CanStandardMdiWindowsMinimize = true,
+        CanStandardMdiWindowsMaximize = true,
         AreDocumentTabEmbeddedButtonsAlwaysVisible = false,
         HasToolTabCloseButtons = false,
         HasDocumentTabStripHighlight = true,

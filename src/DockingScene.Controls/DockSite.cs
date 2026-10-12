@@ -216,8 +216,9 @@ public partial class DockSite : UserControl
             if (layout.MdiMode == MdiMode.Standard && standardIds.Count > 0)
             {
                 var workspace = DockTree.Descendants(layout.Root).OfType<DockWorkspace>().First();
-                if (_mdi is null) { _mdi = new(); _canvas.Children.Add(_mdi); }
+                if (_mdi is null) { _mdi = new(); _mdi.OperationRejected += message => OperationRejected?.Invoke(message); _canvas.Children.Add(_mdi); }
                 _mdi.Visibility = Visibility.Visible; DockChrome.Position(_mdi, _geometry.Nodes[workspace.Id], 2);
+                _mdi.CanWindowsMinimize = CanStandardMdiWindowsMinimize; _mdi.CanWindowsMaximize = CanStandardMdiWindowsMaximize;
                 _mdi.Update(manager, standardIds.ToArray(), Window, Theme);
             }
             else if (_mdi is not null) { _mdi.ReleaseContent(); _mdi.Visibility = Visibility.Collapsed; }

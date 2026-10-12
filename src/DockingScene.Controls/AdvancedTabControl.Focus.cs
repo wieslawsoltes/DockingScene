@@ -10,6 +10,7 @@ public partial class AdvancedTabControl
 {
     private static readonly ConditionalWeakTable<AdvancedTabItem, WeakReference<Control>> ContentFocus = new();
     private uint? _contentFocusPointer;
+    private long _contentFocusRequest;
 
     private void ConfigureContentFocus()
     {
@@ -26,15 +27,32 @@ public partial class AdvancedTabControl
             if (_contentFocusPointer != e.Pointer.PointerId) return;
             _contentFocusPointer = null;
             if (RestorePointerContentFocus()) e.Handled = true;
+            CompleteContentPointerFocus();
         }), true);
         _presenter.AddHandler(PointerCanceledEvent, new PointerEventHandler((_, _) => _contentFocusPointer = null), true);
-        Unloaded += (_, _) => _contentFocusPointer = null;
+        Unloaded += (_, _) => { _contentFocusPointer = null; _contentFocusRequest++; };
         _presenter.GotFocus += (_, _) =>
         {
             if (_presenter.Content is not AdvancedTabItem item || XamlRoot is not { } root) return;
             if (FocusManager.GetFocusedElement(root) is Control focused && IsDescendant(focused, item))
             { ContentFocus.Remove(item); ContentFocus.Add(item, new(focused)); }
         };
+    }
+
+    private void CompleteContentPointerFocus()
+    {
+        if (_presenter.Content is not AdvancedTabItem item || XamlRoot is not { } root) return;
+        long request = ++_contentFocusRequest;
+        // Native pointer cleanup can clear focus after the routed release handler.
+        // Reconcile once after the route; never poll, instantiate other content,
+        // or override a child-directed transfer to another non-null focus owner.
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (request != _contentFocusRequest || !IsLoaded || XamlRoot != root ||
+                !ReferenceEquals(_presenter.Content, item) || item.Id != _selectedId ||
+                FocusManager.GetFocusedElement(root) is not null) return;
+            FocusSelectedContent(FocusState.Pointer);
+        });
     }
 
     private bool RestorePointerContentFocus()
