@@ -156,10 +156,15 @@ public sealed partial class StandardMdiHost : UserControl
                 if (window.IsMinimized) window.SetWindowContent(null);
                 else
                 {
-                    var content = _content(id); content.EnsureContent();
-                    if (_active && ReferenceEquals(manager, _manager) && manager.Layout.Revision == layout.Revision)
-                    { window.SetTitleContextOwner(content as DockingWindow); window.SetWindowContent(content); }
-                    else QueueRefresh();
+                    bool Current() => _active && ReferenceEquals(manager, _manager) &&
+                        ReferenceEquals(manager.Layout, layout) && _windows.TryGetValue(id, out var current) && ReferenceEquals(current, window);
+                    var content = _content(id);
+                    if (!Current()) { QueueRefresh(); break; }
+                    content.EnsureContent();
+                    if (!Current()) { QueueRefresh(); break; }
+                    window.SetTitleContextOwner(content as DockingWindow);
+                    if (!Current()) { QueueRefresh(); break; }
+                    window.SetWindowContent(content);
                 }
             }
             NotifyProjection();

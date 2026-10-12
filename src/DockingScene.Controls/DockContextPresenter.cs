@@ -64,6 +64,11 @@ public sealed class DockContextPresenter : UserControl
             }
             object? data = Context is UIElement ? null : Context;
             if (_materialized is FrameworkElement element && !ReferenceEquals(element.DataContext, data)) element.DataContext = data;
+            // DataContextChanged is application code too. It can replace the
+            // template/data pair or release its owning host before attachment.
+            // Do not attach that now-obsolete root, even for one layout cycle.
+            if (!ReferenceEquals(template, ContextTemplate) ||
+                !ReferenceEquals(data, Context is UIElement ? null : Context)) return;
             ContentLease.Set(_presenter, _materialized);
         }
         finally { _reconciling = false; }

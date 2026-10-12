@@ -62,6 +62,16 @@ export async function runMdiContextTests({page,state,test,reset,click,wait,bound
     await click('scope:right');await settle();assert.equal((await state()).scopedMdi.revision,right.revision);
     await page.screenshot({path:`${output}/mdi-independent-hosts.png`});
   });
+  await test('Context callbacks cannot attach an obsolete template root or reclaim a released host', async () => {
+    await click('scope:reentrant-context');
+    await wait(()=>globalThis.dockingScene.scopedMdi.contextProbe==='Replacement context');
+    assert.equal((await state()).scopedMdi.obsoleteContextLoads,0);
+    const before=(await state()).scopedMdi;
+    await click('scope:reentrant-release');
+    await wait(()=>globalThis.dockingScene.scopedMdi.releasedDocumentDetached);
+    assert.equal((await state()).scopedMdi.obsoleteContextLoads,0);
+    assert.equal((await state()).scopedMdi.revision,before.revision);
+  });
   await test('Released host commands reject without mutating either document group', async () => {
     const before=(await state()).scopedMdi;
     await click('scope:release');await click('scope:left');await settle();

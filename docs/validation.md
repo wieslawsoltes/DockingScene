@@ -14,9 +14,9 @@ The distribution is served under `/DockingScene/`. Four independent Chromium run
 | --- | ---: | --- |
 | Docking | 28 | Startup, editor text/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher, themes and canvas/native-input boundary |
 | Standalone tabs | 32 | Three lanes, six overflow modes, shrinking/fixed extents, physical header targets, menu/close/pin behavior, factories, content lifetime and 2,002-tab work counts |
-| Host, Metro and MDI | 57 | Focus restoration, retained geometry/chrome/pixels, edge scrolling, compact native views, MDI movement/state/menus, frame-free content, scoped external commands and minimized-plan reuse |
+| Host, Metro and MDI | 58 | Focus restoration, retained geometry/chrome/pixels, edge scrolling, compact native views, MDI movement/state/menus, frame-free content, scoped external commands and minimized-plan reuse |
 
-There are **117 named browser scenarios**: the previous 111 and six contextual-title/independent-host cases. These counts are test definitions, not a claim that an arbitrary revision passed them. The exact workflow's result files and exit codes establish execution success.
+There are **118 named browser scenarios**: the previous 111 and seven contextual-title/independent-host cases. These counts are test definitions, not a claim that an arbitrary revision passed them. The exact workflow's result files and exit codes establish execution success.
 
 The separate **100-cycle focus investigation** remains a build gate. It exercises repeated native editor/body input through the packaged canvas focus boundary. The helper contracts cover trusted-pointer scoping, separate documents, idempotence, disposal and atomic hit-target reads. This investigation is not counted as another 100 named product scenarios.
 
@@ -40,7 +40,7 @@ CI renders real Uno Skia through **ANGLE/SwiftShader software WebGL**. Native de
 
 ## Consolidated presentation and keyboard increments
 
-PR #9's fourteen MdiPresentationSpecs are retained alongside PR #10's twelve MdiCommandSpecs, not replaced. Selector review adds twelve immediate popup-key sequences as one named browser case. WindowKeyboardSpecs adds fourteen model cases and 500 seeded resize sequences. The original consolidated host increment added seven keyboard-window cases for 107 product cases. The current 117-case total also includes selector cancellation, individual MDI policies, contextual title controls and independent-host scoping; the separate 100 focus cycles remain. Final workflow result files, not these definitions, establish pass counts.
+PR #9's fourteen MdiPresentationSpecs are retained alongside PR #10's twelve MdiCommandSpecs, not replaced. Selector review adds twelve immediate popup-key sequences as one named browser case. WindowKeyboardSpecs adds fourteen model cases and 500 seeded resize sequences. The original consolidated host increment added seven keyboard-window cases for 107 product cases. The current 118-case total also includes selector cancellation, individual MDI policies, contextual title controls and independent-host scoping; the separate 100 focus cycles remain. Final workflow result files, not these definitions, establish pass counts.
 
 ## Individual MDI policy coverage
 
@@ -48,4 +48,8 @@ Twelve MdiPolicySpecs cover host/window policy intersections, capability checks,
 
 ## Contextual title and independent-host coverage
 
-Twelve `HostArrangementSpecs` cover scoped members, caller order, unrelated capabilities, invalid/hidden/duplicate/tool inputs, floating document groups, one-commit undo, empty/no-op history, veto/lock/stale/reentrant inputs and a 1,000-document batch. Six additional real-input cases cover editable template controls, retained local toggle state, activation/theme/minimize/maximize transitions, UIElement data suppression, template replacement, independent hosts sharing one manager and rejected released-host commands. Final logs establish execution; these are definitions until the exact source passes CI.
+Twelve `HostArrangementSpecs` cover scoped members, caller order, unrelated capabilities, invalid/hidden/duplicate/tool inputs, floating document groups, one-commit undo, empty/no-op history, veto/lock/stale/reentrant inputs and a 1,000-document batch. Seven additional real-input cases cover editable template controls, retained local toggle state, activation/theme/minimize/maximize transitions, UIElement data suppression, template replacement, independent hosts sharing one manager and rejected released-host commands. Final logs establish execution; these are definitions until the exact source passes CI.
+
+### Reentrant context callbacks
+
+The compiled sample template handlers are internal because Uno emits template helpers outside the resource dictionary class. A new callback regression replaces a data/template pair during DataContextChanged and releases an MDI host during contextual-template creation. The presenter must never load the obsolete root; the released host must not attach the returned editor. Snapshot/frame checks surround application factories, content creation and context binding. These cases preserve normal template retention and do not weaken existing input assertions.

@@ -14,4 +14,9 @@
    <TextBlock Loaded="StatusLoaded" Text="{Binding Description}" FontSize="11" TextTrimming="CharacterEllipsis" />
   </Border>
  </DataTemplate>
+ <DataTemplate x:Key="ReentrantCaption">
+  <Border DataContextChanged="ProbeDataChanged" Loaded="ProbeLoaded">
+   <TextBlock Text="Provisional context" />
+  </Border>
+ </DataTemplate>
 </ResourceDictionary>
