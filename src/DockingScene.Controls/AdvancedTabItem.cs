@@ -45,7 +45,7 @@ public class AdvancedTabItem : ContentControl
         finally { _creatingContent = false; }
     }
 }
-public class DockingWindow : AdvancedTabItem
+public partial class DockingWindow : AdvancedTabItem
 {
     public DockWindow Model { get; private set; } = new("window", "Window", WindowKind.Document);
     public void Update(DockWindow model)

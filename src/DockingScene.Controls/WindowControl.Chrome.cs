@@ -143,6 +143,8 @@ public partial class WindowControl
         Paint(_captionButtons["maximize"], IsMaximized ? "Restore" : "Maximize", IsMaximized ? "restore" : "maximize",
             IsMaximized ? DockGlyphs.Restore : DockGlyphs.Maximize, ShowMaximize || IsMaximized, IsMaximized ? CanRestore : ShowMaximize);
         Paint(_captionButtons["close"], "Close", "close", DockGlyphs.Close, true, CanClose);
+        _titleContext.Foreground = _titleText.Foreground;
+        UpdateTitleContext();
         ApplyFrameVisibility();
     }
     private void AcquireMovementInput()
