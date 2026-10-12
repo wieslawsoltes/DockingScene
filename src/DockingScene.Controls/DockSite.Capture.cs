@@ -28,7 +28,7 @@ public partial class DockSite
         var group = DockTree.GroupOf(layout, ids[0]);
         var rect = group is not null && _geometry?.Nodes.TryGetValue(group.Id, out var r) == true ? r : layout.Windows[ids[0]].FloatingBounds;
         if (!CaptureInteractionPointer(e)) return;
-        if (!ReferenceEquals(manager, Manager) || !ReferenceEquals(layout, manager.Layout)) { _canvas.ReleasePointerCapture(e.Pointer); return; }
+        if (!ReferenceEquals(manager, Manager) || !ReferenceEquals(layout, manager.Layout)) { ReleaseGestureKeyboard(); _canvas.ReleasePointerCapture(e.Pointer); return; }
         EnsureFloatingInputGuards(); ReleaseFloatingDragPlan();
         _dragStart = start; _dragIds = ids; _dragRevision = layout.Revision; _dragging = false; _tabDropIndex = -1;
         // The frozen plan is created only after movement crosses the threshold.
@@ -52,7 +52,7 @@ public partial class DockSite
         for (var node = e.OriginalSource as DependencyObject; node is not null && !ReferenceEquals(node, _canvas); node = VisualTreeHelper.GetParent(node))
             if (node is UIElement element && element.PointerCaptures?.Any(p => p.PointerId == e.Pointer.PointerId) == true)
                 element.ReleasePointerCapture(e.Pointer);
-        if (_canvas.CapturePointer(e.Pointer)) return true;
+        if (_canvas.CapturePointer(e.Pointer)) { AcquireGestureKeyboard(); return true; }
         TraceInput("Capture rejected", e);
         return false;
     }

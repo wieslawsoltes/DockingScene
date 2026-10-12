@@ -63,7 +63,10 @@ export async function runFloatingDragTests({page,state,test,reset,click,wait,bou
       await move(p,15);const after=await snapshot();
       assert(after.guideCount>0);assert.equal(after.feedbackCreated,warm.feedbackCreated);assert.equal(after.feedbackIdentity,warm.feedbackIdentity);
       assert.equal(after.plans,before.plans+1);assert(after.feedbackUpdates>warm.feedbackUpdates);
+      assert.equal(after.keyboardScope,true);
       await page.screenshot({path:`${output}/retained-floating-guides.png`});await page.keyboard.press('Escape');
+      // Observe cancellation while the mouse is still held; mouse release must not commit.
+      await wait(()=>!globalThis.dockingScene.floatingReview.interaction && !globalThis.dockingScene.floatingReview.keyboardScope);
     }finally{await page.mouse.up();}
     const end=await snapshot();assert.equal(end.interaction,false);assert.equal(end.guideCount,0);assert.equal(end.preview,undefined);
     assert.deepEqual(end.hosts,before.hosts);assert.equal(end.revision,before.revision);
@@ -85,7 +88,7 @@ export async function runFloatingDragTests({page,state,test,reset,click,wait,bou
   });
   await test('A stationary floating tab click does not build a magnetism plan or preview',async()=>{
     await prepare();const before=await snapshot();await click('tab:float-a');await settle();const after=await snapshot();
-    assert.equal(after.plans,before.plans);assert.equal(after.feedbackUpdates,before.feedbackUpdates);assert.equal(after.interaction,false);
+    assert.equal(after.plans,before.plans);assert.equal(after.feedbackUpdates,before.feedbackUpdates);assert.equal(after.interaction,false);assert.equal(after.keyboardScope,false);
     await reset();
   });
 }

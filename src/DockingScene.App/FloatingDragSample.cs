@@ -67,7 +67,7 @@ public sealed class FloatingDragSample : UserControl
         writer.WriteStartObject("floatingReview");
         writer.WriteNumber("generation",_generation); writer.WriteNumber("revision",_manager.Layout.Revision);
         writer.WriteString("sourceId",_sourceId); writer.WriteString("neighborId",_neighborId); writer.WriteString("error",_lastError);
-        writer.WriteBoolean("interaction",_site.IsInteractionActive); writer.WriteNumber("snap",_site.MagnetismSnapDistance); writer.WriteNumber("gap",_site.MagnetismGapDistance);
+        writer.WriteBoolean("interaction",_site.IsInteractionActive); writer.WriteBoolean("keyboardScope",_site.HasCapturedGestureKeyboardScope); writer.WriteNumber("snap",_site.MagnetismSnapDistance); writer.WriteNumber("gap",_site.MagnetismGapDistance);
         writer.WriteNumber("plans",_site.FloatingDragPlanBuildCount); writer.WriteNumber("queries",_site.FloatingMagnetismQueryCount);
         writer.WriteNumber("feedbackCreated",_site.DragFeedback.VisualCreationCount); writer.WriteNumber("feedbackUpdates",_site.DragFeedback.UpdateCount);
         writer.WriteNumber("feedbackIdentity",_site.DragFeedback.PreviewIdentity); writer.WriteNumber("guideCount",_site.DragFeedback.VisibleGuideCount);

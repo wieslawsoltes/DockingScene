@@ -100,7 +100,7 @@ public partial class DockSite
     private void CancelInteraction()
     {
         _dragIds = []; _dragging = false; _preview = null; _splitDrag = null; _tabDropIndex = -1; _autoResizeId = null;
-        ReleaseFloatingDragPlan(); _canvas.ReleasePointerCaptures(); _overlay.Children.Clear();
+        ReleaseGestureKeyboard(); ReleaseFloatingDragPlan(); _canvas.ReleasePointerCaptures(); _overlay.Children.Clear();
         foreach (var window in _floats.Values) window.CancelMovement(); QueueRender();
     }
     public void ShowSwitcher(int direction = 1)

@@ -29,6 +29,7 @@ public partial class DockSite
                 if (current is null || _autoOpen != id || !_canvas.CapturePointer(e.Pointer)) return;
                 _hoverClose.Stop(); _hoverOpen.Stop(); _autoResizeId = id; _autoResizeSide = current.Side;
                 _autoResizeSize = Manager.Layout.Windows[id].AutoHideSize; _autoResizeRevision = Manager.Layout.Revision;
+                AcquireGestureKeyboard();
                 e.Handled = true;
             };
             return element;
