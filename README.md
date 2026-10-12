@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.12`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.13`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -144,3 +144,7 @@ Per-document `CanStandardMdiMinimize` and `CanStandardMdiMaximize` metadata comb
 ## Contextual tool titles
 
 `ToolWindow.ToolWindowContainerTitleBarContextContentTemplate` adds retained native controls to a tool title. `DockSite.ToolWindowsTitleBarContextContentAlignment` selects Near or Far placement. The sample Appearance menu demonstrates Explorer title controls; their local state follows the tool through tab selection and auto-hide/pin transitions. See [tool title context](docs/tool-title-context.md).
+
+## Standard MDI magnetism
+
+Standard MDI pointer movement and resizing snap to sibling window edges with configurable gaps. `DockSite.MagnetismSnapDistance` defaults to 5 and `MagnetismGapDistance` to 1 logical unit; the standalone `StandardMdiHost` exposes the same options. Zero disables snapping and Ctrl temporarily bypasses it. The independent-host sample includes a magnetic layout demonstration. A renderer-independent `WindowMagnetism` plan supports allocation-free queries, and the controls retain one plan per gesture. See [MDI magnetism](docs/mdi-magnetism.md) for edge rules, tests and platform boundaries.

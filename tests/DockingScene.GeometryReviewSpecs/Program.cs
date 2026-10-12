@@ -45,5 +45,13 @@ Test("Seeded valid resize results obey constraints and preserve opposite edges",
         Check(Math.Abs(result.Right - rect.Right) < .001 && Math.Abs(result.Bottom - rect.Bottom) < .001);
     }
 });
+Test("One-axis pointer resizing preserves an untouched overconstrained extent", () => {
+    var small = new DockRect(10,20,30,25);
+    var taller = WindowGeometry.Resize(small,0,40,DockSide.Center,DockSide.Bottom,new(80,60),new(600,500));
+    Check(taller == new DockRect(10,20,30,65));
+    var wider = WindowGeometry.Resize(small,60,0,DockSide.Right,DockSide.Center,new(80,60),new(600,500));
+    Check(wider == new DockRect(10,20,90,25));
+    Check(WindowGeometry.Resize(small,0,0,DockSide.Center,DockSide.Center,new(80,60),new(600,500)) == small);
+});
 Console.WriteLine($"{passed}/{passed + failed} geometry review specifications passed (including 1,000 seeded resizes).");
 return failed == 0 ? 0 : 1;

@@ -30,8 +30,10 @@ public static partial class WindowGeometry
         if (!minimum.IsFinite || !maximum.IsFinite || minimum.Width < 0 || minimum.Height < 0 ||
             maximum.Width <= 0 || maximum.Height <= 0 || maximum.Width < minimum.Width || maximum.Height < minimum.Height)
             throw new ArgumentException("Invalid resize constraints.");
-        double width = Math.Clamp(start.Width + (horizontal == DockSide.Left ? -dx : horizontal == DockSide.Right ? dx : 0), minimum.Width, maximum.Width);
-        double height = Math.Clamp(start.Height + (vertical == DockSide.Top ? -dy : vertical == DockSide.Bottom ? dy : 0), minimum.Height, maximum.Height);
+        // A one-axis resize must not change the other extent, even when a small
+        // arranged host cannot satisfy that untouched axis's content constraints.
+        double width = horizontal == DockSide.Center ? start.Width : Math.Clamp(start.Width + (horizontal == DockSide.Left ? -dx : dx), minimum.Width, maximum.Width);
+        double height = vertical == DockSide.Center ? start.Height : Math.Clamp(start.Height + (vertical == DockSide.Top ? -dy : dy), minimum.Height, maximum.Height);
         return Checked(new(horizontal == DockSide.Left ? start.Right - width : start.X, vertical == DockSide.Top ? start.Bottom - height : start.Y, width, height));
     }
 

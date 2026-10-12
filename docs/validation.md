@@ -2,58 +2,46 @@
 
 ## Model and package gates
 
-Every `tests/*Specs/*.csproj` executable returns a nonzero exit code on failure. Both workflows enumerate all matching projects under shell `pipefail`, so logging cannot hide a failed process. Twenty-one suites cover Core, transactions, invalid inputs, Layout, MVVM, source binding, serialization, vectors, tab geometry, bulk registration, performance, MDI state and primary commands. The new `MdiCommandSpecs` adds twelve named cases and 500 cached/uncached minimized-layout comparisons. Test logs for the exact source revision are authoritative; seeded loops are not additional browser scenarios.
+Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **22 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope and magnetism. Seeded loops supplement named specifications; they are not additional browser scenarios.
 
-The Uno workflow compiles desktop, publishes the actual WebAssembly application and packs all six libraries from one source revision. A fresh NuGet cache restores a plain .NET application that executes all five non-UI packages and a separate Uno consumer that compiles the controls surface without project references. The latter includes `StandardMdiControlBar`, frame visibility and primary-window commands. Desktop compilation and package consumption are not native UI runtime tests.
+`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.13` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine and both DockSite/StandardMdiHost options. Compilation does not certify native desktop UI behavior.
 
 ## Browser gates
 
-The distribution is served under `/DockingScene/`. Four independent Chromium runners use one exact-revision browser artifact: three product suites and a separate focus stress suite. Product suites use physical pointer and keyboard events with read-only diagnostics. JavaScript does not invoke manager commands or replace the renderer. All suites run even if an earlier suite fails, and any failure blocks distribution.
+Four independent Chromium runners consume the same exact-revision artifact. Three product suites use real pointer and keyboard input; the fourth is the focus stress runner. Read-only diagnostics observe geometry, state and performed work. JavaScript never invokes manager commands or replaces rendering. Every suite runs even if another fails, and any failure blocks deployment.
 
-| Suite | Named scenarios | Coverage |
+| Suite | Named product scenarios | Coverage |
 | --- | ---: | --- |
-| Docking | 28 | Startup, editor text/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher, themes and canvas/native-input boundary |
-| Standalone tabs | 32 | Three lanes, six overflow modes, shrinking/fixed extents, physical header targets, menu/close/pin behavior, factories, content lifetime and 2,002-tab work counts |
-| Host, Metro and MDI | 62 | Focus restoration, retained geometry/chrome/pixels, edge scrolling, compact native views, MDI movement/state/menus, frame-free content, scoped external commands and minimized-plan reuse |
+| Docking | 28 | Editing/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher and themes |
+| Standalone tabs | 32 | Three lanes, six overflow modes, header geometry, close/pin/menus, factories, content lifetime and 2,002-tab workloads |
+| Host, Metro and MDI | 69 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts and pointer magnetism |
 
-There are **122 named browser scenarios**: the previous 118 and four tool-title contextual-content cases. These counts are test definitions, not a claim that an arbitrary revision passed them. The exact workflow's result files and exit codes establish execution success.
+The source defines **129 product scenarios**, extending the preceding 122 with seven magnetism scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
 
-The separate **100-cycle focus investigation** remains a build gate. It exercises repeated native editor/body input through the packaged canvas focus boundary. The helper contracts cover trusted-pointer scoping, separate documents, idempotence, disposal and atomic hit-target reads. This investigation is not counted as another 100 named product scenarios.
+The separate **100-cycle focus investigation** remains a required gate. It exercises native editor/body input through the packaged canvas boundary and is not counted as another 100 named product cases. Helper contracts cover trusted-pointer scoping, independent documents, idempotence, disposal and atomic clipped hit-target reads.
 
-## New frame and command regressions
+## Retained presentation and visual assertions
 
-Real external-button input must target the host's primary document even after a tool gains activation. Hiding a maximized frame must return at least the caption height to the actual editor, remove caption hit targets and preserve its content instance and normal bounds. External system-menu restore, light/dark changes and repeated frame transitions must retain caption/control-bar identities. Locking must disable restore without disabling otherwise permitted close. Populated minimized-caption plans must not rebuild during ten document/tool activation changes. Closing and releasing a host must remove obsolete targets and disable external commands.
+External MDI controls must target the host's primary document even when a tool is active. Frame-free maximize must release actual content space and remove caption hit targets without replacing editors or restore bounds. Repeated state/theme changes retain buttons and contextual roots. Minimized plans must be reused across activation-only changes. Closed/released hosts must remove stale targets and disable commands.
 
-Existing PNG assertions still inspect real rendered tab, tool-caption, status, hover and MDI caption colors. New frame-free light/dark screenshots are retained. Screenshots and selected pixels do not establish complete vendor visual parity.
+Actual PNG assertions inspect tabs, captions, status, hover and highlight paint. Theme round-trip checks require visible glyph ink in editor, Explorer and Properties fields in both Metro themes. Contextual titles test real data binding, local toggle state, explicit UIElement-data suppression, template replacement and reentrant release. Tool title tests include near/far coordinates and docked/auto-hide ownership transfer. Selected pixels and screenshots are not complete vendor pixel-equivalence certification.
 
-## Live deployment
+## Magnetism and resize review
 
-After a successful main build, Pages deploys that exact artifact. The post-deployment job verifies `build-info.json` against the source commit and reruns the browser suites on the live URL. Deployment success and post-deployment verification are separate results. Source snapshots, packages, logs, screenshots and local-server/live traces are retained as workflow artifacts. A feature branch is not published merely because it compiles.
+Sixteen MagnetismSpecs cover default/custom gaps, same/adjacent edges, perpendicular separation, stable ties, defensive copying, disabled behavior, opposite-edge anchors, constraints, reversal, invalid/overflow input and 1,000 seeded resizes. A warm loop performs 20,000 move/resize queries over 128 neighbors and requires zero managed per-query allocation; construction is excluded. The general geometry review adds a regression for single-axis resizing that previously modified an untouched overconstrained extent.
 
-## Diagnostic and performance boundaries
+Seven physical-input cases exercise actual gap placement, provisional versus committed state, one undo entry, a single plan per gesture, Ctrl/zero bypass, custom gaps, right/left resize anchors, Escape, viewport-change cancellation and exclusion of minimized/other-host windows. Editor and caption identities must remain stable. Keyboard Move/Size scenarios remain unchanged and do not use pointer snapping.
 
-`?diagnostics=1` exposes synthetic editor text/caret/identity, focus automation ids, model metadata, clipped hit bounds and performed-work counters. It is off in normal sessions. Do not enable it around confidential content. Geometry respects ancestors and explicit clips but not sibling occlusion, so tests require actual input-driven state transitions rather than treating rectangles as proof of correct interaction.
+These are targeted operation/allocation checks, not frame-rate, input-to-photon, power or hardware-GPU measurements. Gesture-plan queries still examine their captured neighbors; no unmeasured universal speedup is claimed.
 
-Work-count tests reject redundant computation without machine-specific timing thresholds. Warm lookup benchmarks exclude index construction; minimized-plan reuse does not remove all host reconciliation. Browser counters are not FPS, input-to-photon latency, power measurements or hardware-GPU results. Diagnostics themselves add overhead.
+## Deployment and exact source
 
-CI renders real Uno Skia through **ANGLE/SwiftShader software WebGL**. Native desktop runtime, detached windows, multiple monitors, touch/stylus/inertia, screen readers, RTL, other browsers and certified vendor pixel comparison still need separate validation. See `parity.md`, `maximized-mdi.md`, `mdi-review.md` and the preceding performance/Metro/focus review documents for implementation history and remaining scope.
+After all main-branch gates pass, Pages deploys that build artifact. All four runners then verify the live build's `build-info.json` against the source commit and repeat the browser checks. Deployment success and post-deployment validation are separate statuses. Source snapshots, packages, contracts, screenshots and traces identify their tested revisions. Feature-branch compilation alone does not publish an app.
 
-## Consolidated presentation and keyboard increments
+## Diagnostics and platform boundaries
 
-PR #9's fourteen MdiPresentationSpecs are retained alongside PR #10's twelve MdiCommandSpecs, not replaced. Selector review adds twelve immediate popup-key sequences as one named browser case. WindowKeyboardSpecs adds fourteen model cases and 500 seeded resize sequences. The original consolidated host increment added seven keyboard-window cases for 107 product cases. The current 122-case total also includes selector cancellation, individual MDI policies, contextual title controls and independent-host scoping; the separate 100 focus cycles remain. Final workflow result files, not these definitions, establish pass counts.
+`?diagnostics=1` enables synthetic editor text/caret/identity, focus automation ids, model metadata, clipped hit bounds and work counters. It is off by default; normal sessions do not run the periodic visual-tree diagnostic walk. Do not enable it around confidential content. Bounds are clipped by ancestors but do not model sibling occlusion, so tests require actual input-driven changes as well as geometry assertions.
 
-## Individual MDI policy coverage
+CI renders actual Uno Skia through **ANGLE/SwiftShader software WebGL**. Native desktop runtime, detached windows, multiple monitors, touch/stylus/inertia, screen readers, RTL, other browsers and hardware-GPU performance need separate qualification. Complete API, behavior and visual parity remains unfinished; see [parity.md](parity.md).
 
-Twelve MdiPolicySpecs cover host/window policy intersections, capability checks, other-document isolation, direct model transitions, Restore, old/new JSON, MVVM/source binding and geometry-cache reuse. Three further physical-input cases check caption and external-command state, double-click restriction, programmatic maximize/restore, and unchanged caption/editor identities and geometry/minimized-plan build counts. The immediate selector cancellation/reopen scenario supplements the original twelve opening-key cycles; no original assertion is removed. See [individual-mdi-policies.md](individual-mdi-policies.md) and [selector-readiness.md](selector-readiness.md).
-
-## Contextual title and independent-host coverage
-
-Twelve `HostArrangementSpecs` cover scoped members, caller order, unrelated capabilities, invalid/hidden/duplicate/tool inputs, floating document groups, one-commit undo, empty/no-op history, veto/lock/stale/reentrant inputs and a 1,000-document batch. Seven additional real-input cases cover editable template controls, retained local toggle state, activation/theme/minimize/maximize transitions, UIElement data suppression, template replacement, independent hosts sharing one manager and rejected released-host commands. Final logs establish execution; these are definitions until the exact source passes CI.
-
-### Reentrant context callbacks
-
-The compiled sample template handlers are internal because Uno emits template helpers outside the resource dictionary class. A new callback regression replaces a data/template pair during DataContextChanged and releases an MDI host during contextual-template creation. The presenter must never load the obsolete root; the released host must not attach the returned editor. Snapshot/frame checks surround application factories, content creation and context binding. These cases preserve normal template retention and do not weaken existing input assertions.
-
-## Tool title contextual content
-
-Four additional real-input cases exercise metadata writeback, independent per-tool local state, near/far placement, themes, auto-hide/pin transfer, close/reopen, and clearing/reset. Root identities and template build counts must remain unchanged across non-template updates; the metadata-only case also requires unchanged geometry-build and built-in caption identities. These extend rather than replace the preceding 118 product cases. See [tool-title-context.md](tool-title-context.md).
+Earlier investigations and retained coverage are documented in [maximized MDI](maximized-mdi.md), [MDI review](mdi-review.md), [individual policies](individual-mdi-policies.md), [contextual titles/host scope](mdi-context-and-scope.md), [tool title context](tool-title-context.md), [theme text](theme-text-review.md), [selector readiness](selector-readiness.md), [retained-host performance](retained-host-review.md), and [MDI magnetism](mdi-magnetism.md). Their historical totals do not replace the current exact-head results.
