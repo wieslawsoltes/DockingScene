@@ -16,7 +16,7 @@ public partial class WindowControl
     private UIElement? _movementInputRoot;
     private KeyEventHandler? _movementEscape;
     private WindowChromeState? _chrome;
-    private sealed record WindowChromeState(string Id, string Title, DockTheme Theme, bool Active,
+    private readonly record struct WindowChromeState(string Id, string Title, DockTheme Theme, bool Active,
         bool Minimize, bool Maximize, bool Maximized, bool Minimized, bool Close, bool Restore, bool SystemMenu);
     public bool IsMinimized { get; set; }
     public bool CanRestore { get; set; } = true;
@@ -32,17 +32,18 @@ public partial class WindowControl
     {
         if (!CanRestore || !(IsMaximized || IsMinimized)) return;
         if (RestoreRequested is { } restore) restore();
-        else if (IsMaximized) MaximizeRequested?.Invoke(); // Existing floating-host adapter toggles maximization.
+        else if (IsMaximized) MaximizeRequested?.Invoke();
     }
     private void RequestMaximize() { if (ShowMaximize && !IsMaximized) MaximizeRequested?.Invoke(); }
     private void RequestMinimize() { if (ShowMinimize && !IsMinimized) MinimizeRequested?.Invoke(); }
     private void RequestClose() { if (CanClose) CloseRequested?.Invoke(); }
 
-    /// <summary>State/close system commands for this retained frame. Callbacks check
-    /// current capability flags again, not only the flags when the menu was opened.</summary>
-    public void ShowSystemMenu()
+    public void ShowSystemMenu() => ShowSystemMenu(_systemButton);
+    /// <summary>Open state/close commands at a caption or an external command bar.
+    /// Callbacks recheck current flags rather than the menu's original snapshot.</summary>
+    public void ShowSystemMenu(FrameworkElement? anchor)
     {
-        if (!HasSystemMenu || _systemButton is null || !IsLoaded) return;
+        if (!HasSystemMenu || anchor is null || !anchor.IsLoaded || !IsLoaded || anchor.XamlRoot != XamlRoot) return;
         Activated?.Invoke();
         var menu = new MenuFlyout();
         void Item(string text, string id, bool enabled, Action action)
@@ -55,15 +56,14 @@ public partial class WindowControl
         Item("Maximize", "maximize", ShowMaximize && !IsMaximized, RequestMaximize);
         menu.Items.Add(new MenuFlyoutSeparator());
         Item("Close", "close", CanClose, RequestClose);
-        menu.ShowAt(_systemButton);
+        menu.ShowAt(anchor);
     }
     public void UpdateChrome(string title, DockTheme theme, bool active)
     {
         var chrome = new WindowChromeState(WindowId, title, theme, active, ShowMinimize, ShowMaximize, IsMaximized, IsMinimized, CanClose, CanRestore, HasSystemMenu);
         if (_chrome == chrome) return;
         _chrome = chrome; _theme = theme;
-        _root.Background = DockChrome.Brush(theme.Surface); _root.BorderBrush = DockChrome.Brush(active ? theme.Accent : theme.Border); _root.BorderThickness = new(1);
-        _root.RowDefinitions[0].Height = new(theme.TitleHeight);
+        _root.Background = DockChrome.Brush(theme.Surface); _root.BorderBrush = DockChrome.Brush(active ? theme.Accent : theme.Border);
         _title.Background = DockChrome.Brush(active ? theme.ActiveToolTitle : theme.Background);
         string foreground = active ? theme.AccentText : theme.Text;
         _titleText.Text = title; _titleText.FontSize = theme.FontSize; _titleText.Foreground = DockChrome.Brush(foreground);
@@ -96,6 +96,7 @@ public partial class WindowControl
         Paint(_captionButtons["maximize"], IsMaximized ? "Restore" : "Maximize", IsMaximized ? "restore" : "maximize",
             IsMaximized ? DockGlyphs.Restore : DockGlyphs.Maximize, ShowMaximize || IsMaximized, IsMaximized ? CanRestore : ShowMaximize);
         Paint(_captionButtons["close"], "Close", "close", DockGlyphs.Close, true, CanClose);
+        ApplyFrameVisibility();
     }
     private void AcquireMovementInput()
     {
