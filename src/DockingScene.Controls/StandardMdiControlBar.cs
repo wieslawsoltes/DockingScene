@@ -18,6 +18,10 @@ public sealed class StandardMdiControlBar : UserControl
     private StandardMdiHost? _subscribedHost;
     private string _prefix = "mdi-primary";
     private bool _ready;
+    private PresentationState? _painted;
+    private readonly record struct PresentationState(StandardMdiHost? Host, string? Id, string? Title, bool Modified, MdiWindowState State,
+        DockTheme Theme, string Prefix, bool OnlyMaximized, bool Minimize, bool Maximize, bool Restore, bool Close);
+    public long PresentationUpdateCount { get; private set; }
     public static readonly DependencyProperty HostProperty = DependencyProperty.Register(nameof(Host), typeof(StandardMdiHost), typeof(StandardMdiControlBar), new PropertyMetadata(null, HostChanged));
     public static readonly DependencyProperty ShowOnlyWhenMaximizedProperty = DependencyProperty.Register(nameof(ShowOnlyWhenMaximized), typeof(bool), typeof(StandardMdiControlBar), new PropertyMetadata(true, (d, _) => ((StandardMdiControlBar)d).Refresh()));
     public StandardMdiHost? Host { get => (StandardMdiHost?)GetValue(HostProperty); set => SetValue(HostProperty, value); }
@@ -47,7 +51,7 @@ public sealed class StandardMdiControlBar : UserControl
             var button = DockChrome.Button(key, "", theme, () => { });
             button.Style = style; button.Width = 26; button.Padding = new(5); _buttons.Add(key,button); actions.Children.Add(button);
         }
-        Loaded += (_, _) => { Attach(); Refresh(); };
+        Loaded += (_, _) => { Attach(); _painted = null; Refresh(); };
         Unloaded += (_, _) => Detach();
         _ready = true; Refresh();
     }
@@ -70,24 +74,30 @@ public sealed class StandardMdiControlBar : UserControl
     {
         if (!_ready) return;
         var host = Host; var primary = host?.PrimaryWindow; var theme = host?.PresentationTheme ?? DockTheme.MetroLight;
+        var minimize = host?.MinimizePrimaryWindowCommand; var maximize = host?.MaximizePrimaryWindowCommand;
+        var restore = host?.RestorePrimaryWindowCommand; var close = host?.ClosePrimaryWindowCommand;
+        var state = new PresentationState(host, primary?.Id, primary?.Title, primary?.IsModified == true, primary?.MdiState ?? MdiWindowState.Normal,
+            theme, _prefix, ShowOnlyWhenMaximized, minimize?.CanExecute(null) == true, maximize?.CanExecute(null) == true,
+            restore?.CanExecute(null) == true, close?.CanExecute(null) == true);
+        if (_painted == state) return;
+        _painted = state; PresentationUpdateCount++;
         Visibility = primary is not null && (!ShowOnlyWhenMaximized || primary.MdiState == MdiWindowState.Maximized) ? Visibility.Visible : Visibility.Collapsed;
         _root.Background = DockChrome.Brush(theme.Background); _title.Foreground = DockChrome.Brush(theme.Text); _title.FontSize = theme.FontSize;
         _title.Text = primary is null ? "" : primary.Title + (primary.IsModified ? " *" : "");
         DockChrome.Identify(_title, _prefix + ":title", _title.Text);
-        void Set(string key, string label, string glyph, ICommand? command, bool visible = true)
+        void Set(string key, string label, string glyph, ICommand? command, bool enabled, bool visible = true)
         {
             var button = _buttons[key]; button.Command = command;
-            button.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-            button.IsEnabled = key == "system" ? primary is not null : command?.CanExecute(null) == true;
+            button.Visibility = visible ? Visibility.Visible : Visibility.Collapsed; button.IsEnabled = enabled;
             button.Height = theme.TitleHeight; button.Background = _root.Background; button.Foreground = _title.Foreground;
             DockChrome.Identify(button, _prefix + ":" + key, label); ToolTipService.SetToolTip(button,label);
             if (button.Tag as string != glyph) { button.Tag = glyph; button.Content = DockChrome.Glyph(glyph,theme.Text); }
             else if (button.Content is Microsoft.UI.Xaml.Shapes.Path icon) icon.Stroke = _title.Foreground;
         }
-        Set("system", "Window menu", DockGlyphs.Document, null);
-        Set("minimize", "Minimize", DockGlyphs.Minimize, host?.MinimizePrimaryWindowCommand);
-        Set("restore", "Restore", DockGlyphs.Restore, host?.RestorePrimaryWindowCommand, primary?.MdiState is MdiWindowState.Minimized or MdiWindowState.Maximized);
-        Set("maximize", "Maximize", DockGlyphs.Maximize, host?.MaximizePrimaryWindowCommand, primary?.MdiState != MdiWindowState.Maximized);
-        Set("close", "Close", DockGlyphs.Close, host?.ClosePrimaryWindowCommand);
+        Set("system", "Window menu", DockGlyphs.Document, null, primary is not null);
+        Set("minimize", "Minimize", DockGlyphs.Minimize, minimize, state.Minimize);
+        Set("restore", "Restore", DockGlyphs.Restore, restore, state.Restore, primary?.MdiState is MdiWindowState.Minimized or MdiWindowState.Maximized);
+        Set("maximize", "Maximize", DockGlyphs.Maximize, maximize, state.Maximize, primary?.MdiState != MdiWindowState.Maximized);
+        Set("close", "Close", DockGlyphs.Close, close, state.Close);
     }
 }

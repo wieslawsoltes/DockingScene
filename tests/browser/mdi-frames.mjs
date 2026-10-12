@@ -58,7 +58,7 @@ export async function runMdiFrameTests({page, state, test, reset, click, wait, b
     await menu('menubar:Window','appmenu:Unlock layout'); await bounds('mdi-primary:restore');
     await click('mdi-primary:restore'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').mdiState === 'Normal');
   });
-  await test('Populated minimized-caption plans are reused across document and tool activation', async () => {
+  await test('Populated minimized-caption plans and unchanged command chrome are reused across activation', async () => {
     await activate('main'); await click('mdi-primary:minimize');
     await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'main').mdiState === 'Minimized');
     await activate('code'); await settle(); const before = await state();
@@ -66,8 +66,9 @@ export async function runMdiFrameTests({page, state, test, reset, click, wait, b
     const after = await state();
     assert.equal(after.mdiMinimizedLayoutBuilds, before.mdiMinimizedLayoutBuilds);
     assert(after.mdiMinimizedLayoutReuses > before.mdiMinimizedLayoutReuses);
+    assert.equal(after.mdiExternalPresentationUpdates, before.mdiExternalPresentationUpdates);
     for (const key of ['x','y','width','height']) assert.equal(after.mdiFrames.main[key], before.mdiFrames.main[key]);
-    console.log('MDI_MINIMIZED_REUSE ' + JSON.stringify({builds: after.mdiMinimizedLayoutBuilds - before.mdiMinimizedLayoutBuilds, reuses: after.mdiMinimizedLayoutReuses - before.mdiMinimizedLayoutReuses}));
+    console.log('MDI_MINIMIZED_REUSE ' + JSON.stringify({builds: after.mdiMinimizedLayoutBuilds - before.mdiMinimizedLayoutBuilds, reuses: after.mdiMinimizedLayoutReuses - before.mdiMinimizedLayoutReuses, commandPaints: after.mdiExternalPresentationUpdates - before.mdiExternalPresentationUpdates}));
   });
   await test('External close after tool activation closes only the primary document', async () => {
     await activate('code'); await activate('explorer');

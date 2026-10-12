@@ -58,6 +58,7 @@ public sealed partial class WorkspaceView
         writer.WriteBoolean("mdiPrimaryCloseEnabled", current?.ClosePrimaryWindowCommand.CanExecute(null) == true);
         writer.WriteNumber("mdiMinimizedLayoutBuilds", current?.MinimizedLayoutBuildCount ?? 0);
         writer.WriteNumber("mdiMinimizedLayoutReuses", current?.MinimizedLayoutReuseCount ?? 0);
+        writer.WriteNumber("mdiExternalPresentationUpdates", _mdiExternalBar?.PresentationUpdateCount ?? 0);
         writer.WriteStartObject("mdiExternalButtons");
         if (_mdiExternalBar is not null) foreach (var (key, identity) in _mdiExternalBar.ButtonIdentities) writer.WriteNumber(key,identity);
         writer.WriteEndObject();

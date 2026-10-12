@@ -8,7 +8,11 @@ namespace DockingScene.Controls;
 public sealed partial class StandardMdiHost
 {
     private PrimaryCommand? _minimizePrimary, _maximizePrimary, _restorePrimary, _closePrimary;
-    private MdiPrimaryWindowState _notifiedPrimary;
+    private MdiPrimaryWindowState _notifiedPrimary, _cachedPrimary;
+    private DockLayout? _primarySnapshot;
+    private string[]? _primaryIds;
+    private DockCapabilities _primaryAllowed;
+    private bool _primaryCanMinimize, _primaryCanMaximize;
     public static readonly DependencyProperty AreMaximizedWindowFramesVisibleProperty = DependencyProperty.Register(
         nameof(AreMaximizedWindowFramesVisible), typeof(bool), typeof(StandardMdiHost), new PropertyMetadata(true, OptionsChanged));
     public bool AreMaximizedWindowFramesVisible { get => (bool)GetValue(AreMaximizedWindowFramesVisibleProperty); set => SetValue(AreMaximizedWindowFramesVisibleProperty, value); }
@@ -29,8 +33,18 @@ public sealed partial class StandardMdiHost
     /// <summary>Raised after a host projection or release. Subscribers must detach
     /// when their external toolbar or application owner is unloaded.</summary>
     public event EventHandler? ProjectionChanged;
-    private MdiPrimaryWindowState ResolvePrimary(DockLayout layout) => !_active || _manager is null ? default :
-        MdiPrimaryWindow.Resolve(layout, _ids, _manager.Policy.AllowedCapabilities, CanWindowsMinimize, CanWindowsMaximize);
+    private MdiPrimaryWindowState ResolvePrimary(DockLayout layout)
+    {
+        if (!_active || _manager is null) return default;
+        var allowed = _manager.Policy.AllowedCapabilities;
+        bool minimize = CanWindowsMinimize, maximize = CanWindowsMaximize;
+        if (ReferenceEquals(_primarySnapshot, layout) && ReferenceEquals(_primaryIds, _ids) && _primaryAllowed == allowed &&
+            _primaryCanMinimize == minimize && _primaryCanMaximize == maximize) return _cachedPrimary;
+        var result = MdiPrimaryWindow.Resolve(layout, _ids, allowed, minimize, maximize);
+        _primarySnapshot = layout; _primaryIds = _ids; _primaryAllowed = allowed;
+        _primaryCanMinimize = minimize; _primaryCanMaximize = maximize; _cachedPrimary = result;
+        return result;
+    }
     private enum PrimaryAction { Minimize, Maximize, Restore, Close }
     private static bool AllowsPrimary(MdiPrimaryWindowState state, PrimaryAction action) => action switch
     {
@@ -54,6 +68,7 @@ public sealed partial class StandardMdiHost
     }
     private void NotifyProjection()
     {
+        if (!_active) { _primarySnapshot = null; _primaryIds = null; }
         var state = _active && _manager is not null ? ResolvePrimary(_manager.Layout) : default;
         if (state != _notifiedPrimary)
         {
