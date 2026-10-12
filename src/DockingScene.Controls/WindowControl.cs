@@ -89,14 +89,14 @@ public partial class WindowControl : UserControl
         }
         PointerMoved += (_, e) =>
         {
-            if (!_moving || _coordinateRoot is null) return;
+            if (!_moving || _keyboardSession is not null || _coordinateRoot is null) return;
             if (_resizeX == DockSide.Center && _resizeY == DockSide.Center ? !CanMove : !CanResize) { CancelMovement(); return; }
             var point = e.GetCurrentPoint(_coordinateRoot).Position;
             double dx = point.X - _start.X, dy = point.Y - _start.Y;
             var rect = _resizeX == DockSide.Center && _resizeY == DockSide.Center ? _original with { X = _original.X + dx, Y = _original.Y + dy } : WindowGeometry.Resize(_original, dx, dy, _resizeX, _resizeY, MinimumSize, MaximumSize);
             SetBounds(rect); BoundsChanging?.Invoke(rect); e.Handled = true;
         };
-        PointerReleased += (_, e) => { if (!_moving) return; _moving = false; ReleaseMovementInput(); ReleasePointerCapture(e.Pointer); BoundsChanged?.Invoke(Bounds); e.Handled = true; };
+        PointerReleased += (_, e) => { if (!_moving || _keyboardSession is not null) return; _moving = false; ReleaseMovementInput(); ReleasePointerCapture(e.Pointer); BoundsChanged?.Invoke(Bounds); e.Handled = true; };
         PointerCanceled += (_, _) => CancelMovement();
         Unloaded += (_, _) => { CancelMovement(); DismissSystemMenu(); };
         PointerCaptureLost += (_, _) => { if (_moving) CancelMovement(); };
@@ -109,7 +109,7 @@ public partial class WindowControl : UserControl
         _moving = CapturePointer(e.Pointer);
         if (_moving) { AcquireMovementInput(); MovementStarted?.Invoke(); }
     }
-    public void CancelMovement() { if (!_moving) return; _moving = false; ReleaseMovementInput(); SetBounds(_original); ReleasePointerCaptures(); }
+    public void CancelMovement() { if (!_moving) return; _moving = false; ResetKeyboardInteraction(); ReleaseMovementInput(); SetBounds(_original); ReleasePointerCaptures(); }
     public void SetBounds(DockRect bounds) { if (Bounds == bounds && Width == bounds.Width && Height == bounds.Height) return; Bounds = bounds; DockChrome.Position(this, bounds, Canvas.GetZIndex(this)); }
     public void SetWindowContent(object? content) => ContentLease.Set(_content, content);
 }

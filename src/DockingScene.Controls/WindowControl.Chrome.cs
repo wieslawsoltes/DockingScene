@@ -16,7 +16,8 @@ public partial class WindowControl
     private long _systemMenuGeneration;
     private DockTheme _theme = DockTheme.MetroLight;
     private UIElement? _movementInputRoot;
-    private KeyEventHandler? _movementEscape;
+    private KeyEventHandler? _movementEscape, _movementKeyUp;
+    private PointerEventHandler? _movementPointer;
     private WindowChromeState? _chrome;
     private readonly record struct WindowChromeState(string Id, string Title, DockTheme Theme, bool Active,
         bool Minimize, bool Maximize, bool Maximized, bool Minimized, bool Close, bool Restore, bool SystemMenu);
@@ -70,6 +71,8 @@ public partial class WindowControl
             menu.Items.Add(item);
         }
         Item("Restore", "restore", CanRestore && (IsMaximized || IsMinimized), RequestRestore);
+        Item("Move", "move", AllowsKeyboard(DockingScene.Layout.WindowKeyboardMode.Move), () => BeginKeyboardMove());
+        Item("Size", "size", AllowsKeyboard(DockingScene.Layout.WindowKeyboardMode.Resize), () => BeginKeyboardResize());
         Item("Minimize", "minimize", ShowMinimize && !IsMinimized, RequestMinimize);
         Item("Maximize", "maximize", ShowMaximize && !IsMaximized, RequestMaximize);
         menu.Items.Add(new MenuFlyoutSeparator());
@@ -120,12 +123,22 @@ public partial class WindowControl
     {
         if (XamlRoot?.Content is not { } root || _movementInputRoot is not null) return;
         _movementInputRoot = root;
-        _movementEscape ??= (_, e) => { if (_moving && e.Key == VirtualKey.Escape) { e.Handled = true; CancelMovement(); } };
+        _movementEscape ??= (_, e) => HandleMovementKey(e);
+        _movementKeyUp ??= (_, e) =>
+        {
+            if (IsKeyboardInteractionActive && _keyboardCommitPending && e.Key == VirtualKey.Enter)
+            { e.Handled = true; CompleteKeyboardInteraction(); }
+        };
+        _movementPointer ??= (_, _) => { if (IsKeyboardInteractionActive) CancelMovement(); };
         root.AddHandler(PreviewKeyDownEvent, _movementEscape, true);
+        root.AddHandler(PreviewKeyUpEvent, _movementKeyUp, true);
+        root.AddHandler(PointerPressedEvent, _movementPointer, true);
     }
     private void ReleaseMovementInput()
     {
         if (_movementInputRoot is not { } root) return;
         _movementInputRoot = null; root.RemoveHandler(PreviewKeyDownEvent, _movementEscape!);
+        root.RemoveHandler(PreviewKeyUpEvent, _movementKeyUp!);
+        root.RemoveHandler(PointerPressedEvent, _movementPointer!);
     }
 }

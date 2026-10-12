@@ -71,6 +71,7 @@ public partial class DockSite : UserControl
         if (e.OldValue is DockManager old) old.Changed -= site.ModelChanged;
         site._subscribed = false;
         site.CancelInteraction();
+        site.ReleaseFloatingFrames();
         site.ClearAuxiliaries();
         site.CloseSwitcher(false);
         site._hoverOpen.Stop(); site._hoverClose.Stop(); site._hoverId = null;
@@ -88,6 +89,7 @@ public partial class DockSite : UserControl
         {
             if (!ReferenceEquals(sender, GetValue(ManagerProperty))) return;
             CancelStaleInteraction();
+            CancelStaleFloatingMovements();
             // Honor unregister transitions even when the same id is re-registered
             // before the next coalesced render can observe the intermediate layout.
             ReleaseWindowContent(_windows.Keys.Where(id => e.Before.Windows.ContainsKey(id) && !e.After.Windows.ContainsKey(id)).ToArray());
@@ -179,7 +181,7 @@ public partial class DockSite : UserControl
             foreach (var key in _groups.Keys.Where(k => !validGroups.Contains(k)).ToArray()) { _groups[key].Tabs.ReleaseContent(); _canvas.Children.Remove(_groups[key]); _groups.Remove(key); }
             var hostOrder = layout.FloatingHosts.OrderByDescending(h => DockTree.WindowIds(h.Root).Select(id => index.ActivationRank(id) is var i && i >= 0 ? i : int.MaxValue).DefaultIfEmpty(int.MaxValue).Min()).ToArray();
             var z = hostOrder.Select((h, i) => (h.Id, Z: 100 + i * 10)).ToDictionary(p => p.Id, p => p.Z);
-            foreach (var key in _floats.Keys.Where(k => !z.ContainsKey(k)).ToArray()) { _canvas.Children.Remove(_floats[key]); _floats.Remove(key); }
+            foreach (var key in _floats.Keys.Where(k => !z.ContainsKey(k)).ToArray()) { _floats[key].CancelMovement(); _floats[key].DismissSystemMenu(); _canvas.Children.Remove(_floats[key]); _floats.Remove(key); _floatingGestureRevisions.Remove(key); }
             foreach (var host in hostOrder)
             {
                 if (!_floats.TryGetValue(host.Id, out var window))
@@ -191,7 +193,7 @@ public partial class DockSite : UserControl
                         var current = Manager.Layout.FloatingHosts.FirstOrDefault(h => h.Id == key);
                         if (current is not null) { BeginDockDrag(DockTree.WindowIds(current.Root).ToImmutableArray(), e.Pointer); e.Handled = true; }
                     };
-                    window.BoundsChanged += rect => Submit(Manager.SetFloatingBounds(key, rect));
+                    ConfigureFloatingMovement(window, key);
                     window.CloseRequested += () => { var current = Manager.Layout.FloatingHosts.FirstOrDefault(h => h.Id == key); if (current is not null) Submit(Manager.CloseMany(DockTree.WindowIds(current.Root))); };
                     window.MaximizeRequested += () => { var current = Manager.Layout.FloatingHosts.FirstOrDefault(h => h.Id == key); if (current is not null) Submit(Manager.SetFloatingMaximized(key, !current.IsMaximized)); };
                     _floats[key] = window; _canvas.Children.Add(window);
@@ -201,8 +203,9 @@ public partial class DockSite : UserControl
                 window.CanMove = !layout.IsLayoutLocked && ids.All(id => manager.Allows(id, DockCapabilities.Drag));
                 window.CanClose = ids.All(id => manager.Allows(id, DockCapabilities.Close));
                 window.ShowMaximize = !layout.IsLayoutLocked && ids.All(id => manager.Allows(id, DockCapabilities.Resize));
+                window.CanRestore = window.ShowMaximize;
                 window.IsMaximized = host.IsMaximized; window.CanResize = !layout.IsLayoutLocked && ids.All(id => manager.Allows(id, DockCapabilities.Resize));
-                window.SetBounds(_geometry.FloatingHosts[host.Id]); Canvas.SetZIndex(window, z[host.Id]);
+                if (!window.IsMoving) window.SetBounds(_geometry.FloatingHosts[host.Id]); Canvas.SetZIndex(window, z[host.Id]);
                 window.UpdateChrome(layout.Windows[selected].Title, Theme, ids.Contains(layout.ActiveWindowId));
             }
             foreach (var group in groups)
@@ -219,6 +222,7 @@ public partial class DockSite : UserControl
                 if (_mdi is null) { _mdi = new(); _mdi.OperationRejected += message => OperationRejected?.Invoke(message); _canvas.Children.Add(_mdi); }
                 _mdi.Visibility = Visibility.Visible; DockChrome.Position(_mdi, _geometry.Nodes[workspace.Id], 2);
                 _mdi.CanWindowsMinimize = CanStandardMdiWindowsMinimize; _mdi.CanWindowsMaximize = CanStandardMdiWindowsMaximize;
+                _mdi.AreMaximizedWindowFramesVisible = AreStandardMdiMaximizedWindowFramesVisible;
                 _mdi.Update(manager, standardIds.ToArray(), Window, Theme);
             }
             else if (_mdi is not null) { _mdi.ReleaseContent(); _mdi.Visibility = Visibility.Collapsed; }
