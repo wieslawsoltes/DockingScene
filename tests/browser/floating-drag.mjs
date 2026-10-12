@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { assertFloatingPaint } from './painted-floating.mjs';
 
 export async function runFloatingDragTests({page,state,test,reset,click,wait,bounds,settle,menu,output}) {
   const snapshot=async()=>(await state()).floatingReview;
@@ -26,7 +27,9 @@ export async function runFloatingDragTests({page,state,test,reset,click,wait,bou
     const after=await snapshot(), host=after.hosts[before.sourceId];
     assert.equal(host.bounds.x,69);assert.equal(host.rootIdentity,source.rootIdentity);assert.deepEqual(host.nodes,source.nodes);
     assert.equal(host.frameIdentity,source.frameIdentity);assert.deepEqual(host.buttons,source.buttons);assert.deepEqual(after.editors,before.editors);
-    assert.equal(after.error,null);await page.screenshot({path:`${output}/floating-preserved-split.png`});
+    assert.equal(after.error,null);await settle();
+    await assertFloatingPaint(page,await bounds('float-review:site'),host.bounds,source.bounds);
+    await page.screenshot({path:`${output}/floating-preserved-split.png`});
     await click('float-review:undo');await wait(id=>globalThis.dockingScene.floatingReview.hosts[id].bounds.x===20,before.sourceId);
   });
   await test('Floating Ctrl bypass and zero-distance disable use raw host coordinates',async()=>{
@@ -40,7 +43,9 @@ export async function runFloatingDragTests({page,state,test,reset,click,wait,bou
     await prepare();await click('float-review:gap8');const p=await begin();try{await move(p,45);}finally{await page.mouse.up();}
     await wait(()=>{const s=globalThis.dockingScene.floatingReview;return s.hosts[s.sourceId].bounds.x===62;});
     const s=await snapshot(), a=s.hosts[s.sourceId].bounds,b=s.hosts[s.neighborId].bounds;
-    assert.equal(b.x-a.x-a.width,8);await page.screenshot({path:`${output}/floating-gap8.png`});
+    assert.equal(b.x-a.x-a.width,8);await settle();
+    await assertFloatingPaint(page,await bounds('float-review:site'),a,{...a,x:20});
+    await page.screenshot({path:`${output}/floating-gap8.png`});
   });
   await test('Floating border resizing snaps without changing the opposite edge or split identity',async()=>{
     await prepare();const before=await snapshot(), source=before.hosts[before.sourceId], site=await bounds('float-review:site');

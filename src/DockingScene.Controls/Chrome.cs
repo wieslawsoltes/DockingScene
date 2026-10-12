@@ -40,6 +40,8 @@ public static partial class DockChrome
     };
     public static void Position(FrameworkElement element, DockRect rect, int z = 0)
     {
+        if (element is WindowControl or DockContainer)
+        { PositionComposed(element, rect, z); return; }
         Canvas.SetLeft(element, rect.X); Canvas.SetTop(element, rect.Y);
         element.Width = Math.Max(0, rect.Width); element.Height = Math.Max(0, rect.Height); Canvas.SetZIndex(element, z);
     }

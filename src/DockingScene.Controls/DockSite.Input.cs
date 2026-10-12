@@ -37,7 +37,7 @@ public partial class DockSite
             _splitRatio = DockLayoutEngine.RatioAt(split, p.X, p.Y, Theme.SplitterSize);
             var temp = DockTree.Map(Manager.Layout, n => n.Id == split.Id && n is DockSplit s ? s with { Ratio = _splitRatio } : n);
             var geometry = DockLayoutEngine.Arrange(temp, new(0, 0, ActualWidth, ActualHeight), new() { Splitter = Theme.SplitterSize, TabHeight = Theme.TabHeight, TitleHeight = Theme.TitleHeight });
-            foreach (var (id, group) in _groups) if (geometry.Nodes.TryGetValue(id, out var rect)) { Canvas.SetLeft(group, rect.X); Canvas.SetTop(group, rect.Y); group.Width = rect.Width; group.Height = rect.Height; }
+            foreach (var (id, group) in _groups) if (geometry.Nodes.TryGetValue(id, out var rect)) DockChrome.Position(group, rect, Canvas.GetZIndex(group));
             _overlay.Children.Clear(); var bar = geometry.Splitters.First(s => s.Id == split.Id);
             var visual = new Border { Background = DockChrome.Brush(Theme.Accent), Opacity = .6 }; DockChrome.Position(visual, bar.Bounds); _overlay.Children.Add(visual);
             e.Handled = true; return;

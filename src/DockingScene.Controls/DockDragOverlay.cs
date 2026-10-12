@@ -47,7 +47,7 @@ public sealed class DockDragOverlay : UserControl
             _theme = theme;
             _preview.Background = DockChrome.Brush(theme.Accent); _preview.BorderBrush = _preview.Background;
         }
-        _preview.Visibility = Visibility.Visible; DockChrome.Position(_preview, rect);
+        _preview.Visibility = Visibility.Visible; DockChrome.PositionComposed(_preview, rect);
         PreviewBounds = rect; VisibleGuideCount = 0;
         foreach (var guide in preview.Guides)
         {
@@ -98,7 +98,7 @@ public sealed class DockDragOverlay : UserControl
                 Frame.BorderBrush = active ? _area.Background : _outline.BorderBrush;
                 Frame.BorderThickness = new(active ? 2 : 1);
             }
-            Frame.Visibility = Visibility.Visible; DockChrome.Position(Frame,guide.Bounds,2);
+            Frame.Visibility = Visibility.Visible; DockChrome.PositionComposed(Frame,guide.Bounds,2);
         }
     }
 }
