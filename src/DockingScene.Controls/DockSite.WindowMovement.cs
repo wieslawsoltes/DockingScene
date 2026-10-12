@@ -18,7 +18,16 @@ public partial class DockSite
             if (!ids.Contains(layout.ActiveWindowId) && ids.Length > 0) Submit(owner.Activate(ids[0]));
         };
         frame.MovementStarted += () =>
-        { if (Current()) _floatingGestureRevisions[hostId] = owner.Layout.Revision; else frame.CancelMovement(); };
+        {
+            if (!Current()) { frame.CancelMovement(); return; }
+            var layout = owner.Layout;
+            _floatingGestureRevisions[hostId] = layout.Revision;
+            if (frame.IsKeyboardInteractionActive || MagnetismSnapDistance == 0) return;
+            var host = layout.FloatingHosts.FirstOrDefault(h => h.Id == hostId);
+            if (host is null) { frame.CancelMovement(); return; }
+            var plan = CreateFloatingDragPlan(layout, DockTree.WindowIds(host.Root).ToArray(), frame.Bounds);
+            if (plan.Magnetism.NeighborCount > 0) frame.SetPointerMagnetism(plan.Magnetism);
+        };
         frame.BoundsChanged += bounds =>
         {
             if (!Current() || !_floatingGestureRevisions.Remove(hostId, out long revision)) return;

@@ -47,8 +47,7 @@ public partial class DockSite
         if (!_dragging && dx * dx + dy * dy < 25) return;
         _dragging = true; _tabDropIndex = -1;
         bool suppress = e.KeyModifiers.HasFlag(VirtualKeyModifiers.Control);
-        var floating = _dragBounds with { X = _dragBounds.X + dx, Y = _dragBounds.Y + dy };
-        if (!suppress) floating = WindowGeometry.Snap(floating, Manager.Layout.FloatingHosts.Select(h => h.Bounds));
+        var floating = ApplyFloatingDrag(_dragBounds with { X = _dragBounds.X + dx, Y = _dragBounds.Y + dy }, suppress);
         _preview = DockGuides.HitTest(Manager.Layout, _geometry, _dragIds, p.X, p.Y, floating, suppress);
         if (!suppress && _dragIds.All(id => Manager.Allows(id, DockCapabilities.Dock | DockCapabilities.Attach)))
         {
@@ -75,22 +74,7 @@ public partial class DockSite
         if (group.Kind == GroupKind.Tools) return _dragIds.All(id => layout.Windows[id].Kind == WindowKind.Tool);
         return _dragIds.All(id => layout.Windows[id].Kind == WindowKind.Document || Manager.Policy.AllowMixedDocumentGroups && Manager.Allows(id, DockCapabilities.EnterWorkspace));
     }
-    private void RenderDragPreview(DockDragPreview preview)
-    {
-        _overlay.Children.Clear();
-        var rect = preview.Target?.Preview ?? preview.FloatingBounds;
-        var fill = new Border { Background = DockChrome.Brush(Theme.Accent), BorderBrush = DockChrome.Brush(Theme.Accent), BorderThickness = new(2), Opacity = .28 };
-        DockChrome.Position(fill, rect); _overlay.Children.Add(fill);
-        foreach (var guide in preview.Guides)
-        {
-            var grid = new Grid { Background = DockChrome.Brush(Theme.GuideBackground) };
-            grid.Children.Add(new Border { BorderBrush = DockChrome.Brush(Theme.Border), BorderThickness = new(1), Margin = new(5) });
-            var area = DockGuides.Preview(new(5, 7, 18, 16), guide.Side);
-            grid.Children.Add(new Border { Background = DockChrome.Brush(Theme.Accent), HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Margin = new(area.X, area.Y, 0, 0), Width = Math.Max(4, area.Width), Height = Math.Max(4, area.Height) });
-            var border = new Border { Child = grid, BorderBrush = DockChrome.Brush(guide == preview.Target ? Theme.Accent : Theme.Border), BorderThickness = new(guide == preview.Target ? 2 : 1) };
-            DockChrome.Position(border, guide.Bounds, 2); _overlay.Children.Add(border);
-        }
-    }
+    private void RenderDragPreview(DockDragPreview preview) => UpdateDragFeedback(preview);
     private void EndInteraction(PointerRoutedEventArgs e)
     {
         if (IsInteractionActive) TraceInput("Release", e);
@@ -101,20 +85,22 @@ public partial class DockSite
             Submit(Manager.ResizeSplit(split.Id, _splitRatio, _splitRevision)); QueueRender(); e.Handled = true; return;
         }
         if (_dragIds.IsEmpty) return;
-        var ids = _dragIds; var preview = _preview; bool dragged = _dragging; long revision = _dragRevision; int index = _tabDropIndex;
-        _dragIds = []; _dragging = false; _preview = null; _tabDropIndex = -1; _canvas.ReleasePointerCapture(e.Pointer); _overlay.Children.Clear();
+        var ids = _dragIds; var preview = _preview; var plan = _floatingDragPlan;
+        bool dragged = _dragging; long revision = _dragRevision; int index = _tabDropIndex;
+        _dragIds = []; _dragging = false; _preview = null; _tabDropIndex = -1;
+        ReleaseFloatingDragPlan(); _canvas.ReleasePointerCapture(e.Pointer); _overlay.Children.Clear();
         if (dragged && preview is not null)
         {
             if (Manager.Layout.Revision != revision) Submit(new(false, Manager.Layout.Revision, "The layout changed while dragging. Please drag again."));
             else if (preview.Target is { } target) Submit(Manager.DockMany(ids, target.TargetId, target.Side, index, revision));
-            else if (ids.All(id => Manager.Allows(id, DockCapabilities.Float))) Submit(Manager.FloatMany(ids, preview.FloatingBounds));
+            else if (plan is not null) Submit(plan.Commit(Manager, preview.FloatingBounds));
         }
         QueueRender(); e.Handled = true;
     }
     private void CancelInteraction()
     {
         _dragIds = []; _dragging = false; _preview = null; _splitDrag = null; _tabDropIndex = -1; _autoResizeId = null;
-        _canvas.ReleasePointerCaptures(); _overlay.Children.Clear();
+        ReleaseFloatingDragPlan(); _canvas.ReleasePointerCaptures(); _overlay.Children.Clear();
         foreach (var window in _floats.Values) window.CancelMovement(); QueueRender();
     }
     public void ShowSwitcher(int direction = 1)
