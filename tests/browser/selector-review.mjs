@@ -4,7 +4,11 @@ import assert from 'node:assert/strict';
 export async function runSelectorReview({ page, state, test, reset, click, wait, settle }) {
   await test('Native inspector selector handles immediate opening keys for twelve fresh workspaces', async () => {
     for (let iteration = 0; iteration < 12; iteration++) {
-      await reset(); await click('toolbar:New'); await settle();
+      await reset();
+      await click('properties:title'); await page.keyboard.press('Control+a'); await page.keyboard.type('Selector-' + iteration + '.xaml');
+      await click('properties:readonly'); await click('properties:apply');
+      await wait(title => globalThis.dockingScene.windows.some(w => w.id === 'main' && w.title === title && w.isReadOnly), 'Selector-' + iteration + '.xaml');
+      await click('toolbar:New'); await settle();
       const s = await state(), id = s.activeWindowId;
       const index = s.inspectorWindowIds.indexOf(id); assert(index >= 0);
       await click('properties:window'); await page.keyboard.press('Home');

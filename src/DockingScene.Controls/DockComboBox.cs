@@ -18,6 +18,18 @@ public class DockComboBox : ComboBox
     private KeyRoutedEventArgs? _lastDown, _lastUp;
     private bool _completingFocus, _forwarding;
     public long ForwardedKeyCount { get; private set; }
+    public bool InputDiagnosticsEnabled { get; set; }
+    private readonly Queue<string> _navigationTrace = new();
+    public IReadOnlyList<string> NavigationTrace => _navigationTrace.ToArray();
+    private void TraceNavigation(string phase, KeyRoutedEventArgs e)
+    {
+        if (!InputDiagnosticsEnabled) return;
+        var focused = XamlRoot is null ? null : FocusManager.GetFocusedElement(XamlRoot);
+        int index = focused is DependencyObject d ? IndexFromContainer(d) : -1;
+        var adjacent = ContainerFromIndex(Math.Clamp(index + 1, 0, Math.Max(0, Items.Count - 1))) as Control;
+        _navigationTrace.Enqueue($"{phase} key={e.Key} original={e.OriginalKey} handled={e.Handled} open={IsDropDownOpen} selected={SelectedIndex} focused={focused?.GetType().Name}:{index} next={adjacent?.GetType().Name} loaded={adjacent?.IsLoaded} enabled={adjacent?.IsEnabled} tabstop={adjacent?.IsTabStop} selectorFocus={FocusState}");
+        while (_navigationTrace.Count > 24) _navigationTrace.Dequeue();
+    }
 
     public DockComboBox()
     {
@@ -25,7 +37,7 @@ public class DockComboBox : ComboBox
         {
             if (ReferenceEquals(e, _lastDown) || !CanForward(e)) return;
             _lastDown = e; _forwarding = true;
-            try { ForwardedKeyCount++; base.OnKeyDown(e); }
+            try { ForwardedKeyCount++; TraceNavigation("before", e); base.OnKeyDown(e); TraceNavigation("after", e); }
             finally { _forwarding = false; }
         };
         _popupKeyUp = (_, e) =>

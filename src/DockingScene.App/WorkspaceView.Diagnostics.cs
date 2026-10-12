@@ -97,10 +97,12 @@ public sealed partial class WorkspaceView
         {
             if (node is DockComboBox selector)
             {
+                selector.InputDiagnosticsEnabled = _diagnosticsEnabled == true;
                 writer.WriteStartObject("inspectorSelector");
                 writer.WriteBoolean("open", selector.IsDropDownOpen);
                 writer.WriteNumber("selectedIndex", selector.SelectedIndex);
                 writer.WriteNumber("forwardedKeys", selector.ForwardedKeyCount);
+                writer.WriteStartArray("navigation"); foreach (string entry in selector.NavigationTrace) writer.WriteStringValue(entry); writer.WriteEndArray();
                 writer.WriteEndObject();
                 return;
             }
