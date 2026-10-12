@@ -5,7 +5,10 @@ export async function runWindowKeyboardTests({page,state,test,reset,click,wait,b
   const command = (id,name) => menu('window:'+id+':system','window-menu:'+id+':'+name);
   const activate = id => menu('menubar:Activate','activate:'+id);
   await test('System Move previews arrows and commits exactly once on Enter release', async () => {
-    await reset(); await menu('menubar:Window','appmenu:Standard MDI'); await activate('code');
+    await reset(); await menu('menubar:Window','appmenu:Standard MDI');
+    // Presentation options intentionally outlive a layout reset. This suite
+    // exercises framed commands, independently of the frame-free suite before it.
+    await menu('menubar:Window','mdi-option:show-frames'); await activate('code');
     const before = await state(), rect = (await model('code')).mdiBounds;
     await command('code','move'); await wait(() => globalThis.dockingScene.mdiFrames.code.keyboardMoving);
     for (const key of ['ArrowRight','ArrowRight','ArrowRight','ArrowDown','ArrowDown']) await page.keyboard.press(key);
@@ -29,7 +32,6 @@ export async function runWindowKeyboardTests({page,state,test,reset,click,wait,b
   });
   await test('System Size selects anchored edges and commits their final geometry', async () => {
     const before = await state(), rect = (await model('code')).mdiBounds;
-    // First shrink to create room below maximum constraints in the sample.
     await command('code','size');
     for(const key of ['ArrowLeft','ArrowRight','ArrowRight','ArrowUp','ArrowDown']) await page.keyboard.press(key);
     await wait(r => globalThis.dockingScene.mdiFrames.code.width === r.width-16 && globalThis.dockingScene.mdiFrames.code.height === r.height-8,rect);

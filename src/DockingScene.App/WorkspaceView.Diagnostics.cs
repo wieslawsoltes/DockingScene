@@ -18,9 +18,18 @@ public sealed partial class WorkspaceView
         if (_diagnosticsEnabled != true) { _diagnostics.Stop(); return; }
         try
         {
+            // Publish model metadata and arranged hit targets from the same UI
+            // projection. A current model with old caption bounds is not a valid
+            // snapshot (e.g. immediately after restoring a maximized frame).
+            _root.UpdateLayout();
+            if (_site.IsVisualUpdatePending) return;
+            var owner = _site.Manager;
+            var layout = owner.Layout;
+            var hitBounds = DockChrome.AutomationBounds(_root).ToArray();
+            if (_site.IsVisualUpdatePending || !ReferenceEquals(owner, _site.Manager) ||
+                !ReferenceEquals(layout, owner.Layout)) return;
             var buffer = new ArrayBufferWriter<byte>(); using var writer = new Utf8JsonWriter(buffer);
             _site.InputDiagnosticsEnabled = true;
-            var layout = _site.Manager.Layout;
             writer.WriteStartObject(); writer.WriteBoolean("ready", true); writer.WriteNumber("sequence", ++_diagnosticSequence);
             writer.WriteNumber("workspaceGeneration", _workspaceGeneration);
             writer.WriteBoolean("interactionActive", _site.IsInteractionActive);
@@ -35,6 +44,7 @@ public sealed partial class WorkspaceView
             writer.WriteBoolean("modified", _modified); writer.WriteNumber("cachedContentCount", _site.CachedContentCount); writer.WriteString("lastMessage", _lastMessage);
             writer.WriteString("autoHideWindowId", _site.OpenAutoHideWindowId); WriteRect(writer, "autoHideBounds", _site.OpenAutoHideBounds);
             WriteTabDiagnostics(writer);
+            WriteSelectorDiagnostics(writer);
             writer.WriteStartArray("windows");
             foreach (var window in layout.Windows.Values)
             {
@@ -70,7 +80,7 @@ public sealed partial class WorkspaceView
                 writer.WriteNumber("instance", RuntimeHelpers.GetHashCode(editor)); writer.WriteEndObject();
             }
             writer.WriteEndObject(); writer.WriteStartObject("bounds");
-            foreach (var (id, bounds) in DockChrome.AutomationBounds(_root)) WriteRect(writer, id, bounds);
+            foreach (var (id, bounds) in hitBounds) WriteRect(writer, id, bounds);
             writer.WriteEndObject(); writer.WriteStartArray("errors");
             foreach (var warning in _site.Geometry?.ConstraintWarnings.ToArray() ?? []) writer.WriteStringValue(warning);
             writer.WriteEndArray(); writer.WriteEndObject(); writer.Flush();
@@ -78,6 +88,25 @@ public sealed partial class WorkspaceView
         }
         catch (Exception error) { Uno.Foundation.WebAssemblyRuntime.InvokeJS("globalThis.dockingSceneDiagnosticError = " + JsonSerializer.Serialize(error.ToString()) + ";"); }
 #endif
+    }
+    private void WriteSelectorDiagnostics(Utf8JsonWriter writer)
+    {
+        if (!_contentRoots.TryGetValue("properties", out var reference) || !reference.TryGetTarget(out var root)) return;
+        var pending = new Stack<Microsoft.UI.Xaml.DependencyObject>(); pending.Push(root);
+        while (pending.TryPop(out var node))
+        {
+            if (node is DockComboBox selector)
+            {
+                writer.WriteStartObject("inspectorSelector");
+                writer.WriteBoolean("open", selector.IsDropDownOpen);
+                writer.WriteNumber("selectedIndex", selector.SelectedIndex);
+                writer.WriteNumber("forwardedKeys", selector.ForwardedKeyCount);
+                writer.WriteEndObject();
+                return;
+            }
+            for (int i = 0; i < Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(node); i++)
+                pending.Push(Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(node, i));
+        }
     }
     private static void WriteIds(Utf8JsonWriter writer, IEnumerable<string> ids)
     { writer.WriteStartArray("windows"); foreach (var id in ids) writer.WriteStringValue(id); writer.WriteEndArray(); }
