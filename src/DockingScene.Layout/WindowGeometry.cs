@@ -98,12 +98,9 @@ public static partial class WindowGeometry
 
     public static DockResult ArrangeMdi(DockManager manager, DockRect area, MdiArrangement arrangement)
     {
+        ArgumentNullException.ThrowIfNull(manager);
         var snapshot = manager.Layout;
         var ids = DockTree.Descendants(snapshot.Root).OfType<DockWorkspace>().SelectMany(w => DockTree.WindowIds(w.Content)).ToArray();
-        if (snapshot.IsLayoutLocked || ids.Any(id => !manager.Allows(id, DockCapabilities.Resize))) return new(false, snapshot.Revision, "MDI arrangement is not allowed.");
-        var placements = ArrangeMdi(ids, area, arrangement);
-        var windows = snapshot.Windows;
-        foreach (var (id, rect) in placements) windows = windows.SetItem(id, windows[id] with { MdiBounds = rect, MdiState = MdiWindowState.Normal });
-        return manager.Restore(snapshot with { Windows = windows, MdiMode = MdiMode.Standard }, snapshot.Revision);
+        return ArrangeMdi(manager, ids, area, arrangement, expectedRevision: snapshot.Revision);
     }
 }
