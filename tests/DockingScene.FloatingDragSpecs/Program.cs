@@ -88,4 +88,16 @@ Test("Mutable caller arrays and multi-host scopes cannot corrupt the frozen plan
     var m=Create();var ids=new[]{"a","b","c"};var plan=new FloatingDragPlan(m.Layout,ids,fallback);ids[0]="d";
     Check(plan.WindowIds[0]=="a" && plan.SourceHostId is null && plan.Magnetism.NeighborCount==0);
 });
+Test("Viewport-clamped source and neighbors snap from their visible coordinates",()=>{
+    var m=Create();var source=DockTree.Locate(m.Layout,"a").HostId!;var neighbor=DockTree.Locate(m.Layout,"c").HostId!;
+    var visible=new Dictionary<string,DockRect>{{source,new(0,40,260,220)},{neighbor,new(300,40,260,220)}};
+    var plan=new FloatingDragPlan(m.Layout,new[]{"a","b"},fallback,displayedBounds:visible);
+    Check(plan.InitialBounds.X==0 && plan.Move(new(36,40,260,220)).X==39);
+    visible[neighbor]=new(900,40,260,220);Check(plan.Move(new(36,40,260,220)).X==39);
+    plan.Commit(m,plan.Move(new(36,40,260,220))).ThrowIfFailed();Check(m.Layout.FloatingHosts.First(h=>h.Id==source).Bounds.X==39);
+});
+Test("Display metadata cannot silently resize a snapshot host",()=>{
+    var m=Create();var id=DockTree.Locate(m.Layout,"a").HostId!;
+    Reject(()=>new FloatingDragPlan(m.Layout,new[]{"a","b"},fallback,displayedBounds:new Dictionary<string,DockRect>{{id,new(0,0,999,999)}}));
+});
 Console.WriteLine($"{passed}/{passed+failed} floating drag specifications passed.");return failed==0?0:1;

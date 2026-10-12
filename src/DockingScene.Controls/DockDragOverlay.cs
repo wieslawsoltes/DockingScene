@@ -29,13 +29,24 @@ public sealed class DockDragOverlay : UserControl
     public void Update(DockDragPreview preview, DockTheme theme)
     {
         ArgumentNullException.ThrowIfNull(preview); ArgumentNullException.ThrowIfNull(theme);
+        if(preview.Guides.IsDefault || preview.Guides.Length>9) throw new ArgumentException("A docking preview supports at most nine guides.",nameof(preview));
+        var rect = preview.Target?.Preview ?? preview.FloatingBounds;
+        ValidateRect(rect); int seen=0;
+        foreach(var guide in preview.Guides)
+        {
+            if(guide is null || !Enum.IsDefined(guide.Side) || guide.IsOuter && guide.Side==DockSide.Center)
+                throw new ArgumentException("Invalid docking guide.",nameof(preview));
+            int bit=1<<((int)guide.Side+(guide.IsOuter?5:0));
+            if((seen&bit)!=0) throw new ArgumentException("Duplicate docking guide location.",nameof(preview));
+            seen|=bit; ValidateRect(guide.Bounds);
+        }
+        // All caller-supplied geometry is checked before altering the projection.
         UpdateCount++; _generation++;
         if (_theme != theme)
         {
             _theme = theme;
             _preview.Background = DockChrome.Brush(theme.Accent); _preview.BorderBrush = _preview.Background;
         }
-        var rect = preview.Target?.Preview ?? preview.FloatingBounds;
         _preview.Visibility = Visibility.Visible; DockChrome.Position(_preview, rect);
         PreviewBounds = rect; VisibleGuideCount = 0;
         foreach (var guide in preview.Guides)
@@ -45,12 +56,17 @@ public sealed class DockDragOverlay : UserControl
             {
                 visual = new(guide.Side); _guides.Add(key, visual); _canvas.Children.Add(visual.Frame);
             }
-            if (visual.Generation != _generation) VisibleGuideCount++;
-            visual.Generation = _generation;
+            visual.Generation = _generation; VisibleGuideCount++;
             visual.Update(guide, guide == preview.Target, theme);
         }
         foreach (var visual in _guides.Values)
             if (visual.Generation != _generation) visual.Frame.Visibility = Visibility.Collapsed;
+    }
+    private static void ValidateRect(DockRect rect)
+    {
+        if(!double.IsFinite(rect.X) || !double.IsFinite(rect.Y) || !double.IsFinite(rect.Width) || !double.IsFinite(rect.Height) ||
+            !double.IsFinite(rect.Right) || !double.IsFinite(rect.Bottom) || rect.Width<0 || rect.Height<0)
+            throw new ArgumentException("Invalid docking feedback rectangle.");
     }
     public void ClearPreview()
     {

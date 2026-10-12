@@ -1,3 +1,4 @@
+import { runFloatingDragTests } from './floating-drag.mjs';
 import assert from 'node:assert/strict';
 
 export async function runMdiMagnetismTests({page,state,test,reset,click,wait,bounds,settle,menu,output}) {
@@ -51,7 +52,7 @@ export async function runMdiMagnetismTests({page,state,test,reset,click,wait,bou
     await prepare();await click('scope:magnetic-gap8');
     const before=await scope(), p=await beginMove();try{await moveTo(p,39);}finally{await page.mouse.up();}
     await wait(()=>globalThis.dockingScene.scopedMdi.windows.a.x===52);
-    const after=await scope();assert.equal(after.windows.b.x-after.windows.a.x-after.windows.a.width,8);
+    const after=(await scope());assert.equal(after.windows.b.x-after.windows.a.x-after.windows.a.width,8);
     assert.equal(after.leftFrames.a.contentInstance,before.leftFrames.a.contentInstance);
     await page.screenshot({path:`${output}/mdi-magnetism-gap8.png`});
   });
@@ -100,4 +101,5 @@ export async function runMdiMagnetismTests({page,state,test,reset,click,wait,bou
     assert.equal((await scope()).planBuilds,before.planBuilds);
     await reset();
   });
+  await runFloatingDragTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
 }

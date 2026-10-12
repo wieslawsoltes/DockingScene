@@ -15,9 +15,9 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Serialization` | Versioned bounded JSON, unknown-window policies, atomic file layout storage | None |
 | `DockingScene.Mvvm` | Observable window projections, commands, stable identities and atomic collection synchronization | None |
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
-| `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher` and containers | Uno Platform |
+| `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher`, `DockDragOverlay` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.13`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.14`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -148,3 +148,9 @@ Per-document `CanStandardMdiMinimize` and `CanStandardMdiMaximize` metadata comb
 ## Standard MDI magnetism
 
 Standard MDI pointer movement and resizing snap to sibling window edges with configurable gaps. `DockSite.MagnetismSnapDistance` defaults to 5 and `MagnetismGapDistance` to 1 logical unit; the standalone `StandardMdiHost` exposes the same options. Zero disables snapping and Ctrl temporarily bypasses it. The independent-host sample includes a magnetic layout demonstration. A renderer-independent `WindowMagnetism` plan supports allocation-free queries, and the controls retain one plan per gesture. See [MDI magnetism](docs/mdi-magnetism.md) for edge rules, tests and platform boundaries.
+
+## Floating hosts and retained drag feedback
+
+Hosted floating-window dragging and pointer resizing use the same snap/gap settings. A whole-host movement preserves its original dimensions, split layout, group identities and editor controls; detaching an individual document remains a separate operation with its own permission checks. The reusable `FloatingDragPlan` freezes source geometry and excludes source hosts from magnetic neighbors. It is created only after the pointer crosses the drag threshold, not for an ordinary tab click.
+
+`DockDragOverlay` retains its preview and up to nine guide visuals across pointer updates instead of rebuilding them. The Window menu opens a floating-drag review sample with real split hosts and snapping controls. See [floating drag review](docs/floating-drag-review.md) for retained-identity tests, bounded visual reuse, cancellation and remaining native/live-content boundaries.

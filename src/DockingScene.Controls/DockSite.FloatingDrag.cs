@@ -22,22 +22,28 @@ public partial class DockSite
     }
     private void CancelFloatingGeometry()
     {
-        if (_floatingDragPlan is not null) CancelInteraction();
+        if (!_dragIds.IsEmpty) CancelInteraction();
         foreach (var frame in _floats.Values) frame.CancelMovement();
         _floatingGestureRevisions.Clear();
     }
     private FloatingDragPlan CreateFloatingDragPlan(DockLayout layout, IReadOnlyList<string> ids, DockRect fallback)
     {
         EnsureFloatingInputGuards();
-        var plan = new FloatingDragPlan(layout, ids, fallback, MagnetismSnapDistance, MagnetismGapDistance);
+        var plan = new FloatingDragPlan(layout, ids, fallback, MagnetismSnapDistance, MagnetismGapDistance, _geometry?.FloatingHosts);
         FloatingDragPlanBuildCount++; return plan;
     }
     private DockRect ApplyFloatingDrag(DockRect raw, bool bypass)
     {
+        if (_floatingDragPlan is null)
+        {
+            var initial = _dragBounds;
+            _floatingDragPlan = CreateFloatingDragPlan(Manager.Layout,_dragIds,initial);
+            _dragBounds = _floatingDragPlan.InitialBounds;
+            raw = _dragBounds with { X = _dragBounds.X + raw.X - initial.X, Y = _dragBounds.Y + raw.Y - initial.Y };
+        }
         RawFloatingDragBounds = raw;
-        if (_floatingDragPlan is not { } plan) return raw;
-        if (!bypass && plan.Magnetism.SnapDistance > 0) FloatingMagnetismQueryCount++;
-        return plan.Move(raw,bypass);
+        if (!bypass && _floatingDragPlan.Magnetism.SnapDistance > 0) FloatingMagnetismQueryCount++;
+        return _floatingDragPlan.Move(raw,bypass);
     }
     private void ReleaseFloatingDragPlan()
     {

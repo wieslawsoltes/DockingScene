@@ -16,7 +16,7 @@ public sealed class FloatingDragPlan
     public long Revision => _snapshot.Revision;
 
     public FloatingDragPlan(DockLayout snapshot, IReadOnlyList<string> windowIds, DockRect fallbackBounds,
-        double snapDistance = 5, double gapDistance = 1)
+        double snapDistance = 5, double gapDistance = 1, IReadOnlyDictionary<string,DockRect>? displayedBounds = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot); ArgumentNullException.ThrowIfNull(windowIds);
         ValidateBounds(fallbackBounds);
@@ -36,16 +36,24 @@ public sealed class FloatingDragPlan
             if (location.HostId is { } hostId) sourceHosts.Add(hostId);
             ids.Add(id);
         }
+        DockRect VisibleBounds(FloatingHost host)
+        {
+            var bounds = displayedBounds is not null && displayedBounds.TryGetValue(host.Id,out var displayed) ? displayed : host.Bounds;
+            ValidateBounds(bounds);
+            if(bounds.Width!=host.Bounds.Width || bounds.Height!=host.Bounds.Height)
+                throw new ArgumentException("Displayed normal-host bounds may translate, but cannot resize, the snapshot.");
+            return bounds;
+        }
         WindowIds = ids.MoveToImmutable(); _snapshot = snapshot; InitialBounds = fallbackBounds;
         if (sourceHosts.Count == 1)
         {
             var source = snapshot.FloatingHosts.First(host => sourceHosts.Contains(host.Id));
             if (!source.IsMaximized && DockTree.WindowIds(source.Root).ToHashSet(StringComparer.Ordinal).SetEquals(unique))
-            { SourceHostId = source.Id; InitialBounds = source.Bounds; }
+            { SourceHostId = source.Id; InitialBounds = VisibleBounds(source); }
         }
         var neighbors = new List<DockRect>();
         foreach (var host in snapshot.FloatingHosts)
-            if (!host.IsMaximized && !sourceHosts.Contains(host.Id)) neighbors.Add(host.Bounds);
+            if (!host.IsMaximized && !sourceHosts.Contains(host.Id)) neighbors.Add(VisibleBounds(host));
         Magnetism = new(neighbors, snapDistance, gapDistance);
     }
     public DockRect Move(DockRect raw, bool bypass = false)
