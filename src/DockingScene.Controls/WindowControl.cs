@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Windows.Foundation;
+using Windows.System;
 
 namespace DockingScene.Controls;
 
@@ -94,10 +95,16 @@ public partial class WindowControl : UserControl
             if (_resizeX == DockSide.Center && _resizeY == DockSide.Center ? !CanMove : !CanResize) { CancelMovement(); return; }
             var point = e.GetCurrentPoint(_coordinateRoot).Position;
             double dx = point.X - _start.X, dy = point.Y - _start.Y;
-            var rect = _resizeX == DockSide.Center && _resizeY == DockSide.Center ? _original with { X = _original.X + dx, Y = _original.Y + dy } : WindowGeometry.Resize(_original, dx, dy, _resizeX, _resizeY, MinimumSize, MaximumSize);
+            var raw = _resizeX == DockSide.Center && _resizeY == DockSide.Center ? _original with { X = _original.X + dx, Y = _original.Y + dy } : WindowGeometry.Resize(_original, dx, dy, _resizeX, _resizeY, MinimumSize, MaximumSize);
+            var rect = ApplyPointerMagnetism(raw, e.KeyModifiers.HasFlag(VirtualKeyModifiers.Control));
             SetBounds(rect); BoundsChanging?.Invoke(rect); e.Handled = true;
         };
-        PointerReleased += (_, e) => { if (!_moving || _keyboardSession is not null) return; _moving = false; ReleaseMovementInput(); ReleasePointerCapture(e.Pointer); BoundsChanged?.Invoke(Bounds); e.Handled = true; };
+        PointerReleased += (_, e) =>
+        {
+            if (!_moving || _keyboardSession is not null) return;
+            _moving = false; _pointerMagnetism = null; ReleaseMovementInput(); ReleasePointerCapture(e.Pointer);
+            BoundsChanged?.Invoke(Bounds); e.Handled = true;
+        };
         PointerCanceled += (_, _) => CancelMovement();
         Unloaded += (_, _) => { CancelMovement(); DismissSystemMenu(); };
         PointerCaptureLost += (_, _) => { if (_moving) CancelMovement(); };
@@ -105,12 +112,18 @@ public partial class WindowControl : UserControl
     private void Begin(PointerRoutedEventArgs e, DockSide x, DockSide y)
     {
         Activated?.Invoke();
+        _pointerMagnetism = null;
         _coordinateRoot = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(this) as UIElement ?? this;
         _start = e.GetCurrentPoint(_coordinateRoot).Position; _original = Bounds; _resizeX = x; _resizeY = y;
         _moving = CapturePointer(e.Pointer);
         if (_moving) { AcquireMovementInput(); MovementStarted?.Invoke(); }
     }
-    public void CancelMovement() { if (!_moving) return; _moving = false; ResetKeyboardInteraction(); ReleaseMovementInput(); SetBounds(_original); ReleasePointerCaptures(); }
+    public void CancelMovement()
+    {
+        _pointerMagnetism = null;
+        if (!_moving) return;
+        _moving = false; ResetKeyboardInteraction(); ReleaseMovementInput(); SetBounds(_original); ReleasePointerCaptures();
+    }
     public void SetBounds(DockRect bounds) { if (Bounds == bounds && Width == bounds.Width && Height == bounds.Height) return; Bounds = bounds; DockChrome.Position(this, bounds, Canvas.GetZIndex(this)); }
     public void SetWindowContent(object? content) => ContentLease.Set(_content, content);
 }

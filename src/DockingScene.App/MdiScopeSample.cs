@@ -9,7 +9,7 @@ namespace DockingScene.App;
 
 /// <summary>A real standalone two-host consumer sharing one manager. Commands are
 /// scoped to the corresponding host; diagnostics never issue model operations.</summary>
-public sealed class MdiScopeSample : UserControl
+public sealed partial class MdiScopeSample : UserControl
 {
     private readonly DockManager _manager = new();
     private readonly StandardMdiHost _left = new(), _right = new();
@@ -27,6 +27,7 @@ public sealed class MdiScopeSample : UserControl
         var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new(4) };
         grid.Children.Add(toolbar); Grid.SetColumnSpan(toolbar, 2);
         grid.Children.Add(_left); grid.Children.Add(_right); Grid.SetRow(_left, 1); Grid.SetRow(_right, 1); Grid.SetColumn(_right, 1);
+        ConfigureMagnetismSample(grid);
         void Button(string text, string id, Action action) => toolbar.Children.Add(DockChrome.Button(text, "scope:" + id, DockTheme.MetroLight, action));
         Button("Cascade left", "left", () => _lastResult = _left.Cascade());
         Button("Tile right", "right", () => _lastResult = _right.TileHorizontally());
@@ -65,6 +66,7 @@ public sealed class MdiScopeSample : UserControl
     public void WriteDiagnostics(Utf8JsonWriter writer)
     {
         writer.WriteStartObject("scopedMdi"); writer.WriteNumber("revision", _manager.Layout.Revision);
+        WriteMagnetismDiagnostics(writer);
         writer.WriteNumber("obsoleteContextLoads", _templates.ProbeLoadedCount);
         writer.WriteString("contextProbe", _probe.PresentedContent as string);
         writer.WriteBoolean("releasedDocumentDetached", _releasedDocument is not null &&

@@ -35,7 +35,7 @@ public sealed partial class StandardMdiHost : UserControl
     public StandardMdiHost()
     {
         Content = _canvas;
-        SizeChanged += (_, _) => Refresh();
+        SizeChanged += (_, _) => { CancelMagnetismGestures(); Refresh(); };
         Unloaded += (_, _) => { foreach (var window in _windows.Values) window.CancelMovement(); };
     }
     public void Update(DockManager manager, IReadOnlyList<string> ids, Func<string, AdvancedTabItem> content, DockTheme theme)
@@ -123,7 +123,12 @@ public sealed partial class StandardMdiHost : UserControl
                         _windows.TryGetValue(key, out var current) && ReferenceEquals(current, frame) &&
                         owner.Layout.Windows.ContainsKey(key) && DockTree.Locate(owner.Layout, key).Placement != WindowPlacement.Hidden;
                     window.Activated += () => { if (IsCurrent()) Submit(owner.Activate(key)); };
-                    window.MovementStarted += () => { if (IsCurrent()) _gestureRevisions[key] = owner.Layout.Revision; else frame.CancelMovement(); };
+                    window.MovementStarted += () =>
+                    {
+                        if (!IsCurrent()) { frame.CancelMovement(); return; }
+                        _gestureRevisions[key] = owner.Layout.Revision;
+                        BeginPointerMagnetism(frame);
+                    };
                     window.BoundsChanged += rect => { if (IsCurrent()) CommitBounds(key, rect); };
                     window.CloseRequested += () => { if (IsCurrent()) Submit(owner.Close(key)); };
                     window.RestoreRequested += () => { if (IsCurrent()) Submit(owner.SetMdiState(key, MdiWindowState.Normal)); };
