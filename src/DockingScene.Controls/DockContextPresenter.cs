@@ -8,21 +8,23 @@ namespace DockingScene.Controls;
 /// not passed into templates, preventing an editor from acquiring another parent.</summary>
 public sealed class DockContextPresenter : UserControl
 {
-    private readonly ContentPresenter _presenter = new();
+    private readonly Grid _visualHost = new();
+    private readonly ContentPresenter _plainContent = new();
     private DataTemplate? _materializedTemplate;
-    private object? _materialized;
+    private UIElement? _materialized;
+    private object? _presented;
     private bool _reconciling, _queued, _updating;
     public static readonly DependencyProperty ContextProperty = DependencyProperty.Register(nameof(Context), typeof(object), typeof(DockContextPresenter), new PropertyMetadata(null, Changed));
     public static readonly DependencyProperty ContextTemplateProperty = DependencyProperty.Register(nameof(ContextTemplate), typeof(DataTemplate), typeof(DockContextPresenter), new PropertyMetadata(null, Changed));
     public object? Context { get => GetValue(ContextProperty); set => SetValue(ContextProperty, value); }
     public DataTemplate? ContextTemplate { get => (DataTemplate?)GetValue(ContextTemplateProperty); set => SetValue(ContextTemplateProperty, value); }
     public long TemplateBuildCount { get; private set; }
-    public object? PresentedContent => _presenter.Content;
+    public object? PresentedContent => _presented;
     private static void Changed(DependencyObject d, DependencyPropertyChangedEventArgs e) => ((DockContextPresenter)d).Reconcile();
     public DockContextPresenter()
     {
         IsTabStop = false;
-        Content = _presenter;
+        Content = _visualHost;
         SizeChanged += (_, _) => Clip = new Microsoft.UI.Xaml.Media.RectangleGeometry { Rect = new(0, 0, Math.Max(0, ActualWidth), Math.Max(0, ActualHeight)) };
         Loaded += (_, _) => Reconcile();
     }
@@ -46,31 +48,47 @@ public sealed class DockContextPresenter : UserControl
         _reconciling = true;
         try
         {
-            var template = ContextTemplate;
+            var template = ContextTemplate; var context = Context;
+            bool Current() => ReferenceEquals(template, ContextTemplate) && ReferenceEquals(context, Context);
             if (template is null)
             {
                 _materializedTemplate = null; _materialized = null;
-                ContentLease.Set(_presenter, Context);
+                ContentLease.Set(_plainContent, context);
+                if (Current()) Attach(context is null ? null : _plainContent, context, Current);
                 return;
             }
             if (!ReferenceEquals(template, _materializedTemplate))
             {
-                // Template code can reenter through application Loaded callbacks.
-                // Do not install a result belonging to an obsolete template.
                 var created = template.LoadContent();
                 TemplateBuildCount++;
-                if (!ReferenceEquals(template, ContextTemplate)) return;
-                _materializedTemplate = template; _materialized = created;
+                if (!Current()) return;
+                if (created is not null and not UIElement) throw new InvalidOperationException("A context template must create a UIElement.");
+                _materializedTemplate = template; _materialized = (UIElement?)created;
             }
-            object? data = Context is UIElement ? null : Context;
+            object? data = context is UIElement ? null : context;
             if (_materialized is FrameworkElement element && !ReferenceEquals(element.DataContext, data)) element.DataContext = data;
-            // DataContextChanged is application code too. It can replace the
-            // template/data pair or release its owning host before attachment.
-            // Do not attach that now-obsolete root, even for one layout cycle.
-            if (!ReferenceEquals(template, ContextTemplate) ||
-                !ReferenceEquals(data, Context is UIElement ? null : Context)) return;
-            ContentLease.Set(_presenter, _materialized);
+            // Do not feed an already materialized template root through another
+            // ContentPresenter. Its native template/content synchronization can
+            // substitute the surrounding data context during attachment/theme work.
+            // The owned visual host keeps the explicit template context authoritative.
+            if (Current()) Attach(_materialized, _materialized, Current);
         }
         finally { _reconciling = false; }
+    }
+    private void Attach(UIElement? visual, object? presented, Func<bool> current)
+    {
+        if (_visualHost.Children.Count == 1 && ReferenceEquals(_visualHost.Children[0], visual))
+        { _presented = presented; return; }
+        if (_visualHost.Children.Count > 0) _visualHost.Children.Clear();
+        _presented = null;
+        // Unloaded callbacks may replace the context pair too.
+        if (!current()) return;
+        if (visual is not null)
+        {
+            ContentLease.Detach(visual);
+            if (!current()) return;
+            _visualHost.Children.Add(visual);
+        }
+        if (current()) _presented = presented;
     }
 }

@@ -58,6 +58,8 @@ public sealed partial class WorkspaceView
             var presenter = frame.TitleBarContextPresenter;
             writer.WriteStartObject(id);
             writer.WriteString("description", _site.Manager.Layout.Windows.GetValueOrDefault(id)?.Description);
+            writer.WriteString("contextType", presenter.Context?.GetType().FullName);
+            writer.WriteString("rootDataType", (presenter.PresentedContent as FrameworkElement)?.DataContext?.GetType().FullName);
             writer.WriteNumber("builds", presenter.TemplateBuildCount);
             writer.WriteNumber("instance", presenter.PresentedContent is { } content ? RuntimeHelpers.GetHashCode(content) : 0);
             writer.WriteBoolean("visualDataSuppressed", presenter.Context is UIElement && (presenter.PresentedContent as FrameworkElement)?.DataContext is null);
@@ -67,7 +69,11 @@ public sealed partial class WorkspaceView
                 while (stack.TryPop(out var item))
                 {
                     if (item is ToggleButton toggle) writer.WriteBoolean("tracked", toggle.IsChecked == true);
-                    if (item is TextBox note) writer.WriteString("note", note.Text);
+                    if (item is TextBox note)
+                    {
+                        writer.WriteString("note", note.Text);
+                        writer.WriteString("noteDataType", note.DataContext?.GetType().FullName);
+                    }
                     for (int i = 0; i < VisualTreeHelper.GetChildrenCount(item); i++) stack.Push(VisualTreeHelper.GetChild(item, i));
                 }
             }

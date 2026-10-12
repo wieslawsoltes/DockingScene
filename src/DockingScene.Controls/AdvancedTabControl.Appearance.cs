@@ -28,9 +28,13 @@ public partial class AdvancedTabControl
         ValidateHighlight(HighlightThickness);
         if (_stripHighlight.Parent is null) _root.Children.Add(_stripHighlight);
         Grid.SetRow(_stripHighlight, Grid.GetRow(_header)); Grid.SetColumn(_stripHighlight, Grid.GetColumn(_header));
-        _stripHighlight.Visibility = IsTabStripVisible ? Visibility.Visible : Visibility.Collapsed;
+        var thickness = HighlightThickness;
+        bool visible = IsTabStripVisible && (thickness.Left > 0 || thickness.Top > 0 || thickness.Right > 0 || thickness.Bottom > 0);
+        // A zero-width retained border must not leave its previous native paint.
+        // Collapse and clear its brush as well as updating the geometric thickness.
+        _stripHighlight.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
         _stripHighlight.BorderThickness = HighlightThickness;
-        _stripHighlight.BorderBrush = IsGroupActive ? HighlightBrushActive ?? DockChrome.Brush(Theme.Accent) : HighlightBrushInactive ?? DockChrome.Brush(Theme.Border);
+        _stripHighlight.BorderBrush = !visible ? null : IsGroupActive ? HighlightBrushActive ?? DockChrome.Brush(Theme.Accent) : HighlightBrushInactive ?? DockChrome.Brush(Theme.Border);
         DockChrome.Identify(_stripHighlight, "tab-highlight:" + AutomationIdPrefix);
     }
     private void UpdateHeaderActions(HeaderVisual header, AdvancedTabItem item)
