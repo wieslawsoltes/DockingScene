@@ -12,6 +12,9 @@ public static class MdiFrameConsumer
     public static DockResult Cascade(StandardMdiHost host) => host.Cascade();
     public static void Configure(DockingWindow window, Microsoft.UI.Xaml.DataTemplate template)
         => window.StandardMdiTitleBarContextContentTemplate = template;
+    public static void ConfigureTool(ToolWindow window, Microsoft.UI.Xaml.DataTemplate template)
+        => window.ToolWindowContainerTitleBarContextContentTemplate = template;
+    public static DockSite ToolSite() => new() { ToolWindowsTitleBarContextContentAlignment = ContextContentAlignment.Near };
     public static DockComboBox Selector() => new();
     public static bool Move(WindowControl window) => window.BeginKeyboardMove();
     public static bool Size(WindowControl window) => window.BeginKeyboardResize();

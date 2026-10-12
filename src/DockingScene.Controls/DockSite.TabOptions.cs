@@ -37,6 +37,8 @@ public partial class DockSite
                 _tabAdapters.Add(tabs, new());
                 tabs.PinRequested += (id, pinned) => Submit(Manager.SetPinned(id, pinned));
             }
+            if (_groups.TryGetValue(groupId, out var view)) view.ToolTitleContextAlignment = ToolWindowsTitleBarContextContentAlignment;
+            else if (_autoPopup?.Group?.Id == groupId) _autoPopup.ToolTitleContextAlignment = ToolWindowsTitleBarContextContentAlignment;
             ApplyTabAppearance(tabs);
             bool identityChanged = tabs.AutomationIdPrefix != groupId;
             tabs.AutomationIdPrefix = groupId;
