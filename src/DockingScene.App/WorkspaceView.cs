@@ -49,6 +49,7 @@ public sealed partial class WorkspaceView : UserControl
         _site.NewDocumentRequested += NewDocument;
         _site.OperationRejected += message => Log(message);
         _site.LayoutChanged += (_, e) => { _modified = true; Log(e.Command + " · revision " + e.After.Revision); };
+        ConfigureMdiContextSample();
         Reset();
         _diagnostics.Tick += (_, _) => PublishDiagnostics();
         Loaded += (_, _) => { _diagnostics.Start(); PublishDiagnostics(); };
@@ -65,6 +66,7 @@ public sealed partial class WorkspaceView : UserControl
     private void Reset()
     {
         _output = null;
+        _contextWindows.Clear(); _mdiScopeSample = null;
         var manager = new DockManager();
         manager.Register(new("welcome", "Welcome", WindowKind.Document) { Description = "DockingScene feature tour", DisplayMode = TabDisplayMode.Pinned }).ThrowIfFailed();
         manager.Register(new("main", "MainWindow.xaml", WindowKind.Document) { Description = "Editable XAML document", ContentKey = "xaml" }).ThrowIfFailed();

@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.10`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.11`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -136,3 +136,7 @@ Window icons and title context menus expose state and close commands. Minimized 
 ## Individual MDI actions
 
 Per-document `CanStandardMdiMinimize` and `CanStandardMdiMaximize` metadata combine with host settings without affecting other documents or removing Restore. The Window menu demonstrates them; MVVM and source descriptors expose the same policies. See [individual MDI policies](docs/individual-mdi-policies.md).
+
+## Contextual MDI titles and independent hosts
+
+`DockingWindow.StandardMdiTitleBarContextContentTemplate` hosts ordinary Uno controls beside an MDI title. Configure the template and `DataContext` in `DockSite.WindowCreated`. The reusable `DockContextPresenter` retains the instantiated template when the data or activation changes. The sample Window menu demonstrates editable title content and status templates. Its independent-host sample exercises two `StandardMdiHost` controls sharing one manager; cascade/tiling commands now affect only the invoking host. See [contextual MDI and host scoping](docs/mdi-context-and-scope.md).

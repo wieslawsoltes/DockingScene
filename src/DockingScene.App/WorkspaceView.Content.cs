@@ -18,6 +18,7 @@ public sealed partial class WorkspaceView
         if (!_contentThemeSubscribed) { _contentThemeSubscribed = true; _site.VisualsUpdated += ApplyContentTheme; }
         FrameworkElement content = window.Id switch
         {
+            "mdi-host-scope" => _mdiScopeSample = new MdiScopeSample(),
             "welcome" => Welcome(), "explorer" => Explorer(), "outline" => Outline(), "properties" => Properties(),
             "output" => Output(), "errors" => Errors(), "find" => Find(), "toolbox" => Toolbox(), _ => Editor(window)
         };

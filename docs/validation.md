@@ -2,7 +2,7 @@
 
 ## Model and package gates
 
-Every `tests/*Specs/*.csproj` executable returns a nonzero exit code on failure. Both workflows enumerate all matching projects under shell `pipefail`, so logging cannot hide a failed process. Twenty suites cover Core, transactions, invalid inputs, Layout, MVVM, source binding, serialization, vectors, tab geometry, bulk registration, performance, MDI state and primary commands. The new `MdiCommandSpecs` adds twelve named cases and 500 cached/uncached minimized-layout comparisons. Test logs for the exact source revision are authoritative; seeded loops are not additional browser scenarios.
+Every `tests/*Specs/*.csproj` executable returns a nonzero exit code on failure. Both workflows enumerate all matching projects under shell `pipefail`, so logging cannot hide a failed process. Twenty-one suites cover Core, transactions, invalid inputs, Layout, MVVM, source binding, serialization, vectors, tab geometry, bulk registration, performance, MDI state and primary commands. The new `MdiCommandSpecs` adds twelve named cases and 500 cached/uncached minimized-layout comparisons. Test logs for the exact source revision are authoritative; seeded loops are not additional browser scenarios.
 
 The Uno workflow compiles desktop, publishes the actual WebAssembly application and packs all six libraries from one source revision. A fresh NuGet cache restores a plain .NET application that executes all five non-UI packages and a separate Uno consumer that compiles the controls surface without project references. The latter includes `StandardMdiControlBar`, frame visibility and primary-window commands. Desktop compilation and package consumption are not native UI runtime tests.
 
@@ -14,9 +14,9 @@ The distribution is served under `/DockingScene/`. Four independent Chromium run
 | --- | ---: | --- |
 | Docking | 28 | Startup, editor text/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher, themes and canvas/native-input boundary |
 | Standalone tabs | 32 | Three lanes, six overflow modes, shrinking/fixed extents, physical header targets, menu/close/pin behavior, factories, content lifetime and 2,002-tab work counts |
-| Host, Metro and MDI | 51 | Focus restoration, retained geometry/chrome/pixels, edge scrolling, compact native views, MDI movement/state/menus, frame-free content, scoped external commands and minimized-plan reuse |
+| Host, Metro and MDI | 57 | Focus restoration, retained geometry/chrome/pixels, edge scrolling, compact native views, MDI movement/state/menus, frame-free content, scoped external commands and minimized-plan reuse |
 
-There are **111 named browser scenarios**: the previous 107, one immediate selector cancellation/reopen case, and three individual MDI policy cases. These counts are test definitions, not a claim that an arbitrary revision passed them. The exact workflow's result files and exit codes establish execution success.
+There are **117 named browser scenarios**: the previous 111 and six contextual-title/independent-host cases. These counts are test definitions, not a claim that an arbitrary revision passed them. The exact workflow's result files and exit codes establish execution success.
 
 The separate **100-cycle focus investigation** remains a build gate. It exercises repeated native editor/body input through the packaged canvas focus boundary. The helper contracts cover trusted-pointer scoping, separate documents, idempotence, disposal and atomic hit-target reads. This investigation is not counted as another 100 named product scenarios.
 
@@ -40,8 +40,12 @@ CI renders real Uno Skia through **ANGLE/SwiftShader software WebGL**. Native de
 
 ## Consolidated presentation and keyboard increments
 
-PR #9's fourteen MdiPresentationSpecs are retained alongside PR #10's twelve MdiCommandSpecs, not replaced. Selector review adds twelve immediate popup-key sequences as one named browser case. WindowKeyboardSpecs adds fourteen model cases and 500 seeded resize sequences. The original consolidated host increment added seven keyboard-window cases for 107 product cases. The current 111-case total also includes selector cancellation and individual MDI policies; the separate 100 focus cycles remain. Final workflow result files, not these definitions, establish pass counts.
+PR #9's fourteen MdiPresentationSpecs are retained alongside PR #10's twelve MdiCommandSpecs, not replaced. Selector review adds twelve immediate popup-key sequences as one named browser case. WindowKeyboardSpecs adds fourteen model cases and 500 seeded resize sequences. The original consolidated host increment added seven keyboard-window cases for 107 product cases. The current 117-case total also includes selector cancellation, individual MDI policies, contextual title controls and independent-host scoping; the separate 100 focus cycles remain. Final workflow result files, not these definitions, establish pass counts.
 
 ## Individual MDI policy coverage
 
 Twelve MdiPolicySpecs cover host/window policy intersections, capability checks, other-document isolation, direct model transitions, Restore, old/new JSON, MVVM/source binding and geometry-cache reuse. Three further physical-input cases check caption and external-command state, double-click restriction, programmatic maximize/restore, and unchanged caption/editor identities and geometry/minimized-plan build counts. The immediate selector cancellation/reopen scenario supplements the original twelve opening-key cycles; no original assertion is removed. See [individual-mdi-policies.md](individual-mdi-policies.md) and [selector-readiness.md](selector-readiness.md).
+
+## Contextual title and independent-host coverage
+
+Twelve `HostArrangementSpecs` cover scoped members, caller order, unrelated capabilities, invalid/hidden/duplicate/tool inputs, floating document groups, one-commit undo, empty/no-op history, veto/lock/stale/reentrant inputs and a 1,000-document batch. Six additional real-input cases cover editable template controls, retained local toggle state, activation/theme/minimize/maximize transitions, UIElement data suppression, template replacement, independent hosts sharing one manager and rejected released-host commands. Final logs establish execution; these are definitions until the exact source passes CI.
