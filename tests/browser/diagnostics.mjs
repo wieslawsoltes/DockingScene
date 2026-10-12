@@ -7,5 +7,8 @@ export async function captureDiagnostics(page) {
     documentReady: document.readyState,
     canvasCount: document.querySelectorAll('canvas').length,
     bodyText: document.body?.innerText?.slice(0, 8000),
+    browserFocus: { tag: document.activeElement?.tagName, id: document.activeElement?.id,
+      inputPresent: Boolean(document.getElementById('uno-input')),
+      canvasGuard: globalThis.DockingSceneCanvasFocus?.version ?? null },
   })).catch(error => ({ captureError: String(error) }));
 }
