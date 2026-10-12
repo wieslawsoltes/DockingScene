@@ -67,6 +67,7 @@ public partial class DockSite
             string? host = ids.Select(id => DockTree.Locate(layout, id).HostId).FirstOrDefault(id => id is not null);
             DockChrome.Position(thumb, split.Bounds, host is null ? 4 : z[host] + 3);
         }
+        RenderFloatingResizeGrips(z);
     }
 
     private void RenderAutoHideRails(DockLayout layout)

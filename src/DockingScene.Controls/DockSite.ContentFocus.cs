@@ -10,7 +10,8 @@ public partial class DockSite
     {
         string? clicked = !_dragging && _dragIds.Length == 1 ? _dragIds[0] : null;
         var owner = Manager;
-        EndInteraction(e);
+        try { EndInteraction(e); }
+        finally { if (!IsInteractionActive) ReleaseGestureKeyboard(); }
         // Releasing capture can change focus and finish pending pointer state.
         // Restore content only after that transition, not while the canvas still
         // owns the pointer. A true drag or a changed selection must not steal focus.

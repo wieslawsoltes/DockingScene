@@ -14,13 +14,16 @@ public sealed partial class WorkspaceView
     private readonly Dictionary<string, WeakReference<DockingWindow>> _contextWindows = new(StringComparer.Ordinal);
     private readonly MdiContextResources _contextResources = new();
     private MdiScopeSample? _mdiScopeSample;
+    private FloatingDragSample? _floatingDragSample;
     private void ConfigureMdiContextSample()
     {
-        _site.WindowContentReleased += (id, _) => _contextWindows.Remove(id);
+        _site.WindowContentReleased += (id, _) =>
+        { _contextWindows.Remove(id); if(id=="floating-drag-review") _floatingDragSample=null; };
         _site.WindowCreated += window =>
         {
             window.DataContext = _models?.Find(window.Id);
             _contextWindows[window.Id] = new(window);
+            if(window.Id=="floating-drag-review") window.ContentFactory=()=>_floatingDragSample=new FloatingDragSample();
         };
     }
     private void AddMdiContextCommands(MenuFlyout menu)
@@ -46,6 +49,12 @@ public sealed partial class WorkspaceView
         {
             if (_site.Manager.Layout.Windows.ContainsKey("mdi-host-scope")) Execute(_site.Manager.Open("mdi-host-scope"));
             else Execute(_site.Manager.Register(new("mdi-host-scope", "Independent MDI hosts", WindowKind.Document)));
+            Execute(_site.Manager.SetMdiMode(MdiMode.Tabbed));
+        });
+        Item("Open floating drag review", "floating-sample", () =>
+        {
+            if(_site.Manager.Layout.Windows.ContainsKey("floating-drag-review")) Execute(_site.Manager.Open("floating-drag-review"));
+            else Execute(_site.Manager.Register(new("floating-drag-review","Floating host drag review",WindowKind.Document)));
             Execute(_site.Manager.SetMdiMode(MdiMode.Tabbed));
         });
     }
@@ -81,5 +90,6 @@ public sealed partial class WorkspaceView
         }
         writer.WriteEndObject();
         if (_mdiScopeSample is { IsLoaded: true } sample) sample.WriteDiagnostics(writer);
+        if (_floatingDragSample is { IsLoaded: true } floating) floating.WriteDiagnostics(writer);
     }
 }

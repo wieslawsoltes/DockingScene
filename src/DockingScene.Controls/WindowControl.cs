@@ -41,6 +41,7 @@ public partial class WindowControl : UserControl
     public event EventHandler<WindowDragEventArgs>? HeaderDragStarting;
     public event Action<DockRect>? BoundsChanging;
     public event Action<DockRect>? BoundsChanged;
+    internal event Action? VisualBoundsChanged;
     public event Action? CloseRequested;
     public event Action? MaximizeRequested;
     public event Action? MinimizeRequested;
@@ -87,7 +88,7 @@ public partial class WindowControl : UserControl
             if (vertical == DockSide.Center) grip.Margin = new(0, 8, 0, 8);
             Grid.SetRowSpan(grip, 2); _root.Children.Add(grip);
             var rx = horizontal; var ry = vertical;
-            grip.PointerPressed += (_, e) => { if (CanResize && !IsMaximized && !IsMinimized && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) { Begin(e, rx, ry); e.Handled = true; } };
+            grip.PointerPressed += (_, e) => { if (BeginPointerResize(e, rx, ry)) e.Handled = true; };
         }
         PointerMoved += (_, e) =>
         {
@@ -109,9 +110,23 @@ public partial class WindowControl : UserControl
         Unloaded += (_, _) => { CancelMovement(); DismissSystemMenu(); };
         PointerCaptureLost += (_, _) => { if (_moving) CancelMovement(); };
     }
+    internal bool BeginPointerResize(PointerRoutedEventArgs e, DockSide x, DockSide y)
+    {
+        if (_moving || !IsLoaded || !IsFrameVisible || !CanResize || IsMaximized || IsMinimized ||
+            !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return false;
+        if (x is not (DockSide.Center or DockSide.Left or DockSide.Right) ||
+            y is not (DockSide.Center or DockSide.Top or DockSide.Bottom) ||
+            x == DockSide.Center && y == DockSide.Center) return false;
+        Begin(e, x, y);
+        return _moving;
+    }
     private void Begin(PointerRoutedEventArgs e, DockSide x, DockSide y)
     {
+        if (_moving) return;
         Activated?.Invoke();
+        bool resizing = x != DockSide.Center || y != DockSide.Center;
+        if (_moving || !IsLoaded || !IsFrameVisible || IsMaximized || IsMinimized ||
+            (resizing ? !CanResize : !CanMove)) return;
         _pointerMagnetism = null;
         _coordinateRoot = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(this) as UIElement ?? this;
         _start = e.GetCurrentPoint(_coordinateRoot).Position; _original = Bounds; _resizeX = x; _resizeY = y;
@@ -124,6 +139,11 @@ public partial class WindowControl : UserControl
         if (!_moving) return;
         _moving = false; ResetKeyboardInteraction(); ReleaseMovementInput(); SetBounds(_original); ReleasePointerCaptures();
     }
-    public void SetBounds(DockRect bounds) { if (Bounds == bounds && Width == bounds.Width && Height == bounds.Height) return; Bounds = bounds; DockChrome.Position(this, bounds, Canvas.GetZIndex(this)); }
+    public void SetBounds(DockRect bounds)
+    {
+        if (Bounds == bounds && Width == bounds.Width && Height == bounds.Height) return;
+        Bounds = bounds; DockChrome.Position(this, bounds, Canvas.GetZIndex(this));
+        VisualBoundsChanged?.Invoke();
+    }
     public void SetWindowContent(object? content) => ContentLease.Set(_content, content);
 }

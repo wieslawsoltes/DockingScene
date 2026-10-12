@@ -5,8 +5,8 @@ namespace DockingScene.Controls;
 
 public partial class DockSite
 {
-    /// <summary>Standard MDI pointer snapping range in logical units. Zero disables.
-    /// Floating docking-preview magnetism retains its separate existing behavior.</summary>
+    /// <summary>Pointer snapping range for Standard MDI and hosted floating windows.
+    /// Zero disables snapping. Distances are measured in logical units.</summary>
     public static readonly DependencyProperty MagnetismSnapDistanceProperty = DependencyProperty.Register(
         nameof(MagnetismSnapDistance), typeof(double), typeof(DockSite), new PropertyMetadata(5d, MagnetismChanged));
     public static readonly DependencyProperty MagnetismGapDistanceProperty = DependencyProperty.Register(
@@ -25,8 +25,7 @@ public partial class DockSite
     {
         WindowMagnetism.ValidateDistance((double)e.NewValue);
         var site = (DockSite)d;
-        site.ApplyMdiMagnetismOptions();
-        site.QueueRender();
+        site.CancelFloatingGeometry(); site.ApplyMdiMagnetismOptions(); site.QueueRender();
     }
     private void ApplyMdiMagnetismOptions()
     {
