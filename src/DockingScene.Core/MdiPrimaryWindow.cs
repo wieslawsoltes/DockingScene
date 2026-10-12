@@ -28,8 +28,8 @@ public static class MdiPrimaryWindow
         var capabilities = primary.Capabilities & allowed;
         bool resize = !layout.IsLayoutLocked && capabilities.HasFlag(DockCapabilities.Resize);
         return new(primary.Id,
-            resize && canMinimize && primary.MdiState != MdiWindowState.Minimized,
-            resize && canMaximize && primary.MdiState != MdiWindowState.Maximized,
+            resize && canMinimize && primary.CanStandardMdiMinimize && primary.MdiState != MdiWindowState.Minimized,
+            resize && canMaximize && primary.CanStandardMdiMaximize && primary.MdiState != MdiWindowState.Maximized,
             resize && primary.MdiState != MdiWindowState.Normal,
             capabilities.HasFlag(DockCapabilities.Close));
     }

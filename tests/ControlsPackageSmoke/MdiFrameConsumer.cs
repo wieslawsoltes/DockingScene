@@ -6,6 +6,8 @@ namespace DockingScene.PackageValidation;
 
 public static class MdiFrameConsumer
 {
+    public static DockWindow RestrictedDocument() => new("restricted", "Restricted", WindowKind.Document)
+    { CanStandardMdiMinimize = false, CanStandardMdiMaximize = false };
     public static DockComboBox Selector() => new();
     public static bool Move(WindowControl window) => window.BeginKeyboardMove();
     public static bool Size(WindowControl window) => window.BeginKeyboardResize();

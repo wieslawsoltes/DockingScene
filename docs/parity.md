@@ -40,3 +40,5 @@ The alpha.6 Metro increment adds contextual embedded actions, active/inactive st
 The alpha.7 increment adds minimized bottom-up row placement, state/close window menus, host minimize/maximize policies, retained frame buttons and revision-guarded movement with Escape cancellation. Restored bounds are preserved. Scrollable overflow and the full vendor window surface remain unfinished; see [mdi-review.md](mdi-review.md).
 
 The keyboard-window increment adds real Move/Size system-menu operations and atomic floating movement, with explicit cancellation and constraints. See [window-keyboard.md](window-keyboard.md) for contracts and remaining native-system boundaries.
+
+Individual standard-MDI minimize/maximize policies now apply per DockWindow and intersect with the host settings. MVVM/source descriptors, additive JSON persistence, caption buttons and external commands use the same policy; Restore and direct model transitions retain their documented behavior. This model-first API does not claim the complete WPF dependency-property surface. See [individual-mdi-policies.md](individual-mdi-policies.md).

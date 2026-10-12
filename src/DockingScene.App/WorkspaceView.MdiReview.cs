@@ -31,6 +31,7 @@ public sealed partial class WorkspaceView
             item.Click += (_, _) => action(); menu.Items.Add(item);
         }
         bool standard = _site.Manager.Layout.MdiMode == MdiMode.Standard;
+        AddIndividualMdiCommands(menu);
         menu.Items.Add(new MenuFlyoutSeparator());
         Item("Arrange minimized windows", "arrange", () => _site.PrimaryMdiHost?.ArrangeMinimizedWindows(), standard);
         Item("Minimize all MDI documents", "minimize-all", () =>
@@ -54,6 +55,8 @@ public sealed partial class WorkspaceView
         writer.WriteBoolean("mdiCanMaximize", _site.CanStandardMdiWindowsMaximize);
         writer.WriteBoolean("mdiCanMinimize", _site.CanStandardMdiWindowsMinimize);
         writer.WriteString("mdiPrimaryWindowId", current?.PrimaryWindow?.Id);
+        writer.WriteBoolean("mdiPrimaryMinimizeEnabled", current?.MinimizePrimaryWindowCommand.CanExecute(null) == true);
+        writer.WriteBoolean("mdiPrimaryMaximizeEnabled", current?.MaximizePrimaryWindowCommand.CanExecute(null) == true);
         writer.WriteBoolean("mdiPrimaryRestoreEnabled", current?.RestorePrimaryWindowCommand.CanExecute(null) == true);
         writer.WriteBoolean("mdiPrimaryCloseEnabled", current?.ClosePrimaryWindowCommand.CanExecute(null) == true);
         writer.WriteNumber("mdiMinimizedLayoutBuilds", current?.MinimizedLayoutBuildCount ?? 0);

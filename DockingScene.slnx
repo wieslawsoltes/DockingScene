@@ -9,6 +9,7 @@
   <Project Path="src/DockingScene.App/DockingScene.App.csproj" />
  </Folder>
  <Folder Name="/tests/">
+  <Project Path="tests/DockingScene.MdiPolicySpecs/DockingScene.MdiPolicySpecs.csproj" />
   <Project Path="tests/DockingScene.KeyboardWindowSpecs/DockingScene.KeyboardWindowSpecs.csproj" />
   <Project Path="tests/DockingScene.MdiPresentationSpecs/DockingScene.MdiPresentationSpecs.csproj" />
   <Project Path="tests/DockingScene.MdiCommandSpecs/DockingScene.MdiCommandSpecs.csproj" />

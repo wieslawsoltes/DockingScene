@@ -116,8 +116,8 @@ public sealed partial class StandardMdiHost : UserControl
                     window.BoundsChanged += rect => { if (IsCurrent()) CommitBounds(key, rect); };
                     window.CloseRequested += () => { if (IsCurrent()) Submit(owner.Close(key)); };
                     window.RestoreRequested += () => { if (IsCurrent()) Submit(owner.SetMdiState(key, MdiWindowState.Normal)); };
-                    window.MaximizeRequested += () => { if (IsCurrent() && CanWindowsMaximize) Submit(owner.SetMdiState(key, MdiWindowState.Maximized)); };
-                    window.MinimizeRequested += () => { if (IsCurrent() && CanWindowsMinimize) Submit(owner.SetMdiState(key, MdiWindowState.Minimized)); };
+                    window.MaximizeRequested += () => { if (IsCurrent() && CanWindowsMaximize && owner.Layout.Windows[key].CanStandardMdiMaximize) Submit(owner.SetMdiState(key, MdiWindowState.Maximized)); };
+                    window.MinimizeRequested += () => { if (IsCurrent() && CanWindowsMinimize && owner.Layout.Windows[key].CanStandardMdiMinimize) Submit(owner.SetMdiState(key, MdiWindowState.Minimized)); };
                     _windows.Add(id, window); _canvas.Children.Add(window);
                 }
                 if (window.IsMoving && _gestureRevisions.GetValueOrDefault(id, -1) != layout.Revision)
@@ -128,7 +128,8 @@ public sealed partial class StandardMdiHost : UserControl
                 window.CanResize = canResize && model.MdiState == MdiWindowState.Normal;
                 window.CanMove = manager.Allows(id, DockCapabilities.Drag) && !layout.IsLayoutLocked && model.MdiState == MdiWindowState.Normal;
                 window.CanClose = manager.Allows(id, DockCapabilities.Close); window.CanRestore = canResize;
-                window.ShowMaximize = canResize && CanWindowsMaximize; window.ShowMinimize = canResize && CanWindowsMinimize;
+                window.ShowMaximize = canResize && CanWindowsMaximize && model.CanStandardMdiMaximize;
+                window.ShowMinimize = canResize && CanWindowsMinimize && model.CanStandardMdiMinimize;
                 window.IsMaximized = model.MdiState == MdiWindowState.Maximized; window.IsMinimized = model.MdiState == MdiWindowState.Minimized;
                 window.IsFrameVisible = !window.IsMaximized || AreMaximizedWindowFramesVisible;
                 var bounds = model.MdiState switch
