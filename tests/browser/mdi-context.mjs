@@ -1,3 +1,4 @@
+import { assertPaintedContentText } from './painted-content.mjs';
 import assert from 'node:assert/strict';
 
 export async function runMdiContextTests({page,state,test,reset,click,wait,bounds,settle,menu,output}) {
@@ -22,6 +23,7 @@ export async function runMdiContextTests({page,state,test,reset,click,wait,bound
     await menu('menubar:Theme','appmenu:Metro Dark'); await settle();
     assert.equal((await context()).instance,before.instance);assert.equal((await context()).builds,before.builds);assert((await context()).tracked);
     assert.deepEqual((await state()).mdiFrames.code.buttons,identities);
+    await assertPaintedContentText(page, bounds, true);
     await page.screenshot({path:`${output}/mdi-context-dark.png`});
     await menu('menubar:Theme','appmenu:Metro Light');
   });
@@ -37,6 +39,7 @@ export async function runMdiContextTests({page,state,test,reset,click,wait,bound
     assert.equal((await context()).instance,before.instance);assert((await context()).tracked);
     const r=await bounds('mdi-context:track:code'), close=await bounds('window:code:close');
     assert(r.x+r.width<=close.x);
+    await settle(); await assertPaintedContentText(page, bounds, false);
     await page.screenshot({path:`${output}/mdi-context-light.png`});
   });
   await test('Template replacement and UIElement context keep the editor single-owned', async () => {

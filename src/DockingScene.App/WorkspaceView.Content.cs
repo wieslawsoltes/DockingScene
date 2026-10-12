@@ -28,30 +28,48 @@ public sealed partial class WorkspaceView
     {
         if (_contentTheme == _theme) return;
         var old = _contentTheme; _contentTheme = _theme;
-        string? Map(Brush? brush)
+        // Foregrounds must never be translated as surfaces: Metro Light Text
+        // and Metro Dark Surface both use #252526. Snapshot before applying,
+        // because tree foreground callbacks also recolor their retained labels.
+        var foregrounds = new[] { (old.Text, _theme.Text), (old.MutedText, _theme.MutedText), (old.Border, _theme.Border) };
+        var backgrounds = new[] { (old.EditorBackground, _theme.EditorBackground), (old.Surface, _theme.Surface), (old.Background, _theme.Background), (old.Border, _theme.Border) };
+        var colors = new Dictionary<string, SolidColorBrush>(StringComparer.Ordinal);
+        SolidColorBrush GetPaletteBrush(string value)
         {
-            if (brush is not SolidColorBrush solid) return null;
-            foreach (var pair in new[] { (old.Text, _theme.Text), (old.MutedText, _theme.MutedText), (old.EditorBackground, _theme.EditorBackground), (old.Surface, _theme.Surface), (old.Background, _theme.Background), (old.Border, _theme.Border) })
-                if (solid.Color == DockChrome.Brush(pair.Item1).Color) return pair.Item2;
-            return null;
+            if (!colors.TryGetValue(value, out var brush)) colors.Add(value, brush = DockChrome.Brush(value));
+            return brush;
         }
+        var foregroundMap = foregrounds.Select(pair => (Before: GetPaletteBrush(pair.Item1).Color, After: GetPaletteBrush(pair.Item2))).ToArray();
+        var backgroundMap = backgrounds.Select(pair => (Before: GetPaletteBrush(pair.Item1).Color, After: GetPaletteBrush(pair.Item2))).ToArray();
+        var changes = new List<(DependencyObject Target, DependencyProperty Property, Brush Value)>();
+        void Capture(DependencyObject target, DependencyProperty property, bool foreground)
+        {
+            // Leave inherited, style and ThemeResource values under native theme
+            // ownership instead of freezing generated template children locally.
+            if (target.ReadLocalValue(property) is not SolidColorBrush current) return;
+            foreach (var pair in foreground ? foregroundMap : backgroundMap)
+                if (current.Color == pair.Before) { changes.Add((target, property, pair.After)); break; }
+        }
+        var visited = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
         foreach (var reference in _contentRoots.Values)
         {
             if (!reference.TryGetTarget(out var root)) continue;
             var stack = new Stack<DependencyObject>(); stack.Push(root);
             while (stack.TryPop(out var node))
             {
-                if (node is Microsoft.UI.Xaml.Shapes.Shape shape && Map(shape.Stroke) is { } stroke) shape.Stroke = DockChrome.Brush(stroke);
-                if (node is TextBlock text && Map(text.Foreground) is { } textColor) text.Foreground = DockChrome.Brush(textColor);
-                if (node is Control control)
+                if (!visited.Add(node)) continue;
+                if (node is Microsoft.UI.Xaml.Shapes.Shape) Capture(node, Microsoft.UI.Xaml.Shapes.Shape.StrokeProperty, true);
+                if (node is TextBlock) Capture(node, TextBlock.ForegroundProperty, true);
+                if (node is Control)
                 {
-                    if (Map(control.Foreground) is { } foreground) control.Foreground = DockChrome.Brush(foreground);
-                    if (Map(control.Background) is { } background) control.Background = DockChrome.Brush(background);
+                    Capture(node, Control.ForegroundProperty, true);
+                    Capture(node, Control.BackgroundProperty, false);
                 }
-                if (node is Border border && Map(border.Background) is { } borderColor) border.Background = DockChrome.Brush(borderColor);
+                if (node is Border) Capture(node, Border.BackgroundProperty, false);
                 for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++) stack.Push(VisualTreeHelper.GetChild(node, i));
             }
         }
+        foreach (var change in changes) change.Target.SetValue(change.Property, change.Value);
     }
     private FrameworkElement Editor(DockWindow window)
     {
