@@ -24,6 +24,8 @@ Test("Default window policies preserve existing caption and primary actions", ()
     var m = Manager(); var state = Resolve(m);
     Check(m.Layout.Windows["a"].CanStandardMdiMinimize && m.Layout.Windows["a"].CanStandardMdiMaximize);
     Check(state.CanMinimize && state.CanMaximize && state.CanClose && !state.CanRestore);
+    var (id, title, kind) = new DockWindow("compat", "Compatibility", WindowKind.Document);
+    Check(id == "compat" && title == "Compatibility" && kind == WindowKind.Document);
 });
 Test("Window and host policies intersect independently for every combination", () => {
     var m = Manager();
@@ -63,17 +65,26 @@ Test("Policies round-trip through bounded layout serialization", () => {
     var m = Manager();
     m.UpdateWindow("a", w => w with { CanStandardMdiMinimize = false, CanStandardMdiMaximize = false }).ThrowIfFailed();
     var result = DockLayoutSerializer.Deserialize(DockLayoutSerializer.Serialize(m.Layout));
-    Check(result.Success && !result.Layout!.Windows["a"].CanStandardMdiMinimize && !result.Layout.Windows["a"].CanStandardMdiMaximize);
-    Check(result.Layout.Windows["b"].CanStandardMdiMaximize);
+    var loaded = result.Layout ?? throw new Exception(result.Error);
+    Check(result.Success && !loaded.Windows["a"].CanStandardMdiMinimize && !loaded.Windows["a"].CanStandardMdiMaximize);
+    Check(loaded.Windows["b"].CanStandardMdiMaximize);
 });
-Test("Earlier JSON without window policy fields loads with enabled defaults", () => {
-    var json = JsonNode.Parse(DockLayoutSerializer.Serialize(Manager().Layout))!.AsObject();
-    foreach (var pair in json["windows"]!.AsObject()) {
-        pair.Value!.AsObject().Remove("canStandardMdiMinimize");
-        pair.Value.AsObject().Remove("canStandardMdiMaximize");
+Test("Earlier JSON defaults and explicit false values remain distinct in all combinations", () => {
+    var original = DockLayoutSerializer.Serialize(Manager().Layout);
+    foreach (bool? min in new bool?[] { null, false, true })
+    foreach (bool? max in new bool?[] { null, false, true }) {
+        var json = JsonNode.Parse(original)!.AsObject();
+        foreach (var pair in json["windows"]!.AsObject()) {
+            var window = pair.Value!.AsObject();
+            if (min is { } minValue) window["canStandardMdiMinimize"] = minValue;
+            else window.Remove("canStandardMdiMinimize");
+            if (max is { } maxValue) window["canStandardMdiMaximize"] = maxValue;
+            else window.Remove("canStandardMdiMaximize");
+        }
+        var result = DockLayoutSerializer.Deserialize(json.ToJsonString());
+        var loaded = result.Layout ?? throw new Exception(result.Error);
+        Check(result.Success && loaded.Windows.Values.All(w => w.CanStandardMdiMinimize == (min ?? true) && w.CanStandardMdiMaximize == (max ?? true)));
     }
-    var result = DockLayoutSerializer.Deserialize(json.ToJsonString());
-    Check(result.Success && result.Layout!.Windows.Values.All(w => w.CanStandardMdiMinimize && w.CanStandardMdiMaximize));
 });
 Test("MVVM policy setters write through and preserve proxy identity", () => {
     var m = Manager(); using var vm = new DockWorkspaceViewModel(m);
