@@ -1,21 +1,74 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.UI.Xaml.Input;
 
 namespace DockingScene.Controls;
 
-/// <summary>Native Uno ComboBox with synchronous popup focus completion. This
-/// retains native selection, keyboard, scrolling and item templates; no keys are
-/// synthesized or intercepted. Editable combos keep their native text focus.</summary>
+/// <summary>Native Uno ComboBox with popup-local keyboard routing. Native selection,
+/// cancel, type search, scrolling and templates remain owned by ComboBox. The
+/// detached popup forwards the original event, never a synthesized key.</summary>
 public class DockComboBox : ComboBox
 {
     private Popup? _popup;
-    private bool _completingFocus;
-    public DockComboBox() => DropDownOpened += (_, _) => CompletePopupFocus();
+    private FrameworkElement? _inputScope;
+    private readonly KeyEventHandler _popupKeyDown;
+    private readonly KeyEventHandler _popupKeyUp;
+    private bool _completingFocus, _forwarding;
+    public long ForwardedKeyCount { get; private set; }
+
+    public DockComboBox()
+    {
+        _popupKeyDown = (_, e) =>
+        {
+            if (!CanForward(e)) return;
+            _forwarding = true;
+            try { ForwardedKeyCount++; base.OnKeyDown(e); }
+            finally { _forwarding = false; }
+        };
+        _popupKeyUp = (_, e) =>
+        {
+            if (!CanForward(e)) return;
+            _forwarding = true;
+            try { base.OnKeyUp(e); }
+            finally { _forwarding = false; }
+        };
+        DropDownOpened += (_, _) => { AttachPopupInput(); CompletePopupFocus(); };
+        DropDownClosed += (_, _) => DetachPopupInput();
+        Unloaded += (_, _) => DetachPopupInput();
+    }
     protected override void OnApplyTemplate()
     {
+        DetachPopupInput();
         base.OnApplyTemplate();
         _popup = GetTemplateChild("Popup") as Popup;
+        if (IsDropDownOpen) AttachPopupInput();
+    }
+    protected override void OnPointerReleased(PointerRoutedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (IsDropDownOpen) { AttachPopupInput(); CompletePopupFocus(); }
+    }
+    private bool CanForward(KeyRoutedEventArgs e) => !_forwarding && !e.Handled && !IsEditable &&
+        IsEnabled && IsLoaded && IsDropDownOpen && _inputScope is { IsLoaded: true } &&
+        _inputScope.XamlRoot == XamlRoot;
+
+    private void AttachPopupInput()
+    {
+        if (IsEditable || _popup?.Child is not FrameworkElement child || ReferenceEquals(child, _inputScope)) return;
+        DetachPopupInput(); _inputScope = child;
+        // Popup content is outside the selector's ordinary visual ancestry. Route
+        // once at its input boundary before container/default navigation. A key
+        // handled here cannot be handled a second time by the native bubble path.
+        child.AddHandler(PreviewKeyDownEvent, _popupKeyDown, false);
+        child.AddHandler(PreviewKeyUpEvent, _popupKeyUp, false);
+    }
+    private void DetachPopupInput()
+    {
+        if (_inputScope is not { } scope) return;
+        _inputScope = null;
+        scope.RemoveHandler(PreviewKeyDownEvent, _popupKeyDown);
+        scope.RemoveHandler(PreviewKeyUpEvent, _popupKeyUp);
     }
     private void CompletePopupFocus()
     {
@@ -23,9 +76,6 @@ public class DockComboBox : ComboBox
         _completingFocus = true;
         try
         {
-            // A popup lives outside the selector's ordinary visual subtree. Its
-            // selected container must be arranged before focus is requested;
-            // otherwise immediate Home/Arrow/Enter input can target the old pane.
             (_popup?.Child as FrameworkElement)?.UpdateLayout();
             if (!IsLoaded || !IsDropDownOpen || XamlRoot != root) return;
             int index = SelectedIndex >= 0 ? SelectedIndex : 0;
