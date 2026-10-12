@@ -12,6 +12,9 @@ public partial class WindowControl
 {
     private readonly Dictionary<string, Button> _captionButtons = new(StringComparer.Ordinal);
     private Button? _systemButton;
+    private MenuFlyout? _systemMenu;
+    private long _menuGeneration;
+    public void DismissSystemMenu() { _menuGeneration++; _systemMenu?.Hide(); _systemMenu = null; }
     private DockTheme _theme = DockTheme.MetroLight;
     private UIElement? _movementInputRoot;
     private KeyEventHandler? _movementEscape;
@@ -26,6 +29,7 @@ public partial class WindowControl
 
     private void ConfigureWindowChrome()
     {
+        Unloaded += (_, _) => DismissSystemMenu();
         SizeChanged += (_, _) => Clip = new RectangleGeometry { Rect = new(0, 0, ActualWidth, ActualHeight) };
     }
     private void RequestRestore()
@@ -42,13 +46,15 @@ public partial class WindowControl
     /// current capability flags again, not only the flags when the menu was opened.</summary>
     public void ShowSystemMenu()
     {
-        if (!HasSystemMenu || _systemButton is null || !IsLoaded) return;
+        if (!HasSystemMenu || !IsFrameVisible || _systemButton is null || !IsLoaded) return;
         Activated?.Invoke();
-        var menu = new MenuFlyout();
+        DismissSystemMenu();
+        long generation = _menuGeneration;
+        var menu = new MenuFlyout(); _systemMenu = menu;
         void Item(string text, string id, bool enabled, Action action)
         {
             var item = DockChrome.Identify(new MenuFlyoutItem { Text = text, IsEnabled = enabled, FontSize = _theme.FontSize, MinHeight = 26 }, "window-menu:" + WindowId + ":" + id);
-            item.Click += (_, _) => action(); menu.Items.Add(item);
+            item.Click += (_, _) => { if (generation == _menuGeneration) action(); }; menu.Items.Add(item);
         }
         Item("Restore", "restore", CanRestore && (IsMaximized || IsMinimized), RequestRestore);
         Item("Minimize", "minimize", ShowMinimize && !IsMinimized, RequestMinimize);
@@ -96,6 +102,7 @@ public partial class WindowControl
         Paint(_captionButtons["maximize"], IsMaximized ? "Restore" : "Maximize", IsMaximized ? "restore" : "maximize",
             IsMaximized ? DockGlyphs.Restore : DockGlyphs.Maximize, ShowMaximize || IsMaximized, IsMaximized ? CanRestore : ShowMaximize);
         Paint(_captionButtons["close"], "Close", "close", DockGlyphs.Close, true, CanClose);
+        ApplyFrameVisibility();
     }
     private void AcquireMovementInput()
     {

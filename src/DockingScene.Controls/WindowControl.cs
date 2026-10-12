@@ -83,7 +83,7 @@ public partial class WindowControl : UserControl
             if (vertical != DockSide.Center) grip.Height = corner ? 8 : 4;
             if (horizontal == DockSide.Center) grip.Margin = new(8, 0, 8, 0);
             if (vertical == DockSide.Center) grip.Margin = new(0, 8, 0, 8);
-            Grid.SetRowSpan(grip, 2); _root.Children.Add(grip);
+            Grid.SetRowSpan(grip, 2); _root.Children.Add(grip); _resizeGrips.Add(grip);
             var rx = horizontal; var ry = vertical;
             grip.PointerPressed += (_, e) => { if (CanResize && !IsMaximized && !IsMinimized && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) { Begin(e, rx, ry); e.Handled = true; } };
         }

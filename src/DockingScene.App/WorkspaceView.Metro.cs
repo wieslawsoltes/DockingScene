@@ -22,6 +22,7 @@ public sealed partial class WorkspaceView
     {
         if (_metroEnabled) return;
         _metroEnabled = true;
+        EnableExternalMdiChrome();
         _site.AreDocumentTabEmbeddedButtonsAlwaysVisible = false;
         _site.HasToolTabCloseButtons = false;
         _site.HasDocumentTabStripHighlight = true;

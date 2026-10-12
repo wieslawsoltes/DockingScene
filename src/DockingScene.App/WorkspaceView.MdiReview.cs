@@ -14,6 +14,7 @@ public sealed partial class WorkspaceView
             var item = DockChrome.Identify(new MenuFlyoutItem { Text = text, FontSize = 12, MinHeight = 26, IsEnabled = enabled }, "mdi-option:" + id);
             item.Click += (_, _) => action(); menu.Items.Add(item);
         }
+        AddMdiPresentationCommands(menu);
         bool standard = _site.Manager.Layout.MdiMode == MdiMode.Standard;
         menu.Items.Add(new MenuFlyoutSeparator());
         Item("Arrange minimized windows", "arrange", () => _site.PrimaryMdiHost?.ArrangeMinimizedWindows(), standard);
@@ -32,6 +33,7 @@ public sealed partial class WorkspaceView
     }
     private void WriteMdiDiagnostics(Utf8JsonWriter writer)
     {
+        WriteMdiPresentationDiagnostics(writer);
         writer.WriteBoolean("mdiCanMaximize", _site.CanStandardMdiWindowsMaximize);
         writer.WriteBoolean("mdiCanMinimize", _site.CanStandardMdiWindowsMinimize);
         writer.WriteStartObject("mdiFrames");
@@ -42,6 +44,7 @@ public sealed partial class WorkspaceView
                 writer.WriteStartObject(id);
                 writer.WriteNumber("x", frame.Bounds.X); writer.WriteNumber("y", frame.Bounds.Y);
                 writer.WriteNumber("width", frame.Bounds.Width); writer.WriteNumber("height", frame.Bounds.Height);
+                writer.WriteBoolean("frameVisible", frame.IsFrameVisible);
                 writer.WriteBoolean("moving", frame.IsMoving); writer.WriteNumber("z", Canvas.GetZIndex(frame));
                 writer.WriteStartObject("buttons"); foreach (var (key, identity) in frame.CaptionButtonIdentities) writer.WriteNumber(key, identity); writer.WriteEndObject();
                 writer.WriteEndObject();

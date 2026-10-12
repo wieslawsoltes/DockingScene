@@ -9,9 +9,12 @@ namespace DockingScene.Controls;
 
 /// <summary>Retained overlapping-document host. Call Update to project a manager
 /// snapshot; commands originating in this host also refresh its projection.</summary>
-public sealed class StandardMdiHost : UserControl
+public sealed partial class StandardMdiHost : UserControl
 {
     private readonly Canvas _canvas = new();
+    private readonly MinimizedWindowLayoutCache _minimizedCache = new();
+    public long MinimizedLayoutBuildCount => _minimizedCache.BuildCount;
+    public long MinimizedLayoutReuseCount => _minimizedCache.ReuseCount;
     private readonly Dictionary<string, WindowControl> _windows = new(StringComparer.Ordinal);
     private readonly Dictionary<string, long> _gestureRevisions = new(StringComparer.Ordinal);
     private System.Collections.ObjectModel.ReadOnlyDictionary<string, WindowControl>? _windowView;
@@ -43,13 +46,16 @@ public sealed class StandardMdiHost : UserControl
         if (next.Any(id => string.IsNullOrWhiteSpace(id) || !manager.Layout.Windows.ContainsKey(id)) || next.Distinct(StringComparer.Ordinal).Count() != next.Length)
             throw new ArgumentException("MDI ids must be registered, nonempty and unique.", nameof(ids));
         if (!ReferenceEquals(_manager, manager)) ReleaseContent();
-        _manager = manager; _ids = next; _content = content; _theme = theme; _active = true; Refresh();
+        _manager = manager; _ids = _ids.AsSpan().SequenceEqual(next) ? _ids : next; _content = content; _theme = theme; _active = true; Refresh();
     }
     public void ReleaseContent()
     {
         _active = false;
-        foreach (var window in _windows.Values) { window.CancelMovement(); window.SetWindowContent(null); }
+        foreach (var window in _windows.Values) { window.CancelMovement(); window.DismissSystemMenu(); window.SetWindowContent(null); }
         _gestureRevisions.Clear();
+        _minimizedCache.Clear();
+        _primarySnapshot = null; _primaryIds = null; _primaryState = default;
+        PublishPrimaryState();
     }
     public IReadOnlyList<DockWindow> GetDocuments()
     {
@@ -92,7 +98,7 @@ public sealed class StandardMdiHost : UserControl
                 _windows.Remove(id); _gestureRevisions.Remove(id);
             }
             var viewport = new DockRect(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight));
-            MinimizedLayout = MinimizedWindowLayout.Arrange(ordered.Where(id => layout.Windows[id].MdiState == MdiWindowState.Minimized).ToArray(), viewport, new(168, _theme.TitleHeight + 2));
+            MinimizedLayout = _minimizedCache.Arrange(ordered.Where(id => layout.Windows[id].MdiState == MdiWindowState.Minimized).ToArray(), viewport, new(168, _theme.TitleHeight + 2));
             foreach (string id in ordered)
             {
                 if (!_active || !ReferenceEquals(manager, _manager) || manager.Layout.Revision != layout.Revision) { QueueRefresh(); break; }
@@ -119,6 +125,7 @@ public sealed class StandardMdiHost : UserControl
                 window.CanMove = manager.Allows(id, DockCapabilities.Drag) && !layout.IsLayoutLocked && model.MdiState == MdiWindowState.Normal;
                 window.CanClose = manager.Allows(id, DockCapabilities.Close); window.CanRestore = canResize;
                 window.ShowMaximize = canResize && CanWindowsMaximize; window.ShowMinimize = canResize && CanWindowsMinimize;
+                window.IsFrameVisible = model.MdiState != MdiWindowState.Maximized || AreMaximizedWindowFramesVisible;
                 window.IsMaximized = model.MdiState == MdiWindowState.Maximized; window.IsMinimized = model.MdiState == MdiWindowState.Minimized;
                 var bounds = model.MdiState switch
                 {
@@ -135,6 +142,7 @@ public sealed class StandardMdiHost : UserControl
             }
         }
         finally { _refreshing = false; }
+        PublishPrimaryState();
     }
     private void QueueRefresh()
     {
