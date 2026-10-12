@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.9`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.10`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -132,3 +132,7 @@ Window icons and title context menus expose state and close commands. Minimized 
 ## Frame-free maximized MDI
 
 `StandardMdiHost.AreMaximizedWindowFramesVisible` can remove a maximized document's caption and border while retaining its editor and restore bounds. `StandardMdiControlBar` provides a reusable external title, icon and primary-window commands. The sample's Window menu exposes frame visibility, and its external commands remain scoped to MDI documents when a tool has focus. Minimized caption plans are cached across activation changes. See [maximized MDI](docs/maximized-mdi.md) for integration, performance boundaries and the current validation scope; this supersedes the alpha.7 limitation on maximized-frame hiding.
+
+## Individual MDI actions
+
+Per-document `CanStandardMdiMinimize` and `CanStandardMdiMaximize` metadata combine with host settings without affecting other documents or removing Restore. The Window menu demonstrates them; MVVM and source descriptors expose the same policies. See [individual MDI policies](docs/individual-mdi-policies.md).

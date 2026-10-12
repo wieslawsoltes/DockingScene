@@ -32,4 +32,7 @@ manager.MoveMdiWindow("bulk0", 40, 60).ThrowIfFailed();
 var keyboard = new WindowKeyboardSession(new(10,20,200,100), WindowKeyboardMode.Move);
 keyboard.Step(WindowKeyboardDirection.Right, 8, new(1,1), new(1000,1000));
 if (keyboard.Complete(true).X != 18) throw new Exception("Packaged keyboard geometry failed.");
+manager.UpdateWindow("bulk0", w => w with { CanStandardMdiMaximize = false }).ThrowIfFailed();
+if (MdiPrimaryWindow.Resolve(manager.Layout, new[] { "bulk0" }).CanMaximize)
+    throw new Exception("Individual MDI policy package integration failed.");
 Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");
