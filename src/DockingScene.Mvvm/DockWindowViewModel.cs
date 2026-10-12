@@ -16,6 +16,8 @@ public sealed class DockWindowViewModel : INotifyPropertyChanged
     public string Description { get => _model.Description; set => Update(window => window with { Description = value }); }
     public bool IsModified { get => _model.IsModified; set => Update(window => window with { IsModified = value }); }
     public bool IsReadOnly { get => _model.IsReadOnly; set => Update(window => window with { IsReadOnly = value }); }
+    public bool CanStandardMdiMinimize { get => _model.CanStandardMdiMinimize; set => Update(window => window with { CanStandardMdiMinimize = value }); }
+    public bool CanStandardMdiMaximize { get => _model.CanStandardMdiMaximize; set => Update(window => window with { CanStandardMdiMaximize = value }); }
     public TabDisplayMode DisplayMode { get => _model.DisplayMode; set => Update(window => window with { DisplayMode = value }); }
     public DockCapabilities Capabilities { get => _model.Capabilities; set => Update(window => window with { Capabilities = value }); }
     public WindowPlacement Placement => _location.Placement;

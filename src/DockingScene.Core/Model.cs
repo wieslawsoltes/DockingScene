@@ -41,7 +41,7 @@ public readonly record struct DockRect(double X, double Y, double Width, double 
 public sealed record DockBookmark(string? GroupId = null, DockSide Side = DockSide.Left, int Index = -1);
 
 /// <summary>Serializable window metadata. Application content is deliberately not stored here.</summary>
-public sealed record DockWindow(string Id, string Title, WindowKind Kind)
+public sealed partial record DockWindow(string Id, string Title, WindowKind Kind)
 {
     public string? ContentKey { get; init; }
     public string Description { get; init; } = "";
