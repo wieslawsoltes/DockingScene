@@ -9,7 +9,7 @@ namespace DockingScene.Controls;
 /// <summary>Native Uno ComboBox with opening-scoped keyboard routing. Popup and
 /// root routes forward the original event at most once. Native selection, Escape,
 /// type search, scrolling and item templates remain owned by ComboBox.</summary>
-public class DockComboBox : ComboBox
+public partial class DockComboBox : ComboBox
 {
     private Popup? _popup;
     private FrameworkElement? _inputScope;
@@ -37,19 +37,27 @@ public class DockComboBox : ComboBox
         {
             if (ReferenceEquals(e, _lastDown) || !CanForward(e)) return;
             _lastDown = e; _forwarding = true;
-            try { ForwardedKeyCount++; TraceNavigation("before", e); base.OnKeyDown(e); TraceNavigation("after", e); }
+            try
+            {
+                if (DeferOpeningKey(e, true)) return;
+                ForwardedKeyCount++; TraceNavigation("before", e); base.OnKeyDown(e); TraceNavigation("after", e);
+            }
             finally { _forwarding = false; }
         };
         _popupKeyUp = (_, e) =>
         {
             if (ReferenceEquals(e, _lastUp) || !CanForward(e)) return;
             _lastUp = e; _forwarding = true;
-            try { base.OnKeyUp(e); }
+            try { if (!DeferOpeningKey(e, false)) base.OnKeyUp(e); }
             finally { _forwarding = false; }
         };
         DropDownOpened += (_, _) => { AttachPopupInput(); CompletePopupFocus(); };
         DropDownClosed += (_, _) => DetachPopupInput();
         Unloaded += (_, _) => DetachPopupInput();
+        Items.VectorChanged += (_, _) => DiscardOpeningKeys();
+        RegisterPropertyChangedCallback(ItemsSourceProperty, (_, _) => DiscardOpeningKeys());
+        RegisterPropertyChangedCallback(IsEditableProperty, (_, _) => DiscardOpeningKeys());
+        RegisterPropertyChangedCallback(IsEnabledProperty, (_, _) => { if (!IsEnabled) DiscardOpeningKeys(); });
     }
     protected override void OnApplyTemplate()
     {
@@ -72,9 +80,6 @@ public class DockComboBox : ComboBox
     {
         if (_forwarding || e.Handled || IsEditable || !IsEnabled || !IsLoaded || !IsDropDownOpen ||
             XamlRoot is not { } root || _inputRoot != root.Content) return false;
-        // A popup is a separate visual root on some Uno targets. The actual
-        // focused item still identifies its selector even when its key route
-        // bypasses the popup child. Never take a key from another selector/pane.
         var focused = FocusManager.GetFocusedElement(root) as DependencyObject;
         for (var node = focused; node is not null; node = VisualTreeHelper.GetParent(node))
         {
@@ -89,6 +94,7 @@ public class DockComboBox : ComboBox
         var child = _popup?.Child as FrameworkElement;
         if (ReferenceEquals(root, _inputRoot) && ReferenceEquals(child, _inputScope)) return;
         DetachPopupInput(); _inputRoot = root; _inputScope = child;
+        LayoutUpdated += OnOpeningLayoutUpdated;
         root.AddHandler(PreviewKeyDownEvent, _popupKeyDown, false);
         root.AddHandler(PreviewKeyUpEvent, _popupKeyUp, false);
         if (child is not null && !ReferenceEquals(child, root))
@@ -99,6 +105,8 @@ public class DockComboBox : ComboBox
     }
     private void DetachPopupInput()
     {
+        LayoutUpdated -= OnOpeningLayoutUpdated;
+        DiscardOpeningKeys();
         if (_inputRoot is { } root)
         {
             root.RemoveHandler(PreviewKeyDownEvent, _popupKeyDown);
@@ -110,8 +118,7 @@ public class DockComboBox : ComboBox
             scope.RemoveHandler(PreviewKeyUpEvent, _popupKeyUp);
         }
         _inputRoot = null; _inputScope = null;
-        // Keep the last event identities until the current route ends. A native
-        // Enter handler can close this popup inside the forwarding call itself.
+        // Retain last identities through the original route, including close.
     }
     private void CompletePopupFocus()
     {
