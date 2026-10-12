@@ -1,30 +1,32 @@
 # DockingScene
 
-A modular docking and multiple-document workspace for **Uno Platform**, with a UI-independent .NET engine and real retained controls rendered by Uno Skia on desktop and WebAssembly.
+A modular docking and multiple-document workspace for **Uno Platform**, with a UI-independent .NET engine and retained controls rendered by Uno Skia on desktop and WebAssembly.
 
-**Status: working alpha, not full Actipro Docking & MDI parity.** This is an independent implementation, not a WPF binary replacement or an Actipro product. Native OS floating windows, linked-site transfers, advanced serialization behaviors, complete accessibility parity, and pixel-for-pixel comparison remain unfinished. See [the explicit compatibility matrix](docs/parity.md).
+**Working alpha, not full Actipro Docking & MDI parity.** This is an independent implementation, not a WPF binary replacement or an Actipro product. Native/detached hosts, linked-site transfers, advanced persistence, complete accessibility and vendor pixel certification remain unfinished. See the [compatibility matrix](docs/parity.md).
 
-**[Open the browser demonstration](https://wieslawsoltes.github.io/DockingScene/)**. The main-branch workflow tests the application before deployment and verifies the live site's source commit afterward. A feature branch is not published until merged and validated.
+**[Open the browser demonstration](https://wieslawsoltes.github.io/DockingScene/)**. Main builds and tests before deployment, then verifies the live source revision and interactions. A feature branch is not published merely because its source has been pushed.
 
-## Packages
+## Reusable packages
 
-| Package | Responsibility | UI dependency |
-| --- | --- | --- |
-| `DockingScene.Core` | Immutable layout trees, capability policy, validated/cancellable transactions, preview documents, filtered keyboard navigation, undo/redo | None |
-| `DockingScene.Layout` | Constrained layout, splitters, docking guides, independent pinned/normal/preview lanes, six tab-overflow policies, snapping and MDI arrangement | None |
-| `DockingScene.Serialization` | Versioned bounded JSON, unknown-window policies, atomic file layout storage | None |
-| `DockingScene.Mvvm` | Observable window projections, commands, stable identities and atomic collection synchronization | None |
-| `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
-| `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardSwitcher` and containers | Uno Platform |
+All six packages use **0.1.0-alpha.8** and are packed from one source revision. The sample composes the packages; it is not the docking engine.
 
-All six packages use **`0.1.0-alpha.7`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+| Package | Responsibility |
+| --- | --- |
+| `DockingScene.Core` | Immutable layout trees, capabilities, validated/cancellable transactions, previews, history, indexed queries and primary-document state |
+| `DockingScene.Layout` | Constrained geometry, guides, tab allocation/virtualization metrics, MDI arrangement, bounded layout caches and drag edge scrolling |
+| `DockingScene.Serialization` | Versioned bounded JSON/stream input, unknown-window policies and atomic file storage |
+| `DockingScene.Mvvm` | Stable observable projections, commands and bounded collection synchronization |
+| `DockingScene.Themes` | Palettes, metrics, strings, independent vector icons and bounded SVG-path parsing |
+| `DockingScene.Controls` | Uno `DockSite`, `AdvancedTabControl`, document/tool containers, `WindowControl`, `StandardMdiHost` and switcher |
+
+Only Controls depends on Uno UI. Application content and view models are never included in layout persistence. Isolated package-only consumers execute the five non-UI packages and compile the controls APIs without source project references.
 
 ## Build and run
 
-The repository pins Uno SDK **6.7.30** and uses **.NET 10**. Install the .NET 10 SDK and the platform prerequisites required by Uno's desktop target.
+The repository pins Uno SDK **6.7.30** and uses **.NET 10**. Install the SDK and Uno's platform prerequisites.
 
 ```sh
-# All UI-independent executable specification suites
+# Every UI-independent executable specification suite
 for project in tests/*Specs/*.csproj; do
   dotnet run --project "$project" -c Release || exit 1
 done
@@ -32,7 +34,7 @@ done
 # Desktop sample
 dotnet run --project src/DockingScene.App -f net10.0-desktop -c Release
 
-# WebAssembly sample
+# Browser distribution
 dotnet workload install wasm-tools
 dotnet publish src/DockingScene.App -f net10.0-browserwasm -c Release -o artifacts/browser
 mkdir -p artifacts/site/DockingScene
@@ -40,9 +42,9 @@ cp -a artifacts/browser/wwwroot/. artifacts/site/DockingScene/
 python3 -m http.server 8765 --directory artifacts/site
 ```
 
-Open `http://localhost:8765/DockingScene/`. The application is built with this base path, including for GitHub Pages; do not serve it at `/` without changing `WasmShellWebAppBasePath` and rebuilding.
+Open `http://localhost:8765/DockingScene/`. The application uses this base path, including for Pages; serving it at `/` requires changing `WasmShellWebAppBasePath` and rebuilding.
 
-## Use the engine and a DockSite
+## Engine and retained content
 
 ```csharp
 using DockingScene.Core;
@@ -65,39 +67,43 @@ var site = new DockSite
         Text = window.Title
     }
 };
-
-// Content is created lazily. Moving or hiding retains the actual control.
 manager.Float("editor").ThrowIfFailed();
 manager.Undo().ThrowIfFailed();
 ```
 
-`DockSite.Manager`, theme and tab presentation settings are dependency properties. The controls package is independent of the sample. See [architecture and API contracts](docs/architecture.md) for batches, closing vetoes, MVVM, threading, persistence and content ownership.
+Content is created lazily and retained through tab switches, movement, hiding and reopening. Applications own it by default. Set `DisposeContentOnUnregister = true` only for exclusively owned factory results; ordinary close/hide still retains content. `WindowContentReleased` reports cache release. `DockLayoutStream.ReadAsync` leaves its input stream open and supports bounded, cancellable loading.
 
-## Standalone tab controls
+The manager validates changes, supports closing vetoes and expected revisions, and commits batches atomically. Source adapters are disposable and do not own application view models. Read [architecture and contracts](docs/architecture.md) for threading, lifecycle, synchronization and persistence boundaries.
 
-`AdvancedTabControl` supports three independently clipped tab lanes. Pinned tabs remain at the leading edge and preview tabs remain at the trailing edge while normal tabs scroll. Overflow can be disabled, menu-only, scroll-only, scroll plus menu, shrink-only, or shrink plus menu. Measured extents honor minima and maxima; equal limits produce fixed horizontal tab sizes. Shrinking keeps a clickable label instead of allowing embedded buttons to consume the whole header.
+## Tabs and docking
 
-The control supports close cancellation, `CanClose`, optional middle-click closing, application customization of its overflow menu, pin/unpin, preview promotion, four placements and strip visibility without recreating selected content. Header virtualization does not instantiate off-screen document content.
+`AdvancedTabControl` has independently clipped pinned, normal and preview lanes; six overflow policies; measured minimum/fixed/shrunk widths; four placements; strip visibility; pin/unpin and preview promotion; close cancellation and middle-click policy; customizable menus; retained content; and same-lane pointer reordering with cancellable events and edge scrolling. Hidden headers do not instantiate their document content.
 
-Choose **Tab options → Open standalone tab playground** to try these features with 20 synthetic documents. The toolbar also configures document overflow and single-tool-tab visibility. Read [the tab-layout guide](docs/tab-layout.md) for reusable APIs, allocation details and boundaries.
+Choose **Tab options → Open standalone tab playground** for 20-tab and 2,002-tab workloads, overflow/placement controls and content-lifetime examples. [Tab layout](docs/tab-layout.md) documents the standalone API. `CanTabsDrag` and `CanTabsAutoScroll` control drag behavior; `FocusSelectedContent` restores the selected content's eligible focus target.
 
-## Performance and ownership
+Drag document tabs or tool captions to dock, split, reorder or float. Hold **Ctrl** to suppress docking and **Escape** to cancel. Four-sided auto-hide supports hover/click activation, inner-edge resizing and pinning. Context menus expose preview promotion, pinning, placement and directional closing. Floating windows are currently hosted inside the DockSite, not separate OS windows.
 
-The engine caches immutable layout lookups by snapshot identity. Tab controls retain measured headers and lane plans across selection, scrolling and unrelated layout changes, and report measurement/realization counters for profiling. The playground includes 2,002-tab workloads, cancellable standalone reordering and content-lifetime examples. See [the performance review](docs/performance-review.md) for the measured workload, fixes, API contracts and remaining costs.
+The sample's compact Metro presentation includes native Solution Explorer and Properties views, dotted caption grips, contextual document actions, strip accents and a status bar. **Appearance** changes these settings without replacing the workspace. [Metro fidelity](docs/metro-fidelity.md) and [template follow-up](docs/metro-follow-up.md) identify the public references and remaining visual differences.
 
-Application content is not disposed by default. Set `DockSite.DisposeContentOnUnregister = true` only for exclusively owned factory results. Close/hide continues to retain content. `DockLayoutStream.ReadAsync` adds bounded, cancellable JSON stream loading without taking ownership of the input stream.
+## Standard MDI and external commands
 
-## Docking interactions
+Standard MDI supports overlapping windows, movement, eight resize edges/corners, minimize/maximize/restore, cascade and tiling. Minimized captions wrap in nonoverlapping bottom-up rows without changing normal restore bounds. Vertical overflow is reported and clipped; full scrollable virtual extents are not implemented.
 
-Drag document tabs or tool-window captions to dock, split, reorder or float. Hold **Ctrl** while dragging to suppress docking; **Escape** cancels. Tool windows can be auto-hidden on four sides, resized from their popup's inner edge and pinned. Context menus provide preview promotion, pinning, group creation, tab placement and directional closing.
+Window icons and title context menus expose state and close commands. Host minimize/maximize settings control UI actions separately from engine capabilities. Gestures preserve stacking order and cancel on stale revisions, Escape, lost capture or unload. See [MDI review](docs/mdi-review.md).
 
-**Ctrl+Tab / Ctrl+Shift+Tab** cycle the DockSite MRU switcher; releasing Ctrl commits. **F8** opens it where a browser reserves Ctrl+Tab. **Ctrl+F4 / Ctrl+W** close the active window where the host permits these shortcuts. **Ctrl+1…8** selects normal document tabs; **Ctrl+9** selects the last normal tab. Add **Alt** for pinned tabs or **Shift** for preview tabs. **Ctrl+Alt+Down** opens the document list and **Alt+-** opens its context menu. Browser-reserved shortcuts are not guaranteed to reach WebAssembly applications.
+Set `StandardMdiHost.AreMaximizedWindowFramesVisible = false`, or the corresponding `DockSite.AreStandardMdiMaximizedWindowFramesVisible`, to reclaim maximized title/frame space. `PrimaryWindow`, `IsExternalMaximizedUIRequired` and four primary-window commands support external application controls. The sample displays retained minimize/restore/close buttons at the menu bar's right edge; activating a tool keeps their target on the hosted document. **Window → Toggle maximized window frames** demonstrates both modes. [MDI presentation](docs/mdi-presentation.md) explains commands, invalidation and limits.
 
-The toolbar switches between tabbed and standard MDI. Standard MDI supports overlapping windows, minimize/maximize, cascade and horizontal/vertical/grid tiling. Layout save/load is available from the toolbar and File menu. The browser sample stores layout metadata in local storage, not document text.
+## Keyboard and persistence
 
-## Validation and artifacts
+**Ctrl+Tab / Ctrl+Shift+Tab** cycle the MRU switcher; releasing Ctrl commits. **F8** opens it when the browser reserves Ctrl+Tab. **Ctrl+F4 / Ctrl+W** close the active window where permitted. **Ctrl+1…8** selects normal document tabs and **Ctrl+9** selects the last; add **Alt** for pinned or **Shift** for preview tabs. **Ctrl+Alt+Down** opens the document list; **Alt+-** opens its context menu. Browser-reserved keys may not reach WebAssembly.
 
-`Validate` runs every `tests/*Specs` executable. `Uno application` repeats these contracts, builds desktop, publishes WebAssembly, packs all libraries, checks isolated NuGet consumers, and drives docking, standalone-tab and retained-host browser suites. Failure in any suite blocks deployment. The same three suites then run against the deployed URL and verify `build-info.json`.
+The toolbar and File menu save/load layout metadata. Browser storage uses local storage; desktop storage uses the application data directory. This is DockingScene JSON, not Actipro XML, and does not save document text.
+
+## Performance, tests and artifacts
+
+Snapshot indexes, geometry caches, retained tab measurements/lane plans, selective MVVM notifications and retained caption/auxiliary controls avoid repeated work. Minimized-caption layouts are reused when ordered IDs and geometry inputs are unchanged. Counters describe performed work, not an application FPS guarantee. See [performance review](docs/performance-review.md) and [retained-host review](docs/retained-host-review.md).
+
+`Validate` executes every model suite. `Uno application` repeats them, builds desktop/WebAssembly, packs all libraries, validates isolated consumers and drives real browser inputs and pixel checks. Any failed gate blocks distribution. Source snapshots, packages, logs, screenshots and traces are retained as workflow artifacts. [Validation scope](docs/validation.md) distinguishes defined scenarios from actual results for a specific commit.
 
 ```sh
 npm install --prefix tests/browser
@@ -107,24 +113,10 @@ BROWSER_URL=http://localhost:8765/DockingScene/ node tests/browser/tab-layout.mj
 BROWSER_URL=http://localhost:8765/DockingScene/ node tests/browser/host-review.mjs
 ```
 
-Browser tests use actual pointer/keyboard input. Diagnostics are read-only; no JavaScript hook mutates the managed model. **Diagnostic capture is off by default.** The harness adds `?diagnostics=1`, exposing layout geometry and synthetic sample-editor observations, including text, for testing. Do not enable it around sensitive documents. Normal sessions do not perform the periodic diagnostic visual-tree walk.
-
-Artifacts include source snapshots, browser distributions, all six alpha NuGet packages, contract logs, screenshots and Playwright traces. Read [validation scope](docs/validation.md) before interpreting a green check as complete product compatibility.
+Diagnostics are **off by default**. The harness adds `?diagnostics=1` for read-only geometry, synthetic editor text/caret/identity and performed-work observations. No JavaScript test hook changes the managed model. Do not enable diagnostics around confidential documents; the observations themselves add overhead.
 
 ## Rendering and license
 
-Uno Skia renders the actual controls and original vector icon geometry. GPU selection and fallback are the host's responsibility. Chromium CI explicitly uses **SwiftShader software WebGL**: these tests validate rendering and interaction, not hardware-GPU performance.
+Uno Skia renders the actual controls and independent vector geometry. GPU selection/fallback belongs to the host. CI uses **SwiftShader software WebGL**: it validates rendering and interaction, not hardware-GPU throughput or native desktop runtime behavior.
 
-Project source is MIT licensed. Uno Platform, Skia and other dependencies retain their own licenses. No Actipro source, assemblies, proprietary assets or branding are included.
-
-## Retained-host performance and interaction
-
-Host geometry is reused across activation and non-geometric metadata changes. Splitter buttons, auto-hide rails, popup resize grips and empty-workspace presenters retain their visual identity until removed from the layout. A tab click restores the selected content's last focused control, and detached queued projections cannot reclaim transferred content. Standalone tabs support elapsed-time-based drag edge scrolling with a `CanTabsAutoScroll` toggle. The [retained-host review](docs/retained-host-review.md) documents cache inputs, focus behavior, real-input regressions and remaining costs.
-
-## Metro visual fidelity
-
-The sample uses contextual document actions, a thin document-strip accent, dotted tool-caption grips and an accent status bar. Solution Explorer and Properties use compact native layouts. Tool-caption buttons retain their identities across activation and theme changes, and hover-only actions do not remeasure tab headers. The Appearance menu exposes these policies without changing the underlying workspace. See [Metro fidelity](docs/metro-fidelity.md) for public references, reusable APIs, defaults and pixel-test boundaries.
-
-## Standard MDI review
-
-Window icons and title context menus expose state and close commands. Minimized captions wrap in nonoverlapping bottom-up rows and restore without overwriting normal bounds. Host minimize/maximize buttons are configurable, window movement uses its own capability, and caption controls remain retained across activation. Read [the MDI review](docs/mdi-review.md) for API contracts, overflow limits and validation.
+Project source is MIT licensed; dependencies retain their own licenses. No Actipro source, assemblies, proprietary assets, branding or fonts are redistributed. Full compatibility is not claimed.

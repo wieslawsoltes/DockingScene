@@ -5,6 +5,7 @@ import { captureDiagnostics } from './diagnostics.mjs';
 import { readHitBounds } from './hit-targets.mjs';
 import { pngPixels } from './painted-tabs.mjs';
 import { runMetroChromeTests } from './metro-chrome.mjs';
+import { runMdiPresentationTests } from './mdi-presentation.mjs';
 import { runMdiReviewTests } from './mdi-review.mjs';
 
 const output = `${process.env.BROWSER_RESULTS || 'artifacts/browser-results'}/host-review`;
@@ -150,6 +151,7 @@ try {
   });
   await runMetroChromeTests({ page, state, test, reset, click, wait, bounds, settle, menu, output });
   await runMdiReviewTests({ page, state, test, reset, click, wait, bounds, settle, menu, output });
+  await runMdiPresentationTests({ page, state, test, reset, click, wait, bounds, settle, menu, output });
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {

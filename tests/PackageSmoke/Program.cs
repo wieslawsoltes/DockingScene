@@ -27,5 +27,10 @@ if (TabEdgeScroll.NextOffset(200, 200, 1000, 300, .1) <= 300) throw new Exceptio
 var minimized = MinimizedWindowLayout.Arrange(new[] { "document", "bulk0" }, new(0, 0, 170, 100));
 if (minimized.Windows["bulk0"].Y >= minimized.Windows["document"].Y) throw new Exception("Minimized captions did not wrap.");
 manager.MoveMdiWindow("bulk0", 40, 60).ThrowIfFailed();
+var minimizedCache = new MinimizedWindowLayoutCache();
+var captions = minimizedCache.Arrange(["a", "b"], new(0, 0, 170, 100));
+if (!ReferenceEquals(captions, minimizedCache.Arrange(["a", "b"], new(0, 0, 170, 100)))) throw new Exception("Minimized cache not retained.");
+manager.Activate("bulk0").ThrowIfFailed();
+if (MdiPrimaryState.Create(manager.Layout, ["bulk0", "bulk1"]).Window?.Id != "bulk0") throw new Exception("Primary state lookup failed.");
 Console.WriteLine("PASS: UI-independent package-only consumer: core/layout/serialization/MVVM/themes executed.");
 

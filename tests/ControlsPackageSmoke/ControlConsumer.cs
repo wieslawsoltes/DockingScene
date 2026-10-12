@@ -6,12 +6,22 @@ namespace DockingScene.PackageValidation;
 
 public static class ControlConsumer
 {
-    public static StandardMdiHost MdiHost() => new() { CanWindowsMinimize = true, CanWindowsMaximize = false };
+    public static StandardMdiHost MdiHost()
+    {
+        var host = new StandardMdiHost { CanWindowsMinimize = true, CanWindowsMaximize = false, AreMaximizedWindowFramesVisible = false };
+        _ = host.PrimaryWindow; _ = host.IsExternalMaximizedUIRequired;
+        _ = host.RestorePrimaryWindowCommand.CanExecute(null);
+        _ = host.MinimizePrimaryWindowCommand.CanExecute(null);
+        _ = host.MaximizePrimaryWindowCommand.CanExecute(null);
+        _ = host.ClosePrimaryWindowCommand.CanExecute(null);
+        return host;
+    }
     public static bool Focus(AdvancedTabControl tabs) => tabs.FocusSelectedContent();
     public static DockSite Create(DockManager manager) => new()
     {
         Manager = manager,
         DisposeContentOnUnregister = false,
+        AreStandardMdiMaximizedWindowFramesVisible = false,
         CanStandardMdiWindowsMinimize = true,
         CanStandardMdiWindowsMaximize = true,
         AreDocumentTabEmbeddedButtonsAlwaysVisible = false,
