@@ -15,9 +15,9 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Serialization` | Versioned bounded JSON, unknown-window policies, atomic file layout storage | None |
 | `DockingScene.Mvvm` | Observable window projections, commands, stable identities and atomic collection synchronization | None |
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
-| `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardSwitcher` and containers | Uno Platform |
+| `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.7`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.8`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -128,3 +128,7 @@ The sample uses contextual document actions, a thin document-strip accent, dotte
 ## Standard MDI review
 
 Window icons and title context menus expose state and close commands. Minimized captions wrap in nonoverlapping bottom-up rows and restore without overwriting normal bounds. Host minimize/maximize buttons are configurable, window movement uses its own capability, and caption controls remain retained across activation. Read [the MDI review](docs/mdi-review.md) for API contracts, overflow limits and validation.
+
+## Frame-free maximized MDI
+
+`StandardMdiHost.AreMaximizedWindowFramesVisible` can remove a maximized document's caption and border while retaining its editor and restore bounds. `StandardMdiControlBar` provides a reusable external title, icon and primary-window commands. The sample's Window menu exposes frame visibility, and its external commands remain scoped to MDI documents when a tool has focus. Minimized caption plans are cached across activation changes. See [maximized MDI](docs/maximized-mdi.md) for integration, performance boundaries and the current validation scope; this supersedes the alpha.7 limitation on maximized-frame hiding.

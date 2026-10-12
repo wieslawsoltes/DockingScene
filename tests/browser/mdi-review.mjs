@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { pngPixels } from './painted-tabs.mjs';
+import { runMdiFrameTests } from './mdi-frames.mjs';
 
 export async function runMdiReviewTests({page, state, test, reset, click, wait, bounds, settle, menu, output}) {
   const win = async id => (await state()).windows.find(w => w.id === id);
@@ -96,4 +97,5 @@ export async function runMdiReviewTests({page, state, test, reset, click, wait, 
     await reset(); await settle(); assert.equal((await state()).mdiModeSelection, 'Tabbed MDI');
     await page.screenshot({path: `${output}/mdi-review-final.png`});
   });
+  await runMdiFrameTests({page, state, test, reset, click, wait, bounds, settle, menu, output});
 }
