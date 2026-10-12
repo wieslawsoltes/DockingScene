@@ -7,3 +7,9 @@ DockComboBox now gives the detached popup a short-lived preview-key route to the
 The original immediate-key assertion and the twelve-cycle regression remain required; final workflow results determine whether the correction is sufficient. ForwardedKeyCount is a read-only performed-work counter, not key/text capture.
 
 Primary implementation reference: Uno ComboBox's OnKeyDownPrivate, PopupKeyDown and TryMoveKeyboardFocus in src/Uno.UI/UI/Xaml/Controls/ComboBox at upstream revision 951b7b464b8372daa95dae6eeedf9ac6c8109b90. This integration is not an assertion of complete native accessibility or every platform's selector conformance.
+
+## Root routing follow-up
+
+At aa9a7e, all twelve selector stress cycles passed, but the later original inspector case still failed with a focused ComboBoxItem and zero forwarded keys. The popup-local route was not reached. The opening scope now also attaches to the owning XamlRoot, verifies that the focused item belongs to this selector, and forwards each original event at most once across both routes and the normal control path. Close/unload/template changes remove both subscriptions. It cannot take keys from another selector or pane. No custom selection algorithm or fabricated key is used.
+
+The same run passed 45/47 host cases. The keyboard-reset test predicate threw while its next diagnostic snapshot had not yet published the editor, although the failure capture showed the exact expected text `keyboard\nreleased`. Its existing wait now null-checks the not-yet-published editor before comparing the exact same text. The immediate typing sequence and timeout are unchanged.

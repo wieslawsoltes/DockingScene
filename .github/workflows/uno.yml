@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    name: Compile and package
     runs-on: ubuntu-latest
     timeout-minutes: 35
     outputs:
@@ -20,6 +21,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Validate every model specification before distribution
         shell: bash
         run: |
@@ -145,9 +149,24 @@ jobs:
           path: |
             artifacts/browser-results
             artifacts/server.log
+  validated:
+    # Preserve the original required check name: it certifies ALL browser jobs,
+    # not merely compilation, after moving the suites onto independent runners.
+    name: build
+    if: always()
+    needs: [build, browser-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require successful build and every browser suite
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          BROWSER_RESULT: ${{ needs.browser-tests.result }}
+        run: |
+          test "$BUILD_RESULT" = success
+          test "$BROWSER_RESULT" = success
   deploy:
     if: github.ref == 'refs/heads/main'
-    needs: [build, browser-tests]
+    needs: [build, browser-tests, validated]
     runs-on: ubuntu-latest
     permissions:
       pages: write

@@ -61,7 +61,7 @@ export async function runWindowKeyboardTests({page,state,test,reset,click,wait,b
     await command('code','move'); await page.keyboard.press('ArrowLeft');
     await reset(); await click('tab:code'); await page.keyboard.press('Control+a');
     await page.keyboard.type('keyboard');await page.keyboard.press('Enter');await page.keyboard.type('released');
-    await wait(() => globalThis.dockingScene.editors.code.text.replace(/\r\n?|\n/g,'\n')==='keyboard\nreleased');
+    await wait(() => globalThis.dockingScene.editors.code?.text.replace(/\r\n?|\n/g,'\n')==='keyboard\nreleased');
     assert.deepEqual((await state()).mdiFrames,{});
   });
   await test('Floating frames also commit keyboard movement without resizing their documents', async () => {

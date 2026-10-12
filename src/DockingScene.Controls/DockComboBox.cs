@@ -2,18 +2,20 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 
 namespace DockingScene.Controls;
 
-/// <summary>Native Uno ComboBox with popup-local keyboard routing. Native selection,
-/// cancel, type search, scrolling and templates remain owned by ComboBox. The
-/// detached popup forwards the original event, never a synthesized key.</summary>
+/// <summary>Native Uno ComboBox with opening-scoped keyboard routing. Popup and
+/// root routes forward the original event at most once. Native selection, Escape,
+/// type search, scrolling and item templates remain owned by ComboBox.</summary>
 public class DockComboBox : ComboBox
 {
     private Popup? _popup;
     private FrameworkElement? _inputScope;
-    private readonly KeyEventHandler _popupKeyDown;
-    private readonly KeyEventHandler _popupKeyUp;
+    private UIElement? _inputRoot;
+    private readonly KeyEventHandler _popupKeyDown, _popupKeyUp;
+    private KeyRoutedEventArgs? _lastDown, _lastUp;
     private bool _completingFocus, _forwarding;
     public long ForwardedKeyCount { get; private set; }
 
@@ -21,15 +23,15 @@ public class DockComboBox : ComboBox
     {
         _popupKeyDown = (_, e) =>
         {
-            if (!CanForward(e)) return;
-            _forwarding = true;
+            if (ReferenceEquals(e, _lastDown) || !CanForward(e)) return;
+            _lastDown = e; _forwarding = true;
             try { ForwardedKeyCount++; base.OnKeyDown(e); }
             finally { _forwarding = false; }
         };
         _popupKeyUp = (_, e) =>
         {
-            if (!CanForward(e)) return;
-            _forwarding = true;
+            if (ReferenceEquals(e, _lastUp) || !CanForward(e)) return;
+            _lastUp = e; _forwarding = true;
             try { base.OnKeyUp(e); }
             finally { _forwarding = false; }
         };
@@ -49,26 +51,55 @@ public class DockComboBox : ComboBox
         base.OnPointerReleased(e);
         if (IsDropDownOpen) { AttachPopupInput(); CompletePopupFocus(); }
     }
-    private bool CanForward(KeyRoutedEventArgs e) => !_forwarding && !e.Handled && !IsEditable &&
-        IsEnabled && IsLoaded && IsDropDownOpen && _inputScope is { IsLoaded: true } &&
-        _inputScope.XamlRoot == XamlRoot;
+    protected override void OnKeyDown(KeyRoutedEventArgs e)
+    { if (!ReferenceEquals(e, _lastDown)) base.OnKeyDown(e); }
+    protected override void OnKeyUp(KeyRoutedEventArgs e)
+    { if (!ReferenceEquals(e, _lastUp)) base.OnKeyUp(e); }
 
+    private bool CanForward(KeyRoutedEventArgs e)
+    {
+        if (_forwarding || e.Handled || IsEditable || !IsEnabled || !IsLoaded || !IsDropDownOpen ||
+            XamlRoot is not { } root || _inputRoot != root.Content) return false;
+        // A popup is a separate visual root on some Uno targets. The actual
+        // focused item still identifies its selector even when its key route
+        // bypasses the popup child. Never take a key from another selector/pane.
+        var focused = FocusManager.GetFocusedElement(root) as DependencyObject;
+        for (var node = focused; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (ReferenceEquals(node, this) || ReferenceEquals(node, _inputScope)) return true;
+            if (node is ComboBoxItem item && ReferenceEquals(ItemsControl.ItemsControlFromItemContainer(item), this)) return true;
+        }
+        return false;
+    }
     private void AttachPopupInput()
     {
-        if (IsEditable || _popup?.Child is not FrameworkElement child || ReferenceEquals(child, _inputScope)) return;
-        DetachPopupInput(); _inputScope = child;
-        // Popup content is outside the selector's ordinary visual ancestry. Route
-        // once at its input boundary before container/default navigation. A key
-        // handled here cannot be handled a second time by the native bubble path.
-        child.AddHandler(PreviewKeyDownEvent, _popupKeyDown, false);
-        child.AddHandler(PreviewKeyUpEvent, _popupKeyUp, false);
+        if (IsEditable || XamlRoot?.Content is not { } root) return;
+        var child = _popup?.Child as FrameworkElement;
+        if (ReferenceEquals(root, _inputRoot) && ReferenceEquals(child, _inputScope)) return;
+        DetachPopupInput(); _inputRoot = root; _inputScope = child;
+        root.AddHandler(PreviewKeyDownEvent, _popupKeyDown, false);
+        root.AddHandler(PreviewKeyUpEvent, _popupKeyUp, false);
+        if (child is not null && !ReferenceEquals(child, root))
+        {
+            child.AddHandler(PreviewKeyDownEvent, _popupKeyDown, false);
+            child.AddHandler(PreviewKeyUpEvent, _popupKeyUp, false);
+        }
     }
     private void DetachPopupInput()
     {
-        if (_inputScope is not { } scope) return;
-        _inputScope = null;
-        scope.RemoveHandler(PreviewKeyDownEvent, _popupKeyDown);
-        scope.RemoveHandler(PreviewKeyUpEvent, _popupKeyUp);
+        if (_inputRoot is { } root)
+        {
+            root.RemoveHandler(PreviewKeyDownEvent, _popupKeyDown);
+            root.RemoveHandler(PreviewKeyUpEvent, _popupKeyUp);
+        }
+        if (_inputScope is { } scope && !ReferenceEquals(scope, _inputRoot))
+        {
+            scope.RemoveHandler(PreviewKeyDownEvent, _popupKeyDown);
+            scope.RemoveHandler(PreviewKeyUpEvent, _popupKeyUp);
+        }
+        _inputRoot = null; _inputScope = null;
+        // Keep the last event identities until the current route ends. A native
+        // Enter handler can close this popup inside the forwarding call itself.
     }
     private void CompletePopupFocus()
     {

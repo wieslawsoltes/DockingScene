@@ -31,14 +31,16 @@ export async function runMdiReviewTests({page, state, test, reset, click, wait, 
     assert.equal((await state()).editors.code.instance, instance);
   });
   await test('Minimized MDI caption restores without destroying normal bounds', async () => {
-    const before = await win('code'), instance = (await state()).editors.code.instance;
-    await click('window:code:minimize'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').mdiState === 'Minimized');
-    await bounds('window:code:restore');
-    assert.deepEqual((await win('code')).mdiBounds, before.mdiBounds);
-    assert.equal((await state()).bounds['window:code:minimize'], undefined);
-    await click('window:code:restore'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').mdiState === 'Normal');
-    assert.equal((await state()).editors.code.instance, instance);
-    assert.deepEqual((await win('code')).mdiBounds, before.mdiBounds);
+    for (let cycle = 0; cycle < 8; cycle++) {
+      const before = await win('code'), instance = (await state()).editors.code.instance;
+      await click('window:code:minimize'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').mdiState === 'Minimized');
+      await bounds('window:code:restore');
+      assert.deepEqual((await win('code')).mdiBounds, before.mdiBounds);
+      assert.equal((await state()).bounds['window:code:minimize'], undefined);
+      await click('window:code:restore'); await wait(() => globalThis.dockingScene.windows.find(w => w.id === 'code').mdiState === 'Normal');
+      assert.equal((await state()).editors.code.instance, instance);
+      assert.deepEqual((await win('code')).mdiBounds, before.mdiBounds);
+    }
   });
   await test('MDI presentation policies disable buttons and double-click but allow explicit model commands', async () => {
     await options('toggle-maximize'); await options('toggle-minimize'); await activate('code');
