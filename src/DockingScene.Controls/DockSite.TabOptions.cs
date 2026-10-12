@@ -30,6 +30,7 @@ public partial class DockSite
     }
     private void ApplyTabOptions()
     {
+        ApplyMdiMagnetismOptions();
         foreach (var (groupId, tabs) in TabControls)
         {
             if (!_tabAdapters.TryGetValue(tabs, out _))

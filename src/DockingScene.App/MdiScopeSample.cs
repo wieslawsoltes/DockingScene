@@ -9,7 +9,7 @@ namespace DockingScene.App;
 
 /// <summary>A real standalone two-host consumer sharing one manager. Commands are
 /// scoped to the corresponding host; diagnostics never issue model operations.</summary>
-public sealed class MdiScopeSample : UserControl
+public sealed partial class MdiScopeSample : UserControl
 {
     private readonly DockManager _manager = new();
     private readonly StandardMdiHost _left = new(), _right = new();
@@ -27,6 +27,7 @@ public sealed class MdiScopeSample : UserControl
         var toolbar = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new(4) };
         grid.Children.Add(toolbar); Grid.SetColumnSpan(toolbar, 2);
         grid.Children.Add(_left); grid.Children.Add(_right); Grid.SetRow(_left, 1); Grid.SetRow(_right, 1); Grid.SetColumn(_right, 1);
+        ConfigureMagnetismSample(grid);
         void Button(string text, string id, Action action) => toolbar.Children.Add(DockChrome.Button(text, "scope:" + id, DockTheme.MetroLight, action));
         Button("Cascade left", "left", () => _lastResult = _left.Cascade());
         Button("Tile right", "right", () => _lastResult = _right.TileHorizontally());
@@ -51,8 +52,7 @@ public sealed class MdiScopeSample : UserControl
         _manager.RegisterMany(new[] { "a", "b", "c", "d" }.Select(id => new DockWindow(id, "Document " + id, WindowKind.Document)
             { MdiBounds = new(id is "a" or "c" ? 8 : 35, id is "a" or "c" ? 8 : 40, 190, 130) })).ThrowIfFailed();
         _manager.SetMdiMode(MdiMode.Standard).ThrowIfFailed();
-        foreach (string id in new[] { "a", "b", "c", "d" })
-            _content[id] = new() { Id = id, Header = id, Content = new TextBox { AcceptsReturn = true, Text = "Independent editor " + id } };
+        foreach (string id in new[] { "a", "b", "c", "d" }) _content[id] = CreateSampleDocument(id, "Independent editor " + id);
         _manager.Changed += (_, _) => Project();
         Loaded += (_, _) => Project();
         Unloaded += (_, _) => { _left.ReleaseContent(); _right.ReleaseContent(); };
@@ -65,6 +65,7 @@ public sealed class MdiScopeSample : UserControl
     public void WriteDiagnostics(Utf8JsonWriter writer)
     {
         writer.WriteStartObject("scopedMdi"); writer.WriteNumber("revision", _manager.Layout.Revision);
+        WriteMagnetismDiagnostics(writer);
         writer.WriteNumber("obsoleteContextLoads", _templates.ProbeLoadedCount);
         writer.WriteString("contextProbe", _probe.PresentedContent as string);
         writer.WriteBoolean("releasedDocumentDetached", _releasedDocument is not null &&
