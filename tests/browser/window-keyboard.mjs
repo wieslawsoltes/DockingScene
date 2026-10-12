@@ -6,8 +6,8 @@ export async function runWindowKeyboardTests({page,state,test,reset,click,wait,b
   const activate = id => menu('menubar:Activate','activate:'+id);
   await test('System Move previews arrows and commits exactly once on Enter release', async () => {
     await reset(); await menu('menubar:Window','appmenu:Standard MDI');
-    // Presentation options intentionally outlive a layout reset. This suite
-    // exercises framed commands, independently of the frame-free suite before it.
+    // Presentation settings intentionally survive layout resets; this suite
+    // exercises visible captions independently of preceding frame-free tests.
     await menu('menubar:Window','mdi-option:show-frames'); await activate('code');
     const before = await state(), rect = (await model('code')).mdiBounds;
     await command('code','move'); await wait(() => globalThis.dockingScene.mdiFrames.code.keyboardMoving);
@@ -32,6 +32,7 @@ export async function runWindowKeyboardTests({page,state,test,reset,click,wait,b
   });
   await test('System Size selects anchored edges and commits their final geometry', async () => {
     const before = await state(), rect = (await model('code')).mdiBounds;
+    // First shrink to create room below maximum constraints in the sample.
     await command('code','size');
     for(const key of ['ArrowLeft','ArrowRight','ArrowRight','ArrowUp','ArrowDown']) await page.keyboard.press(key);
     await wait(r => globalThis.dockingScene.mdiFrames.code.width === r.width-16 && globalThis.dockingScene.mdiFrames.code.height === r.height-8,rect);
@@ -51,6 +52,13 @@ export async function runWindowKeyboardTests({page,state,test,reset,click,wait,b
   });
   await test('Maximized frames reject Move and Size system actions', async () => {
     await activate('code'); await click('window:code:maximize'); await wait(() => globalThis.dockingScene.windows.find(w=>w.id==='code').mdiState==='Maximized');
+    for (let iteration = 0; iteration < 6; iteration++) {
+      await click('window:code:system'); await bounds('window-menu:code:restore');
+      await page.keyboard.press('Escape');
+      // Immediately reopen: previous native flyout cleanup must not close the replacement.
+      await click('window:code:system'); await bounds('window-menu:code:restore');
+      await page.keyboard.press('Escape');
+    }
     for(const name of ['move','size']) {
       await click('window:code:system'); await settle(); await click('window-menu:code:'+name); await settle();
       assert.equal((await state()).mdiFrames.code.keyboardMoving,false);await page.keyboard.press('Escape');

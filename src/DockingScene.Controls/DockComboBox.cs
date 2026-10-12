@@ -66,6 +66,21 @@ public partial class DockComboBox : ComboBox
         _popup = GetTemplateChild("Popup") as Popup;
         if (IsDropDownOpen) AttachPopupInput();
     }
+    protected override void PrepareContainerForItemOverride(DependencyObject element, object item)
+    {
+        base.PrepareContainerForItemOverride(element, item);
+        if (element is FrameworkElement container)
+        {
+            container.Loaded -= OnOpeningLayoutUpdated;
+            container.Loaded += OnOpeningLayoutUpdated;
+            QueueOpeningDrain();
+        }
+    }
+    protected override void ClearContainerForItemOverride(DependencyObject element, object item)
+    {
+        if (element is FrameworkElement container) container.Loaded -= OnOpeningLayoutUpdated;
+        base.ClearContainerForItemOverride(element, item);
+    }
     protected override void OnPointerReleased(PointerRoutedEventArgs e)
     {
         base.OnPointerReleased(e);
@@ -99,6 +114,8 @@ public partial class DockComboBox : ComboBox
         root.AddHandler(PreviewKeyUpEvent, _popupKeyUp, false);
         if (child is not null && !ReferenceEquals(child, root))
         {
+            child.LayoutUpdated += OnOpeningLayoutUpdated;
+            child.Loaded += OnOpeningLayoutUpdated;
             child.AddHandler(PreviewKeyDownEvent, _popupKeyDown, false);
             child.AddHandler(PreviewKeyUpEvent, _popupKeyUp, false);
         }
@@ -114,6 +131,8 @@ public partial class DockComboBox : ComboBox
         }
         if (_inputScope is { } scope && !ReferenceEquals(scope, _inputRoot))
         {
+            scope.LayoutUpdated -= OnOpeningLayoutUpdated;
+            scope.Loaded -= OnOpeningLayoutUpdated;
             scope.RemoveHandler(PreviewKeyDownEvent, _popupKeyDown);
             scope.RemoveHandler(PreviewKeyUpEvent, _popupKeyUp);
         }

@@ -13,6 +13,7 @@ public partial class WindowControl
     private readonly Dictionary<string, Button> _captionButtons = new(StringComparer.Ordinal);
     private Button? _systemButton;
     private MenuFlyout? _systemMenu;
+    private FrameworkElement? _pendingSystemMenuAnchor;
     private long _systemMenuGeneration;
     private DockTheme _theme = DockTheme.MetroLight;
     private UIElement? _movementInputRoot;
@@ -44,7 +45,10 @@ public partial class WindowControl
     public void DismissSystemMenu()
     {
         _systemMenuGeneration++;
-        var menu = _systemMenu; _systemMenu = null; menu?.Hide();
+        _pendingSystemMenuAnchor = null;
+        // Keep the closing instance until Closed. Uno completes native flyout
+        // cleanup asynchronously and can otherwise close a newly opened menu.
+        _systemMenu?.Hide();
     }
     public void ShowSystemMenu() => ShowSystemMenu(_systemButton);
     /// <summary>Open state/close commands at a caption or an external command bar.
@@ -52,14 +56,36 @@ public partial class WindowControl
     public void ShowSystemMenu(FrameworkElement? anchor)
     {
         if (!HasSystemMenu || anchor is null || !anchor.IsLoaded || !IsLoaded || anchor.XamlRoot != XamlRoot) return;
-        DismissSystemMenu();
-        long generation = _systemMenuGeneration;
+        long generation = ++_systemMenuGeneration;
+        if (_systemMenu is { } previous)
+        {
+            _pendingSystemMenuAnchor = anchor;
+            previous.Hide();
+            return;
+        }
+        OpenSystemMenu(anchor, generation);
+    }
+    private void OpenSystemMenu(FrameworkElement anchor, long generation)
+    {
+        if (generation != _systemMenuGeneration || !HasSystemMenu || !IsLoaded ||
+            !anchor.IsLoaded || anchor.XamlRoot != XamlRoot) return;
         string idAtOpen = WindowId;
         var root = XamlRoot;
         Activated?.Invoke();
         if (generation != _systemMenuGeneration || !IsLoaded || !anchor.IsLoaded || XamlRoot != root) return;
         var menu = new MenuFlyout(); _systemMenu = menu;
-        menu.Closed += (_, _) => { if (ReferenceEquals(_systemMenu, menu)) _systemMenu = null; };
+        menu.Closed += (_, _) =>
+        {
+            if (!ReferenceEquals(_systemMenu, menu)) return;
+            _systemMenu = null;
+            var next = _pendingSystemMenuAnchor;
+            long request = _systemMenuGeneration;
+            _pendingSystemMenuAnchor = null;
+            if (next is not null)
+                // Run after the native Closed handler finishes its open-flyout
+                // cleanup; opening inside Closed would be immediately dismissed.
+                DispatcherQueue.TryEnqueue(() => OpenSystemMenu(next, request));
+        };
         void Item(string text, string id, bool enabled, Action action)
         {
             var item = DockChrome.Identify(new MenuFlyoutItem { Text = text, IsEnabled = enabled, FontSize = _theme.FontSize, MinHeight = 26 }, "window-menu:" + WindowId + ":" + id);

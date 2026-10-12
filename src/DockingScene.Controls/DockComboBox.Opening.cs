@@ -10,7 +10,7 @@ public partial class DockComboBox
     // Retain original non-text events until the native popup creates containers.
     // No synthetic input, selection algorithm, timer or repeated dispatch.
     private readonly Queue<(KeyRoutedEventArgs Event, bool Down)> _openingKeys = new();
-    private bool _drainingOpeningKeys;
+    private bool _drainingOpeningKeys, _openingDrainQueued;
     private long _openingGeneration;
     public int PendingOpeningKeyCount => _openingKeys.Count;
     public long DeferredOpeningKeyCount { get; private set; }
@@ -44,9 +44,23 @@ public partial class DockComboBox
             _navigationTrace.Enqueue($"deferred key={e.Key} down={down} pending={_openingKeys.Count}");
             while (_navigationTrace.Count > 24) _navigationTrace.Dequeue();
         }
+        QueueOpeningDrain();
         return true;
     }
-    private void OnOpeningLayoutUpdated(object? sender, object e)
+    private void OnOpeningLayoutUpdated(object? sender, object e) => QueueOpeningDrain();
+    private void QueueOpeningDrain()
+    {
+        if (_openingDrainQueued || _drainingOpeningKeys || _openingKeys.Count == 0) return;
+        long generation = _openingGeneration;
+        _openingDrainQueued = true;
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            if (generation != _openingGeneration) return;
+            _openingDrainQueued = false;
+            DrainOpeningKeys();
+        })) _openingDrainQueued = false;
+    }
+    private void DrainOpeningKeys()
     {
         if (_drainingOpeningKeys || _forwarding || _openingKeys.Count == 0 || !HasOpeningContainer()) return;
         if (!IsEnabled || IsEditable || !IsLoaded || !IsDropDownOpen || XamlRoot is not { } root ||
@@ -85,5 +99,5 @@ public partial class DockComboBox
         }
         finally { _forwarding = _drainingOpeningKeys = false; }
     }
-    private void DiscardOpeningKeys() { _openingGeneration++; _openingKeys.Clear(); }
+    private void DiscardOpeningKeys() { _openingGeneration++; _openingKeys.Clear(); _openingDrainQueued = false; }
 }
