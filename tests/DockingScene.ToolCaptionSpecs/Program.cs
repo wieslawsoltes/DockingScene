@@ -87,4 +87,12 @@ Test("Caption selection reads changed metadata without modifying its cached tree
     Check(FloatingHostCaption.GetTitle(m.Layout,host,"App")=="Renamed.cs - App");
     Check(ReferenceEquals(root,m.Layout.FloatingHosts.First(h=>h.Id==host).Root));
 });
+Test("Warm primary-window resolution allocates no managed memory",()=>{
+    var m=Create();string host=Host(m,"a");m.Activate("a").ThrowIfFailed();
+    DockWindow? result=null;for(int i=0;i<200;i++)result=FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
+    long bytes=GC.GetAllocatedBytesForCurrentThread();
+    for(int i=0;i<10000;i++)result=FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
+    bytes=GC.GetAllocatedBytesForCurrentThread()-bytes;Check(bytes==0 && result?.Id=="a");
+    Console.WriteLine($"ALLOCATION primary captions: 10000 warm resolutions, {bytes} bytes; membership/index construction excluded");
+});
 Console.WriteLine($"{passed}/{passed+failed} tool caption specifications passed.");return failed==0?0:1;

@@ -110,16 +110,21 @@ public partial class DockContainer
         Grid.SetColumn(_caption, near ? 1 : 0);
         Grid.SetColumn(_grip, near ? 2 : 1);
         Grid.SetColumn(_buttons, 3);
+        // Built-in slots have fixed widths; count only visible actions. Using the
+        // previous ActualWidth here can reserve hidden slots until another measure.
+        double actionWidth = 0;
+        foreach (var action in _buttons.Children)
+            if (action is FrameworkElement { Visibility: Visibility.Visible } button) actionWidth += button.Width;
         double contextWidth = 0;
         if (_contextView is { } context)
         {
             Grid.SetColumn(context, near ? 0 : 2);
-            double available = Math.Max(0, _title.ActualWidth - _buttons.ActualWidth - 66);
+            double available = Math.Max(0, _title.ActualWidth - actionWidth - 66);
             double limit = Math.Min(available, Math.Max(0, _title.ActualWidth * .45));
             if (context.MaxWidth != limit) context.MaxWidth = limit;
             contextWidth = Math.Min(context.DesiredSize.Width, limit) + context.Margin.Left + context.Margin.Right;
         }
-        double captionWidth = Math.Max(0, _title.ActualWidth - Math.Max(69, _buttons.ActualWidth) - contextWidth - 16);
+        double captionWidth = Math.Max(0, _title.ActualWidth - actionWidth - contextWidth - 16);
         if (_caption.MaxWidth != captionWidth) _caption.MaxWidth = captionWidth;
     }
 }

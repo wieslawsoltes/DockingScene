@@ -1,3 +1,4 @@
+import { runToolCaptionTests } from './tool-captions.mjs';
 import { runMdiScrollingTests } from './mdi-scrolling.mjs';
 import { runMdiMagnetismTests } from './mdi-magnetism.mjs';
 import { runToolContextTests } from './tool-context.mjs';
@@ -164,6 +165,7 @@ try {
   await runToolContextTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await runMdiMagnetismTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await runMdiScrollingTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
+  await runToolCaptionTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {

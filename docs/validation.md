@@ -2,9 +2,9 @@
 
 ## Model and package gates
 
-Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **25 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
+Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **26 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
 
-`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.16` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
+`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.17` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
 
 ## Browser gates
 
@@ -14,9 +14,9 @@ Four independent Chromium runners consume the same exact-revision artifact. Thre
 | --- | ---: | --- |
 | Docking | 28 | Editing/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher and themes |
 | Standalone tabs | 32 | Three lanes, six overflow modes, header geometry, close/pin/menus, factories, content lifetime and 2,002-tab workloads |
-| Host, Metro and MDI | 93 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
+| Host, Metro and MDI | 101 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
 
-The source defines **153 product scenarios**, extending the preceding 145 with eight Standard MDI scrolling scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
+The source defines **161 product scenarios**, extending the preceding 153 with eight tool-caption scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
 
 The separate **100-cycle focus investigation** remains a required gate. It exercises native editor/body input through the packaged canvas boundary and is not counted as another 100 named product cases. Helper contracts cover trusted-pointer scoping, independent documents, idempotence, disposal and atomic clipped hit-target reads.
 
@@ -57,3 +57,7 @@ Earlier investigations and retained coverage are documented in [maximized MDI](m
 ## Scrollable Standard MDI
 
 Thirteen `MdiScrollSpecs` cover negative coordinates, interdependent scrollbars, viewport anchoring, minimally revealing frames, minimized overflow, invalid/bounded geometry, 1,000 seeded layouts and 10,000 allocation-checked geometry/reveal queries. Eight new native-input scenarios cover scrollbar arrows, world-coordinate preservation, off-screen activation, cache/control retention, scrolled movement/undo, interrupted-gesture cancellation, maximize/restore, themes/toggle lifetime and wheel access to minimized overflow. These extend the preceding 145 product cases to **153**, with **93 host** cases; all prior assertions and the separate 100-cycle focus gate remain.
+
+## Tool captions and floating titles
+
+Thirteen ToolCaptionSpecs cover complete-host maximize/restore, clicked-group docking, main-site focus isolation, group/host capability distinctions, auto-hide, stale/invalid input, veto/lock/undo, document/tool title selection, metadata and warm resolution allocation. Eight additional native-input cases check title double-clicks, hidden action geometry, unchanged caption/editor identities, alternative commands, auto-hide popup settings, primary document title/delimiter updates and retained action paint. They extend the 153-case baseline to 161, with 101 host cases. Definition counts are not pass claims; exact-head results establish execution. See [tool caption review](tool-caption-review.md).

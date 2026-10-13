@@ -11,8 +11,10 @@ public static class FloatingHostCaption
     public static DockWindow GetPrimaryWindow(DockLayout layout, string hostId)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        var host = layout.FloatingHosts.FirstOrDefault(h => h.Id == hostId)
-            ?? throw new ArgumentException("Unknown floating host.", nameof(hostId));
+        FloatingHost? host = null;
+        foreach (var candidate in layout.FloatingHosts)
+            if (candidate.Id == hostId) { host = candidate; break; }
+        if (host is null) throw new ArgumentException("Unknown floating host.", nameof(hostId));
         var ids = Members.GetValue(host.Root, static root => DockTree.WindowIds(root).ToArray());
         var index = DockLayoutIndex.For(layout);
         DockWindow? selected = null;

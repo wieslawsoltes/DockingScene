@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher`, `DockDragOverlay` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.16`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.17`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -166,3 +166,11 @@ Floating frame movement and resizing now reflow their retained editors, tab cont
 `StandardMdiHost.IsScrollingEnabled` defaults to false, retaining the constrained non-scrolling behavior. Enable it directly or use `DockSite.IsStandardMdiScrollingEnabled` to expose native horizontal/vertical scrollbars as child windows move outside the viewport, including negative coordinates. Activation reveals off-screen windows; `ScrollWindowIntoView` reveals without activation, and `ScrollTo` changes extent offsets without modifying layout history. Native editor content and its own scrolling remain independent.
 
 Window > Open scrollable MDI sample demonstrates positive/negative windows, native scrolling, maximized restoration, themes and minimized-row overflow. The renderer-independent `MdiScrollLayout` computes ranges and maps between persisted world coordinates and viewport positions. See [MDI scrolling](docs/mdi-scrolling.md) for behavior and validation boundaries.
+
+## Tool caption options and floating titles
+
+`DockSite.ToolWindowsHaveCloseButtons`, `ToolWindowsHaveOptionsButtons` and `ToolWindowsHaveToggleAutoHideButtons` default to `true`. Hiding an action reclaims its slot and removes its hit/focus target without recreating the retained button or changing model capabilities. Standalone containers accept `ToolCaptionOptions` in `Update`.
+
+Floating tool-container double-clicks now maximize/restore their entire floating host by default. `FloatingToolWindowContainerTitleBarDoubleClickMode = FloatingWindowTitleBarDoubleClickMode.Dock` instead docks the clicked tool group. The core `InvokeToolCaptionDoubleClick` method validates current ownership, capabilities and revisions and produces one undo step. Floating document captions combine their primary document with `FloatingWindowTitle` and `FloatingWindowTitleDelimiter`; unrelated tool activation does not replace the document title. `GetFloatingDockHostTitle` resolves the current title.
+
+Window > Open tool caption sample demonstrates native title gestures, action visibility, split hosts and application captions. See [tool caption review](docs/tool-caption-review.md) for reference behavior, retained-control tests and remaining limitations.
