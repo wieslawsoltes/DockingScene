@@ -30,7 +30,7 @@ public partial class DockSite
             if (plan.Magnetism.NeighborCount > 0) frame.SetPointerMagnetism(plan.Magnetism);
         };
         frame.VisualBoundsChanged += () => { if (Current()) UpdateFloatingLayout(frame); };
-        frame.MovementEnded += () => EndFloatingLayout(frame, hostId);
+        frame.MovementEnded += version => EndFloatingLayout(frame, hostId, version);
         frame.BoundsChanged += bounds =>
         {
             if (!Current() || !_floatingGestureRevisions.Remove(hostId, out long revision)) return;

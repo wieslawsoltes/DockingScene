@@ -20,6 +20,9 @@ public sealed class FloatingDragSample : UserControl
     private long _generation;
     private readonly Dictionary<string, TextBox> _editors = new(StringComparer.Ordinal);
     private string? _lastError;
+    private WindowControl? _chainedFrame;
+    private Action<DockRect>? _chainedCompletion;
+    private int _chainedMoves;
     public FloatingDragSample()
     {
         RequestedTheme = ElementTheme.Light;
@@ -38,7 +41,8 @@ public sealed class FloatingDragSample : UserControl
         Button("Live layout","layout",()=>_site.IsLiveFloatingWindowLayoutEnabled=!_site.IsLiveFloatingWindowLayoutEnabled);
         Button("Light / dark","theme",()=>SetTheme(_site.Theme==DockTheme.MetroLight?DockTheme.MetroDark:DockTheme.MetroLight));
         KeyDown += (_,e) => {
-            if(e.Key==VirtualKey.F2) { SetTheme(_site.Theme==DockTheme.MetroLight?DockTheme.MetroDark:DockTheme.MetroLight); e.Handled=true; }
+            if(e.Key==VirtualKey.F3) { ArmChainedKeyboardMove(); e.Handled=true; }
+            else if(e.Key==VirtualKey.F2) { SetTheme(_site.Theme==DockTheme.MetroLight?DockTheme.MetroDark:DockTheme.MetroLight); e.Handled=true; }
             else if(e.Key==VirtualKey.F9) { _site.MagnetismSnapDistance=_site.MagnetismSnapDistance==0?5:0; e.Handled=true; } };
         _site.ContentFactory = model =>
         {
@@ -49,9 +53,28 @@ public sealed class FloatingDragSample : UserControl
             _editors[model.Id]=editor; return editor;
         };
         _site.OperationRejected += error=>_lastError=error;
+        Unloaded += (_,_) => ClearChainedKeyboardMove();
         Reset();
     }
     private void Check(DockResult result) { if(!result.Success) _lastError=result.Error; }
+    private void ClearChainedKeyboardMove()
+    {
+        if (_chainedFrame is { } frame && _chainedCompletion is { } handler)
+            frame.BoundsChanged -= handler;
+        _chainedFrame = null; _chainedCompletion = null;
+    }
+    private void ArmChainedKeyboardMove()
+    {
+        ClearChainedKeyboardMove();
+        if (!_site.FloatingWindows.TryGetValue(_sourceId, out var frame)) return;
+        _chainedFrame = frame;
+        _chainedCompletion = _ =>
+        {
+            ClearChainedKeyboardMove();
+            if (frame.BeginKeyboardMove()) _chainedMoves++;
+        };
+        frame.BoundsChanged += _chainedCompletion;
+    }
     private void SetTheme(DockTheme theme)
     {
         _site.Theme=theme; RequestedTheme=theme==DockTheme.MetroDark?ElementTheme.Dark:ElementTheme.Light;
@@ -60,6 +83,7 @@ public sealed class FloatingDragSample : UserControl
     }
     private void Reset()
     {
+        ClearChainedKeyboardMove(); _chainedMoves=0;
         _lastError=null; _editors.Clear(); SetTheme(DockTheme.MetroLight); _site.IsLiveFloatingWindowLayoutEnabled=true;
         var m = new DockManager();
         m.RegisterMany(new[]{"float-a","float-b","float-c","float-d"}.Select(id=>new DockWindow(id,id,WindowKind.Document))).ThrowIfFailed();
@@ -80,6 +104,8 @@ public sealed class FloatingDragSample : UserControl
         writer.WriteString("sourceId",_sourceId); writer.WriteString("neighborId",_neighborId); writer.WriteString("error",_lastError);
         writer.WriteBoolean("interaction",_site.IsInteractionActive); writer.WriteBoolean("keyboardScope",_site.HasCapturedGestureKeyboardScope); writer.WriteNumber("snap",_site.MagnetismSnapDistance); writer.WriteNumber("gap",_site.MagnetismGapDistance);
         writer.WriteBoolean("liveLayout",_site.IsLiveFloatingWindowLayoutEnabled);
+        writer.WriteNumber("chainedMoves",_chainedMoves);
+        writer.WriteBoolean("chainArmed",_chainedFrame is not null);
         writer.WriteNumber("layoutPlans",_site.FloatingLayoutPlanBuildCount);
         writer.WriteNumber("layoutArranges",_site.FloatingLayoutArrangeCount);
         writer.WriteNumber("activeLayoutPlans",_site.ActiveFloatingLayoutPlanCount);

@@ -57,8 +57,11 @@ public partial class DockSite
         projection.Apply(frame.Bounds);
         FloatingLayoutArrangeCount++;
     }
-    private void EndFloatingLayout(WindowControl frame, string hostId)
+    private void EndFloatingLayout(WindowControl frame, string hostId, long completedVersion)
     {
+        // A BoundsChanged subscriber may start another keyboard gesture before
+        // the preceding completion's finally runs. Only release our own epoch.
+        if (frame.MovementVersion != completedVersion) return;
         _floatingLayouts.Remove(frame);
         _floatingGestureRevisions.Remove(hostId);
         QueueRender();

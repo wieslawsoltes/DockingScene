@@ -14,9 +14,9 @@ Four independent Chromium runners consume the same exact-revision artifact. Thre
 | --- | ---: | --- |
 | Docking | 28 | Editing/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher and themes |
 | Standalone tabs | 32 | Three lanes, six overflow modes, header geometry, close/pin/menus, factories, content lifetime and 2,002-tab workloads |
-| Host, Metro and MDI | 84 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
+| Host, Metro and MDI | 85 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
 
-The source defines **144 product scenarios**, extending the preceding 137 with seven live-floating-layout scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
+The source defines **145 product scenarios**, extending the preceding 137 with eight live-floating-layout scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
 
 The separate **100-cycle focus investigation** remains a required gate. It exercises native editor/body input through the packaged canvas boundary and is not counted as another 100 named product cases. Helper contracts cover trusted-pointer scoping, independent documents, idempotence, disposal and atomic clipped hit-target reads.
 
@@ -40,7 +40,7 @@ The overlay counters reject repeated visual construction; the magnetism allocati
 
 ## Live floating layout
 
-Twelve FloatingLayoutSpecs compare against full DockLayoutEngine, including 1,000 seeded resizes and fractional DPI, and require no managed allocation for 20,000 warm subtree arrangements. Seven additional real-input cases verify actual editor/group/splitter geometry before release, commit/undo, Escape rollback, raw reversal, keyboard Move/Size, frame-only opt-out, color refresh and invalidation. The full global layout is not rebuilt by provisional frame changes. See [live floating layout](floating-live-layout.md). Geometry counters exclude native text/measure work and diagnostics; they are not a hardware-GPU speed claim.
+Twelve FloatingLayoutSpecs compare against full DockLayoutEngine, including 1,000 seeded resizes and fractional DPI, and require no managed allocation for 20,000 warm subtree arrangements. Eight additional real-input cases verify actual editor/group/splitter geometry before release, commit/undo, Escape rollback, raw reversal, keyboard Move/Size, frame-only opt-out, color refresh, reentrant completion and invalidation. The full global layout is not rebuilt by provisional frame changes. See [live floating layout](floating-live-layout.md). Geometry counters exclude native text/measure work and diagnostics; they are not a hardware-GPU speed claim.
 
 ## Deployment and exact source
 

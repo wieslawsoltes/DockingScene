@@ -104,6 +104,30 @@ export async function runFloatingLayoutTests({page,state,test,reset,click,wait,b
     await menu('window:'+id+':system','window-menu:'+id+':size'); await page.keyboard.press('Enter'); await settle();
     assert.equal((await snapshot()).activeLayoutPlans,0); assert.equal((await snapshot()).revision,before.revision);
   });
+  await test('Reentrant completion preserves a newly started keyboard gesture and its live layout plan',async()=>{
+    const before=await prepare(),id=before.sourceId;
+    await page.keyboard.press('F3'); await settle(); assert.equal((await snapshot()).chainArmed,true);
+    await menu('window:'+id+':system','window-menu:'+id+':move');
+    await page.keyboard.press('ArrowRight'); await page.keyboard.press('Enter'); await settle();
+    const next=await snapshot();
+    assert.equal(next.chainedMoves,1); assert.equal(next.chainArmed,false);
+    assert.equal(next.revision,before.revision+1); assert.equal(next.activeLayoutPlans,1);
+    assert.equal(next.layoutPlans,before.layoutPlans+2);
+    assert.equal(next.hosts[id].moving,true);
+    await page.keyboard.press('ArrowRight'); await settle();
+    const provisional=await snapshot(); sourceFits(provisional);
+    near(provisional.hosts[id].frame.x,before.hosts[id].bounds.x+16,'Second movement remains live');
+    assert.equal(provisional.revision,next.revision);
+    await page.keyboard.press('Enter'); await settle();
+    const after=await snapshot(); sourceFits(after);
+    near(after.hosts[id].bounds.x,before.hosts[id].bounds.x+16,'Both movements commit');
+    assert.equal(after.revision,before.revision+2); assert.equal(after.activeLayoutPlans,0);
+    retained(before,after);
+    await click('float-review:undo'); await settle();
+    near((await snapshot()).hosts[id].bounds.x,before.hosts[id].bounds.x+8,'Undo second gesture only');
+    await click('float-review:undo'); await settle();
+    assert.deepEqual((await snapshot()).contents,before.contents);
+  });
   await test('Frame-only mode avoids live layout work but commits the same final editor geometry',async()=>{
     await prepare(); await click('float-review:layout'); await settle(); const before=await snapshot();
     assert.equal(before.liveLayout,false); const p=await begin(before);

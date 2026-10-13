@@ -42,7 +42,9 @@ public partial class WindowControl : UserControl
     public event Action<DockRect>? BoundsChanging;
     public event Action<DockRect>? BoundsChanged;
     internal event Action? VisualBoundsChanged;
-    internal event Action? MovementEnded;
+    internal event Action<long>? MovementEnded;
+    private long _movementVersion;
+    internal long MovementVersion => _movementVersion;
     public event Action? CloseRequested;
     public event Action? MaximizeRequested;
     public event Action? MinimizeRequested;
@@ -104,9 +106,10 @@ public partial class WindowControl : UserControl
         PointerReleased += (_, e) =>
         {
             if (!_moving || _keyboardSession is not null) return;
+            long completedVersion = _movementVersion;
             _moving = false; _pointerMagnetism = null; ReleaseMovementInput(); ReleasePointerCapture(e.Pointer);
             try { BoundsChanged?.Invoke(Bounds); }
-            finally { MovementEnded?.Invoke(); }
+            finally { MovementEnded?.Invoke(completedVersion); }
             e.Handled = true;
         };
         PointerCanceled += (_, _) => CancelMovement();
@@ -134,15 +137,16 @@ public partial class WindowControl : UserControl
         _coordinateRoot = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(this) as UIElement ?? this;
         _start = e.GetCurrentPoint(_coordinateRoot).Position; _original = Bounds; _resizeX = x; _resizeY = y;
         _moving = CapturePointer(e.Pointer);
-        if (_moving) { AcquireMovementInput(); MovementStarted?.Invoke(); }
+        if (_moving) { _movementVersion++; AcquireMovementInput(); MovementStarted?.Invoke(); }
     }
     public void CancelMovement()
     {
         _pointerMagnetism = null;
         if (!_moving) return;
+        long completedVersion = _movementVersion;
         _moving = false;
         try { ResetKeyboardInteraction(); ReleaseMovementInput(); SetBounds(_original); }
-        finally { ReleasePointerCaptures(); MovementEnded?.Invoke(); }
+        finally { ReleasePointerCaptures(); MovementEnded?.Invoke(completedVersion); }
     }
     public void SetBounds(DockRect bounds)
     {

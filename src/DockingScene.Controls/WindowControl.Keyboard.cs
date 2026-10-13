@@ -27,7 +27,7 @@ public partial class WindowControl
         DismissSystemMenu();
         _original = Bounds; _keyboardSession = new(Bounds, mode); _keyboardCommitPending = false;
         _keyboardWasTabStop = IsTabStop; IsTabStop = true;
-        _moving = true; AcquireMovementInput(); Focus(FocusState.Programmatic);
+        _moving = true; _movementVersion++; AcquireMovementInput(); Focus(FocusState.Programmatic);
         MovementStarted?.Invoke();
         return _moving && _keyboardSession is not null;
     }
@@ -54,9 +54,10 @@ public partial class WindowControl
         if (!AllowsKeyboard(session.Mode)) { CancelMovement(); return; }
         var final = session.Complete(true);
         bool changed = final != _original;
+        long completedVersion = _movementVersion;
         _moving = false; ResetKeyboardInteraction(); ReleaseMovementInput();
         try { if (changed) BoundsChanged?.Invoke(final); }
-        finally { MovementEnded?.Invoke(); }
+        finally { MovementEnded?.Invoke(completedVersion); }
     }
     private void ResetKeyboardInteraction()
     {
