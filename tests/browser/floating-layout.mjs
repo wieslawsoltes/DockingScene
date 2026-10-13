@@ -62,11 +62,18 @@ export async function runFloatingLayoutTests({page,state,test,reset,click,wait,b
   await test('Bottom resizing and raw reversal reflow split heights and Escape restores both layers',async()=>{
     const before=await prepare(),p=await begin(before,'bottom');
     try {
-      await move(p,0,60); const larger=await snapshot(); sourceFits(larger);
-      near(larger.hosts[before.sourceId].frame.height,280,'Live height');
+      // The 3:1 split initially clamps B to its 88-unit content/chrome minimum.
+      // A 60-unit frame growth belongs entirely to A; demand growth of both
+      // children only once the larger frame clears that constraint boundary.
+      await move(p,0,60); const clamped=await snapshot(); sourceFits(clamped);
+      near(clamped.hosts[before.sourceId].frame.height,280,'Clamped live height');
+      near(clamped.contents['float-a'].group.height,162,'First pane receives clamped growth');
+      near(clamped.contents['float-b'].group.height,88,'Second pane keeps its minimum');
+      await move(p,0,180); const larger=await snapshot(); sourceFits(larger);
+      near(larger.hosts[before.sourceId].frame.height,400,'Unclamped live height');
       assert(larger.contents['float-a'].group.height>before.contents['float-a'].group.height);
       assert(larger.contents['float-b'].group.height>before.contents['float-b'].group.height);
-      for(const dy of [30,70,20,60]) { await move(p,0,dy); sourceFits(await snapshot()); }
+      for(const dy of [30,70,20,60,180]) { await move(p,0,dy); sourceFits(await snapshot()); }
       assert.equal((await snapshot()).layoutPlans,before.layoutPlans+1);
       assert.equal((await snapshot()).revision,before.revision);
       await page.screenshot({path:`${output}/floating-live-split-heights.png`});

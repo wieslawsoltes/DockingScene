@@ -23,7 +23,7 @@ The control adapter captures existing container/splitter references once, then u
 
 ## Validation
 
-Twelve new model specifications include 1,000 seeded direct comparisons with `DockLayoutEngine`, fractional DPI, undersized/maximized/displayed geometry, concurrent use, bounded invalid input and a warm 20,000-arrangement allocation check. Eight additional real-input browser scenarios exercise live horizontal/vertical resizing, raw-pointer reversal, single-transaction commit/undo, Escape rollback, keyboard Move/Size, unchanged/reentrant completion, frame-only mode, color-only refresh and settings/viewport cancellation. They observe actual arranged editor/group/splitter bounds, stable identities, plan/full-layout counters, and painted pixels.
+Thirteen new model specifications include 1,000 seeded direct comparisons with `DockLayoutEngine`, fractional DPI, undersized/maximized/displayed geometry, concurrent use, bounded invalid input and a warm 20,000-arrangement allocation check. Eight additional real-input browser scenarios exercise live horizontal/vertical resizing, raw-pointer reversal, single-transaction commit/undo, Escape rollback, keyboard Move/Size, unchanged/reentrant completion, frame-only mode, color-only refresh and settings/viewport cancellation. They observe actual arranged editor/group/splitter bounds, stable identities, plan/full-layout counters, and painted pixels.
 
 All earlier scenarios and the separate 100-cycle focus gate remain required. Source test counts are definitions until that exact revision's results pass. Diagnostics remain read-only and disabled during normal application use. Local source inspection is not substituted for actual Uno WebAssembly execution.
 
@@ -36,3 +36,19 @@ Native OS/detached hosts, instant floated-tab detachment, linked sites, monitor/
 ## Reentrant completion ownership
 
 An application can start another keyboard movement from `BoundsChanged`. Each frame gesture now carries a monotonic completion version, so the old completion's cleanup cannot remove the newer gesture's plan or revision token. The sample's F3 shortcut arms one follow-on keyboard move to demonstrate this event composition. A physical-keyboard regression commits both moves, verifies the second remains live, then undoes the two separate transactions. Reset and unload remove the optional sample subscription.
+
+## Minimum-constrained split regression
+
+The first integrated browser run passed 144/145 cases. The bottom-resize test
+incorrectly assumed both panes grow during every frame-height increase. Its trace
+shows the original 3:1 split at pane heights 102/88, then 162/88 after a 60-unit
+frame increase: the second pane correctly remains at its 88-unit minimum.
+Changing the product to grow it would violate the configured ratio/constraints.
+
+The regression now explicitly checks that clamped phase, then grows the frame
+to 400 units, requiring both panes to grow after leaving the constraint boundary.
+Both original growth assertions, raw-pointer reversal, retained content and
+Escape/no-history checks remain. A new model specification checks the exact
+102/88, 162/88 and 278/92 pane heights against the full layout engine, including
+reversal back to the initial frame. This corrects a test precondition rather than
+loosening the actual layout contract or treating a failed run as merge-ready.

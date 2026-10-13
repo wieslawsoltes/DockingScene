@@ -145,6 +145,27 @@ Test("Separate output buffers allow simultaneous use of an immutable plan", () =
         Check(nodes[0].X == i + 1);
     });
 });
+Test("A minimum-clamped pane grows only when the split ratio clears its constraint", () =>
+{
+    var windows = new[] { "a", "b" }.ToImmutableDictionary(id => id,
+        id => new DockWindow(id, id, WindowKind.Document));
+    var split = new DockSplit("split", SplitAxis.Vertical, .75,
+        new DockGroup("a-group", GroupKind.Documents, ["a"]),
+        new DockGroup("b-group", GroupKind.Documents, ["b"]));
+    var layout = new DockLayout { Windows = windows, FloatingHosts = [new("host", split, new(20, 40, 260, 220))] };
+    var plan = new FloatingLayoutPlan(layout, "host");
+    var nodes = new DockRect[plan.NodeCount]; var bars = new DockRect[plan.SplitterCount];
+    foreach (var (height, expectedA, expectedB) in new[] { (220d, 102d, 88d), (280d, 162d, 88d), (400d, 278d, 92d), (220d, 102d, 88d) })
+    {
+        var frame = new DockRect(20, 40, 260, height);
+        plan.Arrange(frame, nodes, bars);
+        Check(nodes[1].Height == expectedA && nodes[2].Height == expectedB,
+            $"Height {height}: first={nodes[1].Height}, second={nodes[2].Height}");
+        var reference = DockLayoutEngine.Arrange(layout with { FloatingHosts = [layout.FloatingHosts[0] with { Bounds = frame }] },
+            new(0, 0, 1200, 900));
+        Check(nodes[1] == reference.Nodes["a-group"] && nodes[2] == reference.Nodes["b-group"]);
+    }
+});
 Test("Warm subtree arrangement allocates no managed bytes", () =>
 {
     var plan = new FloatingLayoutPlan(Layout(947, 64), "host");

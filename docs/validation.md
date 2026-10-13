@@ -40,7 +40,7 @@ The overlay counters reject repeated visual construction; the magnetism allocati
 
 ## Live floating layout
 
-Twelve FloatingLayoutSpecs compare against full DockLayoutEngine, including 1,000 seeded resizes and fractional DPI, and require no managed allocation for 20,000 warm subtree arrangements. Eight additional real-input cases verify actual editor/group/splitter geometry before release, commit/undo, Escape rollback, raw reversal, keyboard Move/Size, frame-only opt-out, color refresh, reentrant completion and invalidation. The full global layout is not rebuilt by provisional frame changes. See [live floating layout](floating-live-layout.md). Geometry counters exclude native text/measure work and diagnostics; they are not a hardware-GPU speed claim.
+Thirteen FloatingLayoutSpecs compare against full DockLayoutEngine, including 1,000 seeded resizes and fractional DPI, and require no managed allocation for 20,000 warm subtree arrangements. Eight additional real-input cases verify actual editor/group/splitter geometry before release, commit/undo, Escape rollback, raw reversal, keyboard Move/Size, frame-only opt-out, color refresh, reentrant completion and invalidation. The full global layout is not rebuilt by provisional frame changes. See [live floating layout](floating-live-layout.md). Geometry counters exclude native text/measure work and diagnostics; they are not a hardware-GPU speed claim.
 
 ## Deployment and exact source
 
