@@ -54,7 +54,7 @@ public sealed partial class StandardMdiHost : UserControl
     }
     public void ReleaseContent()
     {
-        _active = false;
+        _active = false; ResetScrollState();
         foreach (var window in _windows.Values) { window.CancelMovement(); window.DismissSystemMenu(); window.SetTitleContextOwner(null); window.SetWindowContent(null); }
         _gestureRevisions.Clear(); _minimizedCache.Clear(); MinimizedLayout = null; NotifyProjection();
     }
@@ -69,7 +69,8 @@ public sealed partial class StandardMdiHost : UserControl
         if (!_active || _manager is null) return new(false, _manager?.Layout.Revision ?? 0, "No active MDI host.");
         var manager = _manager; var layout = manager.Layout; var index = DockLayoutIndex.For(layout);
         var ids = _ids.Where(id => layout.Windows.ContainsKey(id) && index.Locate(id).Placement != WindowPlacement.Hidden).ToArray();
-        var result = WindowGeometry.ArrangeMdi(manager, ids, new(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight)),
+        var area = IsScrollingEnabled && _scrollInputCount >= 0 ? ScrollLayout.Viewport : new DockRect(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight));
+        var result = WindowGeometry.ArrangeMdi(manager, ids, area,
             arrangement, _theme.TitleHeight + 2, layout.Revision);
         Submit(result);
         return result;
@@ -88,6 +89,7 @@ public sealed partial class StandardMdiHost : UserControl
         var layout = _manager.Layout;
         if (layout.Revision != revision || !layout.Windows.TryGetValue(id, out var model))
         { Submit(new(false, layout.Revision, "The MDI layout changed during the gesture.")); return; }
+        if (IsScrollingEnabled) rect = ScrollLayout.ToWorld(rect);
         Submit(rect.Width == model.MdiBounds.Width && rect.Height == model.MdiBounds.Height
             ? _manager.MoveMdiWindow(id, rect.X, rect.Y, revision)
             : _manager.Transaction("ResizeMdiWindow", [m => m.SetMdiBounds(id, rect)], revision));
@@ -103,14 +105,13 @@ public sealed partial class StandardMdiHost : UserControl
             var index = DockLayoutIndex.For(layout);
             var ordered = _ids.Where(id => layout.Windows.ContainsKey(id) && index.Locate(id).Placement != WindowPlacement.Hidden).ToArray(); var ids = ordered.ToHashSet(StringComparer.Ordinal);
             _canvas.Background = DockChrome.Brush(_theme.InactiveTab);
-            _canvas.Clip = new RectangleGeometry { Rect = new(0, 0, Math.Max(0, ActualWidth), Math.Max(0, ActualHeight)) };
             foreach (string id in _windows.Keys.Where(id => !ids.Contains(id)).ToArray())
             {
                 _windows[id].CancelMovement(); _windows[id].DismissSystemMenu(); _windows[id].SetTitleContextOwner(null); _windows[id].SetWindowContent(null); _canvas.Children.Remove(_windows[id]);
                 _windows.Remove(id); _gestureRevisions.Remove(id);
             }
-            var viewport = new DockRect(0, 0, Math.Max(1, ActualWidth), Math.Max(1, ActualHeight));
-            MinimizedLayout = _minimizedCache.Arrange(ordered.Where(id => layout.Windows[id].MdiState == MdiWindowState.Minimized).ToArray(), viewport, new(168, _theme.TitleHeight + 2));
+            var minimized = ordered.Where(id => layout.Windows[id].MdiState == MdiWindowState.Minimized).ToArray();
+            var viewport = PrepareScrollProjection(layout, ordered, minimized);
             foreach (string id in ordered)
             {
                 if (!_active || !ReferenceEquals(manager, _manager) || manager.Layout.Revision != layout.Revision) { QueueRefresh(); break; }
@@ -151,8 +152,8 @@ public sealed partial class StandardMdiHost : UserControl
                 var bounds = model.MdiState switch
                 {
                     MdiWindowState.Maximized => viewport,
-                    MdiWindowState.Minimized => MinimizedLayout.Windows[id],
-                    _ => WindowGeometry.KeepVisible(model.MdiBounds, viewport)
+                    MdiWindowState.Minimized => IsScrollingEnabled ? ScrollLayout.ToDisplay(MinimizedLayout!.Windows[id]) : MinimizedLayout!.Windows[id],
+                    _ => IsScrollingEnabled ? ScrollLayout.ToDisplay(model.MdiBounds) : WindowGeometry.KeepVisible(model.MdiBounds, viewport)
                 };
                 if (!window.IsMoving) window.SetBounds(bounds);
                 int rank = index.ActivationRank(id);

@@ -2,9 +2,9 @@
 
 ## Model and package gates
 
-Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **24 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans and live floating subtree layout. Seeded loops supplement named specifications; they are not additional browser scenarios.
+Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **25 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
 
-`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.15` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
+`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.16` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
 
 ## Browser gates
 
@@ -14,9 +14,9 @@ Four independent Chromium runners consume the same exact-revision artifact. Thre
 | --- | ---: | --- |
 | Docking | 28 | Editing/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher and themes |
 | Standalone tabs | 32 | Three lanes, six overflow modes, header geometry, close/pin/menus, factories, content lifetime and 2,002-tab workloads |
-| Host, Metro and MDI | 85 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
+| Host, Metro and MDI | 93 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
 
-The source defines **145 product scenarios**, extending the preceding 137 with eight live-floating-layout scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
+The source defines **153 product scenarios**, extending the preceding 145 with eight Standard MDI scrolling scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
 
 The separate **100-cycle focus investigation** remains a required gate. It exercises native editor/body input through the packaged canvas boundary and is not counted as another 100 named product cases. Helper contracts cover trusted-pointer scoping, independent documents, idempotence, disposal and atomic clipped hit-target reads.
 
@@ -53,3 +53,7 @@ After all main-branch gates pass, Pages deploys that build artifact. All four ru
 CI renders actual Uno Skia through **ANGLE/SwiftShader software WebGL**. Native desktop runtime, detached windows, multiple monitors, touch/stylus/inertia, screen readers, RTL, other browsers and hardware-GPU performance need separate qualification. Complete API, behavior and visual parity remains unfinished; see [parity.md](parity.md).
 
 Earlier investigations and retained coverage are documented in [maximized MDI](maximized-mdi.md), [MDI review](mdi-review.md), [individual policies](individual-mdi-policies.md), [contextual titles/host scope](mdi-context-and-scope.md), [tool title context](tool-title-context.md), [theme text](theme-text-review.md), [selector readiness](selector-readiness.md), [retained-host performance](retained-host-review.md), [MDI magnetism](mdi-magnetism.md) and [floating drag](floating-drag-review.md). Historical totals do not replace the current exact-head results.
+
+## Scrollable Standard MDI
+
+Thirteen `MdiScrollSpecs` cover negative coordinates, interdependent scrollbars, viewport anchoring, minimally revealing frames, minimized overflow, invalid/bounded geometry, 1,000 seeded layouts and 10,000 allocation-checked geometry/reveal queries. Eight new native-input scenarios cover scrollbar arrows, world-coordinate preservation, off-screen activation, cache/control retention, scrolled movement/undo, interrupted-gesture cancellation, maximize/restore, themes/toggle lifetime and wheel access to minimized overflow. These extend the preceding 145 product cases to **153**, with **93 host** cases; all prior assertions and the separate 100-cycle focus gate remain.
