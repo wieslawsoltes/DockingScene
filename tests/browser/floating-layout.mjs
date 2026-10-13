@@ -62,7 +62,7 @@ export async function runFloatingLayoutTests({page,state,test,reset,click,wait,b
   await test('Bottom resizing and raw reversal reflow split heights and Escape restores both layers',async()=>{
     const before=await prepare(),p=await begin(before,'bottom');
     try {
-      // The 3:1 split initially clamps B to its 88-unit content/chrome minimum.
+      // The 76:24 split initially clamps B to its 88-unit content/chrome minimum.
       // A 60-unit frame growth belongs entirely to A; demand growth of both
       // children only once the larger frame clears that constraint boundary.
       await move(p,0,60); const clamped=await snapshot(); sourceFits(clamped);

@@ -41,7 +41,7 @@ An application can start another keyboard movement from `BoundsChanged`. Each fr
 
 The first integrated browser run passed 144/145 cases. The bottom-resize test
 incorrectly assumed both panes grow during every frame-height increase. Its trace
-shows the original 3:1 split at pane heights 102/88, then 162/88 after a 60-unit
+shows the original 76:24 split at pane heights 102/88, then 162/88 after a 60-unit
 frame increase: the second pane correctly remains at its 88-unit minimum.
 Changing the product to grow it would violate the configured ratio/constraints.
 
@@ -49,6 +49,6 @@ The regression now explicitly checks that clamped phase, then grows the frame
 to 400 units, requiring both panes to grow after leaving the constraint boundary.
 Both original growth assertions, raw-pointer reversal, retained content and
 Escape/no-history checks remain. A new model specification checks the exact
-102/88, 162/88 and 278/92 pane heights against the full layout engine, including
+102/88, 162/88 and 278/92 pane heights for an independent 3:1 split against the full layout engine, including
 reversal back to the initial frame. This corrects a test precondition rather than
 loosening the actual layout contract or treating a failed run as merge-ready.
