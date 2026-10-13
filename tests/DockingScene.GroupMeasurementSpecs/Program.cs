@@ -166,19 +166,20 @@ Test("Overflow is rejected without replacing the previous valid geometry", () =>
 });
 Test("Omitted-metrics warm geometry queries allocate zero managed bytes", () => {
     var layout = Layout(); var cache = new DockGeometryCache(); var expected = cache.Arrange(layout, viewport);
-    for (int i = 0; i < 1000; i++) _ = cache.Arrange(layout, viewport);
-    long before = GC.GetAllocatedBytesForCurrentThread(); DockGeometry? result = null;
-    for (int i = 0; i < 10000; i++) result = cache.Arrange(layout, viewport);
-    long bytes = GC.GetAllocatedBytesForCurrentThread() - before;
+    AllocationProbe.VerifyControls();
+    Func<DockGeometry> query = () => cache.Arrange(layout, viewport);
+    _ = AllocationProbe.Measure(query, 1000, out _);
+    long bytes = AllocationProbe.Measure(query, 10000, out var result);
     Check(bytes == 0 && ReferenceEquals(result, expected), $"Expected zero default-query bytes; actual {bytes}");
     Console.WriteLine($"ALLOCATION default geometry: 10000 warm queries, {bytes} bytes; construction excluded");
 });
 Test("Single-pass group measurement allocates zero managed bytes", () => {
     var layout = Layout(TabPlacement.Left, count: 128); var group = Tools(layout); var expected = Reference(layout, group, DockMetrics.Default);
-    for (int i = 0; i < 1000; i++) _ = DockLayoutEngine.MeasureGroup(layout, group);
-    var watch = Stopwatch.StartNew(); long before = GC.GetAllocatedBytesForCurrentThread(); DockMeasure result = default;
-    for (int i = 0; i < 10000; i++) result = DockLayoutEngine.MeasureGroup(layout, group);
-    long bytes = GC.GetAllocatedBytesForCurrentThread() - before; watch.Stop();
+    Func<DockMeasure> query = () => DockLayoutEngine.MeasureGroup(layout, group);
+    _ = AllocationProbe.Measure(query, 1000, out _);
+    var watch = Stopwatch.StartNew();
+    long bytes = AllocationProbe.Measure(query, 10000, out var result);
+    watch.Stop();
     Check(bytes == 0 && result == expected, $"Expected zero group-measure bytes; actual {bytes}");
     Console.WriteLine($"GROUP_MEASURE members=128 queries=10000 elapsedMs={watch.Elapsed.TotalMilliseconds:F3} allocated={bytes}");
 });
