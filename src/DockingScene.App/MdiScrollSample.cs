@@ -37,6 +37,7 @@ public sealed class MdiScrollSample : UserControl
         Button("Negative", "negative", () => Check(_manager.Activate("scroll-negative")));
         Button("Reveal far", "reveal", () => _host.ScrollWindowIntoView("scroll-far"));
         Button("Minimized rows", "minimized", () => Reset(true));
+        Button("Keep six", "six", () => { if (_ids.Length > 6) Check(_manager.CloseMany(_ids.Skip(6))); });
         Button("Undo", "undo", () => Check(_manager.Undo()));
         Button("Dark / Light (F2)", "theme", ToggleTheme);
         KeyDown += (_, e) =>
@@ -54,7 +55,9 @@ public sealed class MdiScrollSample : UserControl
     {
         _manager.Changed -= Changed;
         _host.ReleaseContent(); _content.Clear(); _error = null;
-        _host.Height = minimized ? 140 : double.NaN;
+        _host.Height = minimized ? 54 : double.NaN;
+        _host.Width = minimized ? 510 : double.NaN;
+        _host.HorizontalAlignment = minimized ? HorizontalAlignment.Left : HorizontalAlignment.Stretch;
         _host.VerticalAlignment = minimized ? VerticalAlignment.Top : VerticalAlignment.Stretch;
         _ids = minimized ? Enumerable.Range(0, 40).Select(i => "scroll-min-" + i).ToArray() : ["scroll-home", "scroll-far", "scroll-negative"];
         var manager = new DockManager();

@@ -141,6 +141,15 @@ public sealed partial class StandardMdiHost
         { var rect = MinimizedLayout.Windows[id]; changed |= _scrollInputs[at] != rect; _scrollInputs[at++] = rect; }
         if (changed)
         {
+            // Recalculate from the full client, not the old reduced viewport.
+            // Otherwise a formerly needed vertical bar can keep captions wrapped
+            // into extra rows and make itself permanently necessary after close.
+            if (minimizedIds.Length > 0 && area != full)
+            {
+                area = full;
+                MinimizedLayout = _minimizedCache.Arrange(minimizedIds, area, new(168, _theme.TitleHeight + 2));
+                at = normalCount; foreach (var id in minimizedIds) _scrollInputs[at++] = MinimizedLayout.Windows[id];
+            }
             // Rewrap minimized rows if newly visible bars changed the viewport.
             // They participate in extents, so captions above y=0 remain reachable.
             for (int pass = 0; pass < 3; pass++)

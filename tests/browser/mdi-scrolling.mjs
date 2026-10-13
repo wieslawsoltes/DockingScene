@@ -101,6 +101,15 @@ export async function runMdiScrollingTests({page,state,test,reset,click,wait,bou
     await bounds('window-title:scroll-min-39');const after=await sample();assert.equal(after.revision,before.revision);
     assert(after.windows['scroll-min-39'].frame.y>=0);assert.equal(after.windows['scroll-min-39'].editor,undefined);
     await page.screenshot({path:`${output}/mdi-scroll-minimized-rows.png`});
+    // Six captions fit exactly in two rows in the full 510x54 client. Starting
+    // from the old bar-reduced width would wrap them into three rows forever.
+    await click('scroll-sample:six');
+    await wait(()=>!globalThis.dockingScene.mdiScrolling.vertical && !globalThis.dockingScene.mdiScrolling.horizontal);
+    const reduced=await sample();assert.equal(reduced.revision,after.revision+1);
+    assert.equal(reduced.viewport.x,0);assert.equal(reduced.viewport.y,0);
+    assert.equal(reduced.viewport.width,510);assert.equal(reduced.viewport.height,54);
+    assert.equal((await state()).bounds['mdi-scroll:sample:vertical'],undefined);
+    await page.screenshot({path:`${output}/mdi-scroll-shrunk-extents.png`});
     await reset();
   });
 }

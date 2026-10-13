@@ -58,6 +58,11 @@ Test("Minimized caption overflow remains reachable above the world origin",()=>{
     Check(a.HasVerticalScrollBar && a.ContentBounds.Y<0);
     var target=captions.Windows["19"];var b=a.Reveal(target);
     Check(b.ToDisplay(target).Y>=0 && b.ToDisplay(target).Bottom<=b.Viewport.Height);
+    var six=Enumerable.Range(0,6).Select(i=>i.ToString()).ToArray();
+    var full=MinimizedWindowLayout.Arrange(six,new(0,0,510,54));
+    var reduced=MinimizedWindowLayout.Arrange(six,new(0,0,494,54));
+    Check(!MdiScrollLayout.Measure(full.Windows.Values.ToArray(),new(510,54)).HasVerticalScrollBar);
+    Check(MdiScrollLayout.Measure(reduced.Windows.Values.ToArray(),new(510,54)).HasVerticalScrollBar);
 });
 Test("Offsets are clamped and nonfinite inputs are rejected",()=>{
     var a=MdiScrollLayout.Measure([new(1000,700,200,100)],new(600,400));

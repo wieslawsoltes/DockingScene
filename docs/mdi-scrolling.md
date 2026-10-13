@@ -18,8 +18,12 @@ The opt-in implementation uses a clipped Canvas with native scrollbar controls i
 
 ## Sample and validation
 
-Window > Open scrollable MDI sample presents near, distant and negative-coordinate windows. Buttons exercise the same public APIs; F2 switches its theme and F4 scrolls during a captured gesture to verify cancellation. Diagnostics are read-only. A compact minimized-row example demonstrates overflow without instantiating normal editor content.
+Window > Open scrollable MDI sample presents near, distant and negative-coordinate windows. Buttons exercise the same public APIs; F2 switches its theme and F4 scrolls during a captured gesture to verify cancellation. Diagnostics are read-only. A compact minimized-row example demonstrates overflow without instantiating normal editor content; Keep six closes excess captions to exercise range contraction.
 
 Thirteen geometry specifications cover empty/one-axis/both-axis layouts, negative bounds, anchoring, reveal, oversized frames, minimized rows, invalid/overflow input and 1,000 seeded layouts. A warm 10,000-query/128-frame loop requires zero managed allocated bytes, excluding input construction. Eight physical-input cases extend the preceding 145 product scenarios to 153. They require native scrollbar/wheel behavior, model/undo invariants, retained identities, scrolled movement/cancellation, maximize/restore and actual caption pixels in light/dark themes. Counts are definitions; exact-head workflow results establish execution success. All six packages advance to alpha.16.
 
 Public reference: Actipro Standard MDI documents the opt-in IsScrollingEnabled behavior at https://www.actiprosoftware.com/docs/controls/wpf/docking/workspace-mdi-features/standard-mdi . This is independent Uno code, not copied vendor source or WPF binary equivalence. Browser CI uses actual Uno Skia via SwiftShader software WebGL, not hardware-GPU throughput certification.
+
+## Minimized range contraction
+
+Changed extents restart caption wrapping from the full client area, not the previous scrollbar-reduced area. Without this reset, a bar can keep captions wrapped into too many rows and appear permanently necessary after windows are closed. The browser overflow case now closes excess captions through the Keep six button and requires both native bars to disappear: six 168-unit captions fit exactly in two rows inside a 510 by 54 client. The corresponding model assertion distinguishes full-client and bar-reduced wrapping. This preserves all existing scrolling, identity, paint and history assertions.

@@ -2,7 +2,7 @@
 
 ## Model and package gates
 
-Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **25 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans and live floating subtree layout. Seeded loops supplement named specifications; they are not additional browser scenarios.
+Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **25 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
 
 `Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.16` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
 
@@ -48,7 +48,7 @@ After all main-branch gates pass, Pages deploys that build artifact. All four ru
 
 ## Diagnostics and platform boundaries
 
-`?diagnostics=1` enables synthetic editor text/caret/identity, focus automation ids, model metadata, clipped hit bounds and work counters. It is off by default; normal sessions do not run the periodic diagnostic visual-tree diagnostic walk. Do not enable it around confidential content. Bounds are clipped by ancestors but do not model sibling occlusion, so tests require actual input-driven changes as well as geometry assertions.
+`?diagnostics=1` enables synthetic editor text/caret/identity, focus automation ids, model metadata, clipped hit bounds and work counters. It is off by default; normal sessions do not run the periodic visual-tree diagnostic walk. Do not enable it around confidential content. Bounds are clipped by ancestors but do not model sibling occlusion, so tests require actual input-driven changes as well as geometry assertions.
 
 CI renders actual Uno Skia through **ANGLE/SwiftShader software WebGL**. Native desktop runtime, detached windows, multiple monitors, touch/stylus/inertia, screen readers, RTL, other browsers and hardware-GPU performance need separate qualification. Complete API, behavior and visual parity remains unfinished; see [parity.md](parity.md).
 
