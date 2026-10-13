@@ -2,21 +2,22 @@
 
 ## Model and package gates
 
-Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **26 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
+Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **27 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
 
-`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.17` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
+`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.18` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
 
 ## Browser gates
 
-Four independent Chromium runners consume the same exact-revision artifact. Three product suites use real pointer and keyboard input; the fourth is the focus stress runner. Read-only diagnostics observe geometry, state and performed work. JavaScript never invokes manager commands or replaces rendering. Every suite runs even if another fails, and any failure blocks deployment.
+Five independent Chromium runners consume the same exact-revision artifact. Four product suites use real pointer and keyboard input; the fifth is the focus stress runner. Read-only diagnostics observe geometry, state and performed work. JavaScript never invokes manager commands or replaces rendering. Every suite runs even if another fails, and any failure blocks deployment.
 
 | Suite | Named product scenarios | Coverage |
 | --- | ---: | --- |
 | Docking | 28 | Editing/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher and themes |
 | Standalone tabs | 32 | Three lanes, six overflow modes, header geometry, close/pin/menus, factories, content lifetime and 2,002-tab workloads |
+| Caption policies | 11 | Instance/site inheritance, reclaimed native title/button space, capability checks, persistence and capture cancellation |
 | Host, Metro and MDI | 101 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
 
-The source defines **161 product scenarios**, extending the preceding 153 with eight tool-caption scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
+The source defines **172 product scenarios**: the preceding 161 plus ten per-window caption behavior cases and their independent revision/error gate. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
 
 The separate **100-cycle focus investigation** remains a required gate. It exercises native editor/body input through the packaged canvas boundary and is not counted as another 100 named product cases. Helper contracts cover trusted-pointer scoping, independent documents, idempotence, disposal and atomic clipped hit-target reads.
 
@@ -44,7 +45,7 @@ Thirteen FloatingLayoutSpecs compare against full DockLayoutEngine, including 1,
 
 ## Deployment and exact source
 
-After all main-branch gates pass, Pages deploys that build artifact. All four runners then verify the live build's `build-info.json` against the source commit and repeat the browser checks. Deployment success and post-deployment validation are separate statuses. Source snapshots, packages, contracts, screenshots and traces identify their tested revisions. Feature-branch compilation alone does not publish an app.
+After all main-branch gates pass, Pages deploys that build artifact. All five runners then verify the live build's `build-info.json` against the source commit and repeat the browser checks. Deployment success and post-deployment validation are separate statuses. Source snapshots, packages, contracts, screenshots and traces identify their tested revisions. Feature-branch compilation alone does not publish an app.
 
 ## Diagnostics and platform boundaries
 
@@ -60,4 +61,30 @@ Thirteen `MdiScrollSpecs` cover negative coordinates, interdependent scrollbars,
 
 ## Tool captions and floating titles
 
-Thirteen ToolCaptionSpecs cover complete-host maximize/restore, clicked-group docking, main-site focus isolation, group/host capability distinctions, auto-hide, stale/invalid input, veto/lock/undo, document/tool title selection, metadata and warm resolution allocation. Eight additional native-input cases check title double-clicks, hidden action geometry, unchanged caption/editor identities, alternative commands, auto-hide popup settings, primary document title/delimiter updates and retained action paint. They extend the 153-case baseline to 161, with 101 host cases. Definition counts are not pass claims; exact-head results establish execution. See [tool caption review](tool-caption-review.md).
+Sixteen ToolCaptionSpecs cover complete-host maximize/restore, clicked-group docking, main-site focus isolation, group/host capability distinctions, auto-hide, stale/invalid input, veto/lock/undo, document/tool title selection, metadata and warm resolution allocation. Eight additional native-input cases check title double-clicks, hidden action geometry, unchanged caption/editor identities, alternative commands, auto-hide popup settings, primary document title/delimiter updates and retained action paint. They extend the 153-case baseline to 161, with 101 host cases. Definition counts are not pass claims; exact-head results establish execution. See [tool caption review](tool-caption-review.md).
+
+
+## Inherited per-window title and button presentation
+
+Sixteen CaptionPolicySpecs exercise all 1,296 instance/default combinations,
+81 nullable serialization combinations, 256 legacy missing/null/boolean
+combinations, malformed-input rejection, source and MVVM projection, retained
+identity, undo/veto, capability independence, effective-value geometry caching,
+floating measurement, and 100,000 warmed allocation-free value resolutions.
+These are model specifications, not browser or vendor-conformance counts.
+
+The independent `caption-policies-runner.mjs` adds ten native-input behavior
+cases plus a revision/error gate. It checks reclaimed 23-pixel button slots and
+title-row height, selected-window inheritance, per-window exceptions to site
+defaults, retained editors/buttons, auto-hide pinning, disabled action focus
+state, JSON restore/undo, and caption capture/Escape/double-click. It joins both
+the pre-deployment and live matrix; none of the 101 existing host cases or any
+other existing gate was removed. Keeping this new suite independent avoids
+adding its execution time to the existing host runner's critical path.
+
+The primary-caption cache keeps the exact zero-byte warm-query assertion and
+adds equal-revision isolation, concurrent-host reads, and unknown-host rejection.
+The allocator responsible for the earlier intermittent result was not identified;
+source changes and test definitions are not substituted for exact-head execution.
+See [caption inheritance](tool-caption-inheritance.md) and the two caption input
+and allocation review documents for the source-level changes.
