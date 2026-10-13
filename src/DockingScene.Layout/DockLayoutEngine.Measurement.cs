@@ -60,15 +60,17 @@ internal struct DockGroupMeasurement
 
     public readonly DockMeasure Complete(DockGroup group, DockMetrics metrics)
     {
-        if (_count == 0 || !Enum.IsDefined(group.Kind) || !Enum.IsDefined(group.TabPlacement))
+        // These closed enum domains are deliberately checked without generic
+        // Enum metadata/reflection in the repeatedly executed measurement path.
+        if (_count == 0 || group.Kind is not (GroupKind.Documents or GroupKind.Tools) ||
+            group.TabPlacement is not (TabPlacement.Top or TabPlacement.Bottom or TabPlacement.Left or TabPlacement.Right))
             throw new ArgumentException("Invalid group presentation.", nameof(group));
         bool vertical = group.TabPlacement is TabPlacement.Left or TabPlacement.Right;
         double widthChrome = 2 * metrics.Border + (vertical ? DockMetrics.VerticalTabStripWidth : 0);
         double heightChrome = 2 * metrics.Border + (vertical ? 0 : metrics.TabHeight) +
             (group.Kind == GroupKind.Tools && _hasTitle ? metrics.TitleHeight : 0);
         double minWidth = _minWidth + widthChrome, minHeight = _minHeight + heightChrome;
-        var result = new DockMeasure(new(minWidth, minHeight),
+        return new DockMeasure(new(minWidth, minHeight),
             new(Math.Max(minWidth, _maxWidth + widthChrome), Math.Max(minHeight, _maxHeight + heightChrome)));
-        return result;
     }
 }
