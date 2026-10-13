@@ -87,12 +87,35 @@ Test("Caption selection reads changed metadata without modifying its cached tree
     Check(FloatingHostCaption.GetTitle(m.Layout,host,"App")=="Renamed.cs - App");
     Check(ReferenceEquals(root,m.Layout.FloatingHosts.First(h=>h.Id==host).Root));
 });
+Test("Equal-revision metadata and activation snapshots cannot alias caption results",()=>{
+    var m=Create();m.Activate("a").ThrowIfFailed();var before=m.Layout;string host=Host(m,"a");
+    Check(FloatingHostCaption.GetPrimaryWindow(before,host).Id=="a");
+    var changed=before with {Windows=before.Windows.SetItem("a",before.Windows["a"] with {Title="Changed title"})};
+    Check(FloatingHostCaption.GetTitle(changed,host)=="Changed title" && FloatingHostCaption.GetTitle(before,host)=="Explorer");
+    var switched=before with {ActiveWindowId="b",ActivationHistory=["b","a","doc"]};
+    Check(FloatingHostCaption.GetPrimaryWindow(switched,host).Id=="b" && FloatingHostCaption.GetPrimaryWindow(before,host).Id=="a");
+});
+Test("Concurrent readers see complete independent host projections",()=>{
+    var m=Create();m.Float("doc").ThrowIfFailed();m.Activate("a").ThrowIfFailed();
+    var layout=m.Layout;string tools=Host(m,"a"),document=Host(m,"doc");
+    Parallel.For(0,128,i=>{
+        Check(FloatingHostCaption.GetPrimaryWindow(layout,tools).Id=="a");
+        Check(FloatingHostCaption.GetPrimaryWindow(layout,document).Id=="doc");
+    });
+});
+Test("An unknown host cannot reuse the previously queried host's caption",()=>{
+    var m=Create();string host=Host(m,"a");var primary=FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
+    try{FloatingHostCaption.GetPrimaryWindow(m.Layout,"missing");throw new Exception("Unknown host was accepted");}
+    catch(ArgumentException){}
+    Check(ReferenceEquals(primary,FloatingHostCaption.GetPrimaryWindow(m.Layout,host)));
+});
 Test("Warm primary-window resolution allocates no managed memory",()=>{
     var m=Create();string host=Host(m,"a");m.Activate("a").ThrowIfFailed();
     DockWindow? result=null;for(int i=0;i<200;i++)result=FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
     long bytes=GC.GetAllocatedBytesForCurrentThread();
     for(int i=0;i<10000;i++)result=FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
-    bytes=GC.GetAllocatedBytesForCurrentThread()-bytes;Check(bytes==0 && result?.Id=="a");
+    bytes=GC.GetAllocatedBytesForCurrentThread()-bytes;
+    if(bytes!=0 || result?.Id!="a") throw new Exception($"Expected 0 bytes and a; actual {bytes} bytes and {result?.Id}");
     Console.WriteLine($"ALLOCATION primary captions: 10000 warm resolutions, {bytes} bytes; membership/index construction excluded");
 });
 Console.WriteLine($"{passed}/{passed+failed} tool caption specifications passed.");return failed==0?0:1;
