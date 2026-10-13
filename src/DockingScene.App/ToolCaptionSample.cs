@@ -12,7 +12,7 @@ namespace DockingScene.App;
 
 /// <summary>Nested DockSite exercising native tool captions, policy and retained
 /// title controls. Toolbar actions are ordinary application commands.</summary>
-public sealed class ToolCaptionSample : UserControl
+public sealed partial class ToolCaptionSample : UserControl
 {
     private readonly DockSite _site = new() { OpenAutoHideOnHover = false };
     private readonly Dictionary<string, TextBox> _editors = new(StringComparer.Ordinal);
@@ -53,6 +53,7 @@ public sealed class ToolCaptionSample : UserControl
             Item("Auto-hide Explorer", "autohide", () => Check(_manager.AutoHide("cap-a", DockSide.Left)));
             menu.ShowAt(options);
         };
+        AddPolicyOptions(toolbar);
         Button("Explorer", "a", () => Check(_manager.Activate("cap-a")));
         Button("Properties", "b", () => Check(_manager.Activate("cap-b")));
         Button("Document 1", "doc1", () => Check(_manager.Activate("cap-doc1")));
@@ -88,8 +89,9 @@ public sealed class ToolCaptionSample : UserControl
         m.FloatMany(new[] { "cap-doc1", "cap-doc2" }, new(440, 40, 380, 300)).ThrowIfFailed();
         m.Activate("cap-doc1").ThrowIfFailed(); m.Activate("cap-a").ThrowIfFailed();
         _toolHost = DockTree.Locate(m.Layout, "cap-a").HostId!; _documentHost = DockTree.Locate(m.Layout, "cap-doc1").HostId!;
+        _savedPolicyLayout = null;
         _manager = m; _site.Manager = m; _site.Theme = _theme;
-        _site.ToolWindowsHaveCloseButtons = _site.ToolWindowsHaveOptionsButtons = _site.ToolWindowsHaveToggleAutoHideButtons = true;
+        _site.ToolWindowsHaveTitleBars = _site.ToolWindowsHaveCloseButtons = _site.ToolWindowsHaveOptionsButtons = _site.ToolWindowsHaveToggleAutoHideButtons = true;
         _site.FloatingToolWindowContainerTitleBarDoubleClickMode = FloatingWindowTitleBarDoubleClickMode.ToggleMaximized;
         _site.FloatingWindowTitle = "DockingScene"; _site.FloatingWindowTitleDelimiter = " - "; _generation++;
     }
@@ -138,6 +140,6 @@ public sealed class ToolCaptionSample : UserControl
         { writer.WriteStartArray(id); foreach (int identity in buttons) writer.WriteNumberValue(identity); writer.WriteEndArray(); }
         writer.WriteEndObject(); writer.WriteStartObject("captionWidths");
         foreach (var (id, width) in _site.ToolCaptionWidths) writer.WriteNumber(id, width);
-        writer.WriteEndObject(); writer.WriteEndObject();
+        writer.WriteEndObject(); WritePolicyDiagnostics(writer); writer.WriteEndObject();
     }
 }

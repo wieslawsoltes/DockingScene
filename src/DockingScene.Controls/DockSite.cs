@@ -171,7 +171,7 @@ public partial class DockSite : UserControl
         {
             var layout = manager.Layout;
             var index = DockLayoutIndex.For(layout);
-            _geometry = _geometryCache.Arrange(layout, new(0, 0, ActualWidth, ActualHeight), new() { TabHeight = Theme.TabHeight, TitleHeight = Theme.TitleHeight, Splitter = Theme.SplitterSize, DpiScale = XamlRoot?.RasterizationScale ?? 1 });
+            _geometry = _geometryCache.Arrange(layout, new(0, 0, ActualWidth, ActualHeight), new() { TabHeight = Theme.TabHeight, TitleHeight = Theme.TitleHeight, Splitter = Theme.SplitterSize, DpiScale = XamlRoot?.RasterizationScale ?? 1, ToolWindowsHaveTitleBars = ToolWindowsHaveTitleBars });
             _canvas.Background = DockChrome.Brush(Theme.Background);
             _canvas.Clip = new RectangleGeometry { Rect = new(0, 0, ActualWidth, ActualHeight) };
             _usedAuxiliaries.Clear();

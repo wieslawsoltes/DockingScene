@@ -5,6 +5,17 @@ namespace DockingScene.Controls;
 
 public partial class DockSite
 {
+    public static readonly DependencyProperty ToolWindowsHaveTitleBarsProperty = DependencyProperty.Register(nameof(ToolWindowsHaveTitleBars), typeof(bool), typeof(DockSite), new PropertyMetadata(true, ToolTitlePolicyChanged));
+    public bool ToolWindowsHaveTitleBars { get => (bool)GetValue(ToolWindowsHaveTitleBarsProperty); set => SetValue(ToolWindowsHaveTitleBarsProperty, value); }
+    private static void ToolTitlePolicyChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
+    {
+        var site = (DockSite)sender;
+        // A title-height change invalidates pointer geometry even when the immutable
+        // model revision did not change (unlike a button-only presentation change).
+        site.CancelInteraction();
+        site.CancelFloatingGeometry();
+        site.QueueRender();
+    }
     public static readonly DependencyProperty ToolWindowsHaveCloseButtonsProperty = DependencyProperty.Register(nameof(ToolWindowsHaveCloseButtons), typeof(bool), typeof(DockSite), new PropertyMetadata(true, TabsChanged));
     public static readonly DependencyProperty ToolWindowsHaveOptionsButtonsProperty = DependencyProperty.Register(nameof(ToolWindowsHaveOptionsButtons), typeof(bool), typeof(DockSite), new PropertyMetadata(true, TabsChanged));
     public static readonly DependencyProperty ToolWindowsHaveToggleAutoHideButtonsProperty = DependencyProperty.Register(nameof(ToolWindowsHaveToggleAutoHideButtons), typeof(bool), typeof(DockSite), new PropertyMetadata(true, TabsChanged));
@@ -23,7 +34,7 @@ public partial class DockSite
     }
     public string? FloatingWindowTitle { get => (string?)GetValue(FloatingWindowTitleProperty); set => SetValue(FloatingWindowTitleProperty, value); }
     public string? FloatingWindowTitleDelimiter { get => (string?)GetValue(FloatingWindowTitleDelimiterProperty); set => SetValue(FloatingWindowTitleDelimiterProperty, value); }
-    private ToolCaptionOptions ToolCaptionPresentation => new(ToolWindowsHaveCloseButtons, ToolWindowsHaveOptionsButtons, ToolWindowsHaveToggleAutoHideButtons);
+    private ToolCaptionOptions ToolCaptionPresentation => new(ToolWindowsHaveCloseButtons, ToolWindowsHaveOptionsButtons, ToolWindowsHaveToggleAutoHideButtons) { HasTitleBar = ToolWindowsHaveTitleBars };
     private static void DoubleClickModeChanged(DependencyObject sender, DependencyPropertyChangedEventArgs args)
     {
         if (!Enum.IsDefined((FloatingWindowTitleBarDoubleClickMode)args.NewValue)) throw new ArgumentOutOfRangeException(nameof(args));

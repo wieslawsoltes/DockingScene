@@ -15,7 +15,7 @@ public partial class DockContainer : UserControl
     private readonly DockCaptionGrip _grip = new() { Margin = new(7, 0, 6, 0) };
     private readonly StackPanel _buttons = new() { Orientation = Orientation.Horizontal };
     public AdvancedTabControl Tabs { get; } = new();
-    private (string Id, DockWindow? Selected, DockTheme Theme, bool Active, bool AutoHidden, bool Locked, DockCapabilities Allowed, ToolCaptionOptions Buttons)? _chrome;
+    private (string Id, DockWindow? Selected, DockTheme Theme, bool Active, bool AutoHidden, bool Locked, DockCapabilities Allowed, ToolCaptionSettings Buttons)? _chrome;
     public double CaptionAvailableWidth => _caption.MaxWidth;
     public DockGroup? Group { get; private set; }
     public IReadOnlyList<int> CaptionButtonIdentities => _buttons.Children.Select(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode).ToArray();
@@ -49,8 +49,9 @@ public partial class DockContainer : UserControl
         bool tools = group.Kind == GroupKind.Tools;
         bool active = group.Windows.Contains(layout.ActiveWindowId ?? "");
         var selected = group.SelectedId is null ? null : layout.Windows[group.SelectedId];
-        bool title = tools && selected?.HasTitleBar == true;
-        var buttons = captionOptions ?? ToolCaptionOptions.Default;
+        var defaults = captionOptions ?? ToolCaptionOptions.Default;
+        var buttons = selected is null ? new ToolCaptionSettings(false, false, false, false) : defaults.Resolve(selected);
+        bool title = tools && buttons.HasTitleBar;
         var chrome = (group.Id, selected, theme, active, autoHidden, layout.IsLayoutLocked, allowed, buttons);
         if (_chrome != chrome)
         {
