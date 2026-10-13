@@ -1,0 +1,3 @@
+# Primary-caption fixture review
+
+The initial new mixed-host model case tried to dock a document against a tool-only container. The current engine rejects documents in tool containers; that is an existing placement boundary, not a caption-resolution operation. The fixture now floats the document and docks a tool into its floating document host, matching the native sample's permitted operation. It still requires that activating the tool preserves the primary document title, supports the custom delimiter and handles a null delimiter. No existing assertion or product placement rule is relaxed. Broader cross-kind split placement remains separate compatibility work.

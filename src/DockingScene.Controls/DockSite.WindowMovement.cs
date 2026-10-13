@@ -54,6 +54,6 @@ public partial class DockSite
     {
         foreach (var frame in _floats.Values)
         { frame.CancelMovement(); frame.DismissSystemMenu(); _canvas.Children.Remove(frame); }
-        _floats.Clear(); _floatingGestureRevisions.Clear(); _floatingLayouts.Clear();
+        _floats.Clear(); _floatingCaptions.Clear(); _floatingGestureRevisions.Clear(); _floatingLayouts.Clear();
     }
 }

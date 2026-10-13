@@ -15,7 +15,8 @@ public partial class DockContainer : UserControl
     private readonly DockCaptionGrip _grip = new() { Margin = new(7, 0, 6, 0) };
     private readonly StackPanel _buttons = new() { Orientation = Orientation.Horizontal };
     public AdvancedTabControl Tabs { get; } = new();
-    private (string Id, DockWindow? Selected, DockTheme Theme, bool Active, bool AutoHidden, bool Locked, DockCapabilities Allowed)? _chrome;
+    private (string Id, DockWindow? Selected, DockTheme Theme, bool Active, bool AutoHidden, bool Locked, DockCapabilities Allowed, ToolCaptionOptions Buttons)? _chrome;
+    public double CaptionAvailableWidth => _caption.MaxWidth;
     public DockGroup? Group { get; private set; }
     public IReadOnlyList<int> CaptionButtonIdentities => _buttons.Children.Select(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode).ToArray();
     public event EventHandler<WindowDragEventArgs>? HeaderPointerPressed;
@@ -42,14 +43,15 @@ public partial class DockContainer : UserControl
             surface.RightTapped += (_, e) => { OptionsRequested?.Invoke(surface); e.Handled = true; };
         }
     }
-    public void Update(DockGroup group, IReadOnlyList<AdvancedTabItem> items, DockLayout layout, DockTheme theme, bool autoHidden = false, DockCapabilities allowed = DockCapabilities.All)
+    public void Update(DockGroup group, IReadOnlyList<AdvancedTabItem> items, DockLayout layout, DockTheme theme, bool autoHidden = false, DockCapabilities allowed = DockCapabilities.All, ToolCaptionOptions? captionOptions = null)
     {
         Group = group;
         bool tools = group.Kind == GroupKind.Tools;
         bool active = group.Windows.Contains(layout.ActiveWindowId ?? "");
         var selected = group.SelectedId is null ? null : layout.Windows[group.SelectedId];
         bool title = tools && selected?.HasTitleBar == true;
-        var chrome = (group.Id, selected, theme, active, autoHidden, layout.IsLayoutLocked, allowed);
+        var buttons = captionOptions ?? ToolCaptionOptions.Default;
+        var chrome = (group.Id, selected, theme, active, autoHidden, layout.IsLayoutLocked, allowed, buttons);
         if (_chrome != chrome)
         {
             _chrome = chrome;
@@ -75,20 +77,22 @@ public partial class DockContainer : UserControl
                     }
                     Make(b => OptionsRequested?.Invoke(b)); Make(_ => PinRequested?.Invoke()); Make(_ => CloseRequested?.Invoke());
                 }
-                void Paint(int index, string name, string glyph, bool enabled)
+                void Paint(int index, string name, string glyph, bool enabled, bool visible)
                 {
                     var button = (Button)_buttons.Children[index];
                     DockChrome.Identify(button, "group:" + group.Id + ":" + name, name);
                     ToolTipService.SetToolTip(button, name); button.Height = theme.TitleHeight; button.IsEnabled = enabled;
+                    button.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+                    button.IsTabStop = visible && enabled;
                     button.Background = _title.Background; button.Foreground = DockChrome.Brush(foreground);
                     if (button.Tag as string != glyph) { button.Tag = glyph; button.Content = DockChrome.Glyph(glyph, foreground); }
                     else if (button.Content is Microsoft.UI.Xaml.Shapes.Path path) path.Stroke = button.Foreground;
                 }
                 var capabilities = (selected?.Capabilities ?? DockCapabilities.None) & allowed;
-                Paint(0, "Options", DockGlyphs.Chevron, true);
+                Paint(0, "Options", DockGlyphs.Chevron, true, buttons.HasOptionsButton);
                 Paint(1, autoHidden ? "Pin" : "AutoHide", autoHidden ? DockGlyphs.Unpin : DockGlyphs.Pin,
-                    !layout.IsLayoutLocked && capabilities.HasFlag(autoHidden ? DockCapabilities.Dock : DockCapabilities.AutoHide));
-                Paint(2, "Close", DockGlyphs.Close, capabilities.HasFlag(DockCapabilities.Close));
+                    !layout.IsLayoutLocked && capabilities.HasFlag(autoHidden ? DockCapabilities.Dock : DockCapabilities.AutoHide), buttons.HasToggleAutoHideButton);
+                Paint(2, "Close", DockGlyphs.Close, capabilities.HasFlag(DockCapabilities.Close), buttons.HasCloseButton);
             }
         }
         SelectToolTitleContext(title ? items.FirstOrDefault(item => item.Id == group.SelectedId) as ToolWindow : null);

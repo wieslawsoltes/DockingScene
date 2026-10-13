@@ -81,14 +81,14 @@ public partial class DockSite
         if (EndAutoHideResize(e)) return;
         if (_splitDrag is not null)
         {
-            var split = _splitDrag; _splitDrag = null; _canvas.ReleasePointerCapture(e.Pointer); _overlay.Children.Clear();
+            var split = _splitDrag; _splitDrag = null; ReleaseInteractionPointer(e); _overlay.Children.Clear();
             Submit(Manager.ResizeSplit(split.Id, _splitRatio, _splitRevision)); QueueRender(); e.Handled = true; return;
         }
         if (_dragIds.IsEmpty) return;
         var ids = _dragIds; var preview = _preview; var plan = _floatingDragPlan;
         bool dragged = _dragging; long revision = _dragRevision; int index = _tabDropIndex;
         _dragIds = []; _dragging = false; _preview = null; _tabDropIndex = -1;
-        ReleaseFloatingDragPlan(); _canvas.ReleasePointerCapture(e.Pointer); _overlay.Children.Clear();
+        ReleaseFloatingDragPlan(); ReleaseInteractionPointer(e); _overlay.Children.Clear();
         if (dragged && preview is not null)
         {
             if (Manager.Layout.Revision != revision) Submit(new(false, Manager.Layout.Revision, "The layout changed while dragging. Please drag again."));
@@ -100,7 +100,7 @@ public partial class DockSite
     private void CancelInteraction()
     {
         _dragIds = []; _dragging = false; _preview = null; _splitDrag = null; _tabDropIndex = -1; _autoResizeId = null;
-        ReleaseGestureKeyboard(); ReleaseFloatingDragPlan(); _canvas.ReleasePointerCaptures(); _overlay.Children.Clear();
+        ReleaseGestureKeyboard(); ReleaseFloatingDragPlan(); ReleaseInteractionPointers(); _overlay.Children.Clear();
         foreach (var window in _floats.Values) window.CancelMovement(); QueueRender();
     }
     public void ShowSwitcher(int direction = 1)
