@@ -18,7 +18,7 @@ public partial class DockSite
         _gestureEscape ??= (_, e) =>
         {
             if (e.Key != VirtualKey.Escape || !IsInteractionActive ||
-                _canvas.PointerCaptures?.Count is not > 0 ||
+                InteractionCaptureOwner.PointerCaptures?.Count is not > 0 ||
                 !ReferenceEquals(XamlRoot?.Content, _gestureKeyboardRoot)) return;
             // Pointer capture does not transfer keyboard focus from an external
             // toolbar. Only the currently capturing site consumes this key.
