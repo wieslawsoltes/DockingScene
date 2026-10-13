@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using DockingScene.Controls;
 using DockingScene.Core;
+using DockingScene.Layout;
 using DockingScene.Themes;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
