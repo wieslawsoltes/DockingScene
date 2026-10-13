@@ -75,7 +75,7 @@ Test("Tool-only captions ignore the application title and follow host MRU",()=>{
     m.Activate("b").ThrowIfFailed();Check(FloatingHostCaption.GetTitle(m.Layout,host,"App")=="Properties");
 });
 Test("Document captions retain the primary document while a tool is active",()=>{
-    var m=Create();string host=Host(m,"a");m.Dock("doc","a",DockSide.Right).ThrowIfFailed();
+    var m=Create();m.Float("doc").ThrowIfFailed();string host=Host(m,"doc");m.Dock("a","doc",DockSide.Left).ThrowIfFailed();
     m.Activate("a").ThrowIfFailed();Check(FloatingHostCaption.GetTitle(m.Layout,host,"App")=="Document.cs - App");
     Check(FloatingHostCaption.GetTitle(m.Layout,host,"App"," | ")=="Document.cs | App");
     Check(FloatingHostCaption.GetTitle(m.Layout,host,"App",null)=="Document.csApp");
