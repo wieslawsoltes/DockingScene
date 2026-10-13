@@ -22,7 +22,7 @@ public sealed class DockGeometryCache
         metrics ??= new();
         lock (_gate)
         {
-            if (_geometry is not null && _bounds == bounds && _metrics == metrics && GeometryEqual(_source!, layout))
+            if (_geometry is not null && _bounds == bounds && _metrics == metrics && GeometryEqual(_source!, layout, metrics.ToolWindowsHaveTitleBars))
             {
                 _source = layout; _reuses++; return _geometry;
             }
@@ -35,7 +35,7 @@ public sealed class DockGeometryCache
     /// <summary>Release cached inputs and output without resetting lifetime counters.</summary>
     public void Clear() { lock (_gate) { _source = null; _geometry = null; _metrics = null; } }
 
-    private static bool GeometryEqual(DockLayout a, DockLayout b)
+    private static bool GeometryEqual(DockLayout a, DockLayout b, bool titleDefault)
     {
         if (ReferenceEquals(a, b)) return true;
         if (!SameNode(a.Root, b.Root) || a.FloatingHosts.Length != b.FloatingHosts.Length) return false;
@@ -56,7 +56,7 @@ public sealed class DockGeometryCache
         if (ReferenceEquals(a.Windows, b.Windows)) return true;
         if (a.Windows.Count != b.Windows.Count) return false;
         foreach (var (id, x) in a.Windows)
-            if (!b.Windows.TryGetValue(id, out var y) || x.MinimumSize != y.MinimumSize || x.MaximumSize != y.MaximumSize || x.HasTitleBar != y.HasTitleBar) return false;
+            if (!b.Windows.TryGetValue(id, out var y) || x.MinimumSize != y.MinimumSize || x.MaximumSize != y.MaximumSize || (x.HasTitleBar ?? titleDefault) != (y.HasTitleBar ?? titleDefault)) return false;
         return true;
     }
 

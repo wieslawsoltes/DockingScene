@@ -110,6 +110,8 @@ jobs:
             script: host-review.mjs
           - suite: focus
             script: focus-investigation.mjs
+          - suite: caption-policies
+            script: caption-policies-runner.mjs
     steps:
       - uses: actions/checkout@v4
         with:
@@ -198,6 +200,8 @@ jobs:
             script: host-review.mjs
           - suite: focus
             script: focus-investigation.mjs
+          - suite: caption-policies
+            script: caption-policies-runner.mjs
     steps:
       - uses: actions/checkout@v4
         with:

@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher`, `DockDragOverlay` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.17`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.18`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -97,7 +97,7 @@ The toolbar switches between tabbed and standard MDI. Standard MDI supports over
 
 ## Validation and artifacts
 
-`Validate` runs every `tests/*Specs` executable. `Uno application` repeats these contracts, builds desktop, publishes WebAssembly, packs all libraries, checks isolated NuGet consumers, and drives docking, standalone-tab and retained-host browser suites. Failure in any suite blocks deployment. The same three suites then run against the deployed URL and verify `build-info.json`.
+`Validate` runs every `tests/*Specs` executable. `Uno application` repeats these contracts, builds desktop, publishes WebAssembly, packs all libraries, checks isolated NuGet consumers, and drives four product browser suites (docking, standalone tabs, retained hosts, and per-window caption policies) plus the independent 100-cycle focus runner. Failure in any runner blocks deployment. All five runners then check the deployed URL and verify `build-info.json`.
 
 ```sh
 npm install --prefix tests/browser
@@ -174,3 +174,12 @@ Window > Open scrollable MDI sample demonstrates positive/negative windows, nati
 Floating tool-container double-clicks now maximize/restore their entire floating host by default. `FloatingToolWindowContainerTitleBarDoubleClickMode = FloatingWindowTitleBarDoubleClickMode.Dock` instead docks the clicked tool group. The core `InvokeToolCaptionDoubleClick` method validates current ownership, capabilities and revisions and produces one undo step. Floating document captions combine their primary document with `FloatingWindowTitle` and `FloatingWindowTitleDelimiter`; unrelated tool activation does not replace the document title. `GetFloatingDockHostTitle` resolves the current title.
 
 Window > Open tool caption sample demonstrates native title gestures, action visibility, split hosts and application captions. See [tool caption review](docs/tool-caption-review.md) for reference behavior, retained-control tests and remaining limitations.
+
+
+## Inherited per-window tool captions
+
+`DockWindow.HasTitleBar`, `HasCloseButton`, `HasOptionsButton` and `HasToggleAutoHideButton` are nullable presentation overrides. `null` inherits the corresponding `DockSite.ToolWindowsHave*` default; explicit `true` or `false` applies only to that window, including when tools share a selected tab group or move into an auto-hide popup. `ToolWindowsHaveTitleBars` defaults to `true`, as do the three existing button defaults. Hiding a title reclaims its row; hiding buttons reclaims their individual slots without replacing native controls or editors. Capabilities, layout locking and closing vetoes remain authoritative.
+
+This alpha changes the model's `HasTitleBar` from `bool` to `bool?`. Existing boolean assignments and serialized explicit booleans remain supported. Code reading a non-nullable result should use `window.HasTitleBar ?? site.ToolWindowsHaveTitleBars`, or the UI-independent `ToolCaptionSettings.Resolve` API. Other adapters can use the same resolver without loading Uno. MVVM and source bindings expose all four values, and layout serialization preserves null versus explicit booleans. The original three-argument `ToolCaptionOptions` constructor and deconstruction remain available.
+
+The tool-caption sample's **Instance policies** menu demonstrates overrides, inheritance reset, live title visibility, capabilities, and save/restore. Button-only changes preserve geometric cache entries; effective title-height changes invalidate measurement, including live floating and splitter previews. Repeated floating-primary queries use an immutable-snapshot cache instead of rescanning host members. See [caption inheritance](docs/tool-caption-inheritance.md), [native gesture review](docs/tool-caption-input-review.md), and [caption query review](docs/tool-caption-allocation-review.md) for contracts and validation boundaries.

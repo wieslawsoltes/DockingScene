@@ -11,6 +11,7 @@ public sealed record DockMetrics
     public double AutoHideRail { get; init; } = 25;
     public double Border { get; init; } = 1;
     public double DpiScale { get; init; } = 1;
+    public bool ToolWindowsHaveTitleBars { get; init; } = true;
 }
 public readonly record struct DockMeasure(DockSize Minimum, DockSize Maximum);
 public sealed record SplitterGeometry(string Id, DockRect Bounds, DockRect ParentBounds, SplitAxis Axis, double Ratio);
@@ -46,7 +47,7 @@ public static class DockLayoutEngine
             {
                 case DockGroup g:
                     var windows = g.Windows.Select(id => layout.Windows[id]).ToArray();
-                    double chrome = metrics.TabHeight + (g.Kind == GroupKind.Tools && windows.Any(w => w.HasTitleBar) ? metrics.TitleHeight : 0) + 2 * metrics.Border;
+                    double chrome = metrics.TabHeight + (g.Kind == GroupKind.Tools && windows.Any(w => w.HasTitleBar ?? metrics.ToolWindowsHaveTitleBars) ? metrics.TitleHeight : 0) + 2 * metrics.Border;
                     double minW = windows.Max(w => w.MinimumSize.Width) + 2 * metrics.Border;
                     double minH = windows.Max(w => w.MinimumSize.Height) + chrome;
                     result = new(new(minW, minH), new(Math.Max(minW, windows.Min(w => w.MaximumSize.Width) + 2 * metrics.Border), Math.Max(minH, windows.Min(w => w.MaximumSize.Height) + chrome)));

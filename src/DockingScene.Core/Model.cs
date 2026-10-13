@@ -50,7 +50,8 @@ public sealed partial record DockWindow(string Id, string Title, WindowKind Kind
     public bool IsModified { get; init; }
     public bool IsReadOnly { get; init; }
     public bool IsFlashing { get; init; }
-    public bool HasTitleBar { get; init; } = true;
+    /// <summary>Null inherits the host's title-bar default; true/false explicitly override it.</summary>
+    public bool? HasTitleBar { get; init; }
     public string? TabColor { get; init; }
     public DockSize MinimumSize { get; init; } = DockSize.Minimum;
     public DockSize MaximumSize { get; init; } = DockSize.Maximum;

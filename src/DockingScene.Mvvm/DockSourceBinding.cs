@@ -71,6 +71,8 @@ public sealed class DockSourceBinding<T> : IDisposable where T : class
                     var updated = current with { Title = description.Title, Description = description.Description, ContentKey = description.ContentKey,
                         Capabilities = description.Capabilities, IsModified = description.IsModified, IsReadOnly = description.IsReadOnly,
                         IsFlashing = description.IsFlashing, HasTitleBar = description.HasTitleBar, TabColor = description.TabColor,
+                        HasCloseButton = description.HasCloseButton, HasOptionsButton = description.HasOptionsButton,
+                        HasToggleAutoHideButton = description.HasToggleAutoHideButton,
                         CanStandardMdiMinimize = description.CanStandardMdiMinimize, CanStandardMdiMaximize = description.CanStandardMdiMaximize,
                         MinimumSize = description.MinimumSize, MaximumSize = description.MaximumSize, DesiredSize = description.DesiredSize };
                     if (current.Kind != description.Kind) throw new ArgumentException("A source window cannot change kind: " + id);
