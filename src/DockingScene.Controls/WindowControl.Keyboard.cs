@@ -55,7 +55,8 @@ public partial class WindowControl
         var final = session.Complete(true);
         bool changed = final != _original;
         _moving = false; ResetKeyboardInteraction(); ReleaseMovementInput();
-        if (changed) BoundsChanged?.Invoke(final);
+        try { if (changed) BoundsChanged?.Invoke(final); }
+        finally { MovementEnded?.Invoke(); }
     }
     private void ResetKeyboardInteraction()
     {

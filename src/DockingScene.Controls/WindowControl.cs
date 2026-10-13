@@ -42,6 +42,7 @@ public partial class WindowControl : UserControl
     public event Action<DockRect>? BoundsChanging;
     public event Action<DockRect>? BoundsChanged;
     internal event Action? VisualBoundsChanged;
+    internal event Action? MovementEnded;
     public event Action? CloseRequested;
     public event Action? MaximizeRequested;
     public event Action? MinimizeRequested;
@@ -104,7 +105,9 @@ public partial class WindowControl : UserControl
         {
             if (!_moving || _keyboardSession is not null) return;
             _moving = false; _pointerMagnetism = null; ReleaseMovementInput(); ReleasePointerCapture(e.Pointer);
-            BoundsChanged?.Invoke(Bounds); e.Handled = true;
+            try { BoundsChanged?.Invoke(Bounds); }
+            finally { MovementEnded?.Invoke(); }
+            e.Handled = true;
         };
         PointerCanceled += (_, _) => CancelMovement();
         Unloaded += (_, _) => { CancelMovement(); DismissSystemMenu(); };
@@ -137,7 +140,9 @@ public partial class WindowControl : UserControl
     {
         _pointerMagnetism = null;
         if (!_moving) return;
-        _moving = false; ResetKeyboardInteraction(); ReleaseMovementInput(); SetBounds(_original); ReleasePointerCaptures();
+        _moving = false;
+        try { ResetKeyboardInteraction(); ReleaseMovementInput(); SetBounds(_original); }
+        finally { ReleasePointerCaptures(); MovementEnded?.Invoke(); }
     }
     public void SetBounds(DockRect bounds)
     {

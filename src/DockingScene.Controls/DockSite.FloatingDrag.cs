@@ -19,6 +19,8 @@ public partial class DockSite
     {
         if (_floatingInputGuards) return; _floatingInputGuards = true;
         SizeChanged += (_, _) => CancelFloatingGeometry();
+        VisualsUpdated += RefreshFloatingLayouts;
+        RegisterPropertyChangedCallback(ThemeProperty, (_, _) => CancelInvalidFloatingLayouts());
     }
     private void CancelFloatingGeometry()
     {

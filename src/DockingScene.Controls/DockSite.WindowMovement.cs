@@ -22,12 +22,15 @@ public partial class DockSite
             if (!Current()) { frame.CancelMovement(); return; }
             var layout = owner.Layout;
             _floatingGestureRevisions[hostId] = layout.Revision;
+            if (!BeginFloatingLayout(frame, hostId)) return;
             if (frame.IsKeyboardInteractionActive || MagnetismSnapDistance == 0) return;
             var host = layout.FloatingHosts.FirstOrDefault(h => h.Id == hostId);
             if (host is null) { frame.CancelMovement(); return; }
             var plan = CreateFloatingDragPlan(layout, DockTree.WindowIds(host.Root).ToArray(), frame.Bounds);
             if (plan.Magnetism.NeighborCount > 0) frame.SetPointerMagnetism(plan.Magnetism);
         };
+        frame.VisualBoundsChanged += () => { if (Current()) UpdateFloatingLayout(frame); };
+        frame.MovementEnded += () => EndFloatingLayout(frame, hostId);
         frame.BoundsChanged += bounds =>
         {
             if (!Current() || !_floatingGestureRevisions.Remove(hostId, out long revision)) return;
@@ -51,6 +54,6 @@ public partial class DockSite
     {
         foreach (var frame in _floats.Values)
         { frame.CancelMovement(); frame.DismissSystemMenu(); _canvas.Children.Remove(frame); }
-        _floats.Clear(); _floatingGestureRevisions.Clear();
+        _floats.Clear(); _floatingGestureRevisions.Clear(); _floatingLayouts.Clear();
     }
 }

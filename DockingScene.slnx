@@ -9,6 +9,7 @@
   <Project Path="src/DockingScene.App/DockingScene.App.csproj" />
  </Folder>
  <Folder Name="/tests/">
+  <Project Path="tests/DockingScene.FloatingLayoutSpecs/DockingScene.FloatingLayoutSpecs.csproj" />
   <Project Path="tests/DockingScene.FloatingDragSpecs/DockingScene.FloatingDragSpecs.csproj" />
   <Project Path="tests/DockingScene.MagnetismSpecs/DockingScene.MagnetismSpecs.csproj" />
   <Project Path="tests/DockingScene.HostArrangementSpecs/DockingScene.HostArrangementSpecs.csproj" />

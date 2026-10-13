@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher`, `DockDragOverlay` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.14`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.15`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -154,3 +154,9 @@ Standard MDI pointer movement and resizing snap to sibling window edges with con
 Hosted floating-window dragging and pointer resizing use the same snap/gap settings. A whole-host movement preserves its original dimensions, split layout, group identities and editor controls; detaching an individual document remains a separate operation with its own permission checks. The reusable `FloatingDragPlan` freezes source geometry and excludes source hosts from magnetic neighbors. It is created only after the pointer crosses the drag threshold, not for an ordinary tab click.
 
 `DockDragOverlay` retains its preview and up to nine guide visuals across pointer updates instead of rebuilding them. The Window menu opens a floating-drag review sample with real split hosts and snapping controls. See [floating drag review](docs/floating-drag-review.md) for retained-identity tests, bounded visual reuse, cancellation and remaining native/live-content boundaries.
+
+## Live floating layout
+
+Floating frame movement and resizing now reflow their retained editors, tab containers and splitters while pointer or keyboard input is still active. One measured `FloatingLayoutPlan` and caller-owned buffers are reused for the entire gesture, without cloning the global layout or adding provisional model history. Escape restores the original content geometry. Other hosts remain untouched.
+
+`DockSite.IsLiveFloatingWindowLayoutEnabled` defaults to `true`; set it to `false` for frame-only feedback around expensive application content. The floating review sample exposes this option and light/dark switching (F2). See [live floating layout](docs/floating-live-layout.md) for APIs, performance scope and validation.
