@@ -30,6 +30,7 @@ public partial class DockSite
     private void ApplyMdiMagnetismOptions()
     {
         if (_mdi is not { } host) return;
+        host.IsScrollingEnabled = IsStandardMdiScrollingEnabled;
         host.MagnetismSnapDistance = MagnetismSnapDistance;
         host.MagnetismGapDistance = MagnetismGapDistance;
     }
