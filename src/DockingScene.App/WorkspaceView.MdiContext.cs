@@ -15,14 +15,16 @@ public sealed partial class WorkspaceView
     private readonly MdiContextResources _contextResources = new();
     private MdiScopeSample? _mdiScopeSample;
     private FloatingDragSample? _floatingDragSample;
+    private MdiScrollSample? _mdiScrollSample;
     private void ConfigureMdiContextSample()
     {
         _site.WindowContentReleased += (id, _) =>
-        { _contextWindows.Remove(id); if(id=="floating-drag-review") _floatingDragSample=null; };
+        { _contextWindows.Remove(id); if(id=="floating-drag-review") _floatingDragSample=null; if(id=="mdi-scroll-review") _mdiScrollSample=null; };
         _site.WindowCreated += window =>
         {
             window.DataContext = _models?.Find(window.Id);
             _contextWindows[window.Id] = new(window);
+            if(window.Id=="mdi-scroll-review") window.ContentFactory=()=>_mdiScrollSample=new MdiScrollSample();
             if(window.Id=="floating-drag-review") window.ContentFactory=()=>_floatingDragSample=new FloatingDragSample();
         };
     }
@@ -49,6 +51,12 @@ public sealed partial class WorkspaceView
         {
             if (_site.Manager.Layout.Windows.ContainsKey("mdi-host-scope")) Execute(_site.Manager.Open("mdi-host-scope"));
             else Execute(_site.Manager.Register(new("mdi-host-scope", "Independent MDI hosts", WindowKind.Document)));
+            Execute(_site.Manager.SetMdiMode(MdiMode.Tabbed));
+        });
+        Item("Open scrollable MDI sample", "scroll-sample", () =>
+        {
+            if (_site.Manager.Layout.Windows.ContainsKey("mdi-scroll-review")) Execute(_site.Manager.Open("mdi-scroll-review"));
+            else Execute(_site.Manager.Register(new("mdi-scroll-review", "Scrollable MDI", WindowKind.Document)));
             Execute(_site.Manager.SetMdiMode(MdiMode.Tabbed));
         });
         Item("Open floating drag review", "floating-sample", () =>
@@ -91,5 +99,6 @@ public sealed partial class WorkspaceView
         writer.WriteEndObject();
         if (_mdiScopeSample is { IsLoaded: true } sample) sample.WriteDiagnostics(writer);
         if (_floatingDragSample is { IsLoaded: true } floating) floating.WriteDiagnostics(writer);
+        if (_mdiScrollSample is { IsLoaded: true } scrolling) scrolling.WriteDiagnostics(writer);
     }
 }
