@@ -26,9 +26,13 @@ public partial class AdvancedTabControl
         var text = DockChrome.Text(item.Header + (item.IsModified ? " *" : ""), Theme);
         if (item.IsPreview) text.FontStyle = Windows.UI.Text.FontStyle.Italic;
         var label = new Grid();
-        label.ColumnDefinitions.Add(new() { Width = GridLength.Auto }); label.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
-        if (item.IsReadOnly) { var icon = DockChrome.Glyph(DockGlyphs.Lock, Theme.MutedText, 11); icon.Margin = new(0, 0, 5, 0); label.Children.Add(icon); }
-        label.Children.Add(text); Grid.SetColumn(text, 1);
+        label.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        label.ColumnDefinitions.Add(new() { Width = GridLength.Auto });
+        label.ColumnDefinitions.Add(new() { Width = new(1, GridUnitType.Star) });
+        var image = CreateHeaderImage(item);
+        if (image is not null) label.Children.Add(image);
+        if (item.IsReadOnly) { var icon = DockChrome.Glyph(DockGlyphs.Lock, Theme.MutedText, 11); icon.Margin = new(0, 0, 5, 0); label.Children.Add(icon); Grid.SetColumn(icon, 1); }
+        label.Children.Add(text); Grid.SetColumn(text, 2);
         var select = CreateTabButton(item.Header, "tab:" + item.Id, () => Select(item.Id, true)); select.Content = label;
         select.HorizontalAlignment = HorizontalAlignment.Stretch; select.HorizontalContentAlignment = HorizontalAlignment.Stretch;
         select.Height = double.NaN; select.VerticalAlignment = VerticalAlignment.Stretch;
@@ -60,7 +64,7 @@ public partial class AdvancedTabControl
             });
         if (item.IsPreview && CanTabsPromote) Add("Keep " + item.Header + " open", "keep-open:" + item.Id, DockGlyphs.Pin, () => Promote(item));
         if (HasTabCloseButtons && item.CanClose) Add("Close " + item.Header, "close:" + item.Id, DockGlyphs.Close, () => RequestClose(item));
-        var header = new HeaderVisual(new Border { Child = grid, BorderThickness = new(0, 0, 1, 0), BorderBrush = DockChrome.Brush(Theme.Border) }, select, text, buttons);
+        var header = new HeaderVisual(new Border { Child = grid, BorderThickness = new(0, 0, 1, 0), BorderBrush = DockChrome.Brush(Theme.Border) }, select, text, buttons, image);
         header.Border.PointerEntered += (_, _) => { header.IsPointerOver = true; PaintHeader(header, item); };
         header.Border.PointerExited += (_, _) => { header.IsPointerOver = false; PaintHeader(header, item); };
         header.Border.GotFocus += (_, _) => { header.HasKeyboardFocus = true; PaintHeader(header, item); };
@@ -88,6 +92,7 @@ public partial class AdvancedTabControl
     }
     private void PaintHeader(HeaderVisual header, AdvancedTabItem item)
     {
+        UpdateHeaderImage(header, item);
         UpdateHeaderActions(header, item);
         bool selected = item.Id == _selectedId;
         string color = selected ? IsGroupActive && !IsToolGroup ? Theme.Accent : Theme.Surface : Theme.InactiveTab;
