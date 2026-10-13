@@ -1,3 +1,4 @@
+import { runFloatingLayoutTests } from './floating-layout.mjs';
 import assert from 'node:assert/strict';
 import { assertFloatingPaint } from './painted-floating.mjs';
 
@@ -96,4 +97,5 @@ export async function runFloatingDragTests({page,state,test,reset,click,wait,bou
     assert.equal(after.plans,before.plans);assert.equal(after.feedbackUpdates,before.feedbackUpdates);assert.equal(after.interaction,false);assert.equal(after.keyboardScope,false);
     await reset();
   });
+  await runFloatingLayoutTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
 }

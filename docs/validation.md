@@ -2,9 +2,9 @@
 
 ## Model and package gates
 
-Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **23 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism and floating-drag plans. Seeded loops supplement named specifications; they are not additional browser scenarios.
+Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **24 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans and live floating subtree layout. Seeded loops supplement named specifications; they are not additional browser scenarios.
 
-`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.14` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
+`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.15` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
 
 ## Browser gates
 
@@ -14,9 +14,9 @@ Four independent Chromium runners consume the same exact-revision artifact. Thre
 | --- | ---: | --- |
 | Docking | 28 | Editing/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher and themes |
 | Standalone tabs | 32 | Three lanes, six overflow modes, header geometry, close/pin/menus, factories, content lifetime and 2,002-tab workloads |
-| Host, Metro and MDI | 77 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
+| Host, Metro and MDI | 85 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
 
-The source defines **137 product scenarios**, extending the preceding 129 with eight floating-drag scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
+The source defines **145 product scenarios**, extending the preceding 137 with eight live-floating-layout scenarios. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
 
 The separate **100-cycle focus investigation** remains a required gate. It exercises native editor/body input through the packaged canvas boundary and is not counted as another 100 named product cases. Helper contracts cover trusted-pointer scoping, independent documents, idempotence, disposal and atomic clipped hit-target reads.
 
@@ -37,6 +37,10 @@ Seven physical-input MDI cases exercise actual gap placement, provisional versus
 Fourteen FloatingDragSpecs cover full split-host identity and geometry, Drag versus Float capabilities, partial detach, self-exclusion, stale snapshots, locking/veto, no-op/undo, invalid inputs, mutable caller arrays and frozen displayed bounds. Eight additional browser cases exercise the real nested DockSite: exact gaps, full original preview dimensions, retained split roots/editors/frames, bypass/disable, resize anchors, bounded guide reuse, settings/viewport cancellation and stationary tab clicks that build no magnetism plan. All preceding scenarios remain required.
 
 The overlay counters reject repeated visual construction; the magnetism allocation checks exclude planning. Docking-guide hit testing still allocates model records and traverses candidates. These are targeted operation/allocation checks, not frame-rate, input-to-photon, power or hardware-GPU measurements.
+
+## Live floating layout
+
+Thirteen FloatingLayoutSpecs compare against full DockLayoutEngine, including 1,000 seeded resizes and fractional DPI, and require no managed allocation for 20,000 warm subtree arrangements. Eight additional real-input cases verify actual editor/group/splitter geometry before release, commit/undo, Escape rollback, raw reversal, keyboard Move/Size, frame-only opt-out, color refresh, reentrant completion and invalidation. The full global layout is not rebuilt by provisional frame changes. See [live floating layout](floating-live-layout.md). Geometry counters exclude native text/measure work and diagnostics; they are not a hardware-GPU speed claim.
 
 ## Deployment and exact source
 

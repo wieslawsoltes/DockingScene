@@ -65,7 +65,7 @@ public partial class DockSite
             thumb.Tag = split; thumb.Background = DockChrome.Brush(Theme.Background);
             thumb.IsEnabled = !layout.IsLayoutLocked && ids.All(id => Manager.Allows(id, DockCapabilities.Resize));
             string? host = ids.Select(id => DockTree.Locate(layout, id).HostId).FirstOrDefault(id => id is not null);
-            DockChrome.Position(thumb, split.Bounds, host is null ? 4 : z[host] + 3);
+            DockChrome.PositionComposed(thumb, split.Bounds, host is null ? 4 : z[host] + 3);
         }
         RenderFloatingResizeGrips(z);
     }
