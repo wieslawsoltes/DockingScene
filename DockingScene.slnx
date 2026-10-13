@@ -10,6 +10,7 @@
  </Folder>
  <Folder Name="/tests/">
   <Project Path="tests/DockingScene.ToolCaptionSpecs/DockingScene.ToolCaptionSpecs.csproj" />
+    <Project Path="tests/DockingScene.CaptionPolicySpecs/DockingScene.CaptionPolicySpecs.csproj" />
   <Project Path="tests/DockingScene.MdiScrollSpecs/DockingScene.MdiScrollSpecs.csproj" />
   <Project Path="tests/DockingScene.FloatingLayoutSpecs/DockingScene.FloatingLayoutSpecs.csproj" />
   <Project Path="tests/DockingScene.FloatingDragSpecs/DockingScene.FloatingDragSpecs.csproj" />

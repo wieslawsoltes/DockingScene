@@ -64,7 +64,7 @@ public sealed class FloatingLayoutPlan
                             throw new ArgumentException("Invalid floating content constraints.", nameof(snapshot));
                         minW = Math.Max(minW, min.Width); minH = Math.Max(minH, min.Height);
                         maxW = Math.Min(maxW, max.Width); maxH = Math.Min(maxH, max.Height);
-                        title |= window.HasTitleBar;
+                        title |= window.HasTitleBar ?? _metrics.ToolWindowsHaveTitleBars;
                     }
                     double chrome = _metrics.TabHeight + (group.Kind == GroupKind.Tools && title ? _metrics.TitleHeight : 0) + 2 * _metrics.Border;
                     minW += 2 * _metrics.Border; minH += chrome;
