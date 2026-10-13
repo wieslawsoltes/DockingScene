@@ -17,7 +17,7 @@ A modular docking and multiple-document workspace for **Uno Platform**, with a U
 | `DockingScene.Themes` | Palettes, metrics, strings, original vector icons and bounded SVG-path parsing | None |
 | `DockingScene.Controls` | `DockSite`, standalone `AdvancedTabControl`, `DockingWindow`, `WindowControl`, `StandardMdiHost`, `StandardMdiControlBar`, `StandardSwitcher`, `DockDragOverlay` and containers | Uno Platform |
 
-All six packages use **`0.1.0-alpha.18`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
+All six packages use **`0.1.0-alpha.19`** and are packed from the same commit. Isolated package-only consumers execute the five non-UI libraries and compile the controls separately from the source-project builds. The sample App composes these packages; it is not the docking engine. Application content is never embedded in layout persistence.
 
 ## Build and run
 
@@ -183,3 +183,10 @@ Window > Open tool caption sample demonstrates native title gestures, action vis
 This alpha changes the model's `HasTitleBar` from `bool` to `bool?`. Existing boolean assignments and serialized explicit booleans remain supported. Code reading a non-nullable result should use `window.HasTitleBar ?? site.ToolWindowsHaveTitleBars`, or the UI-independent `ToolCaptionSettings.Resolve` API. Other adapters can use the same resolver without loading Uno. MVVM and source bindings expose all four values, and layout serialization preserves null versus explicit booleans. The original three-argument `ToolCaptionOptions` constructor and deconstruction remain available.
 
 The tool-caption sample's **Instance policies** menu demonstrates overrides, inheritance reset, live title visibility, capabilities, and save/restore. Button-only changes preserve geometric cache entries; effective title-height changes invalidate measurement, including live floating and splitter previews. Repeated floating-primary queries use an immutable-snapshot cache instead of rescanning host members. See [caption inheritance](docs/tool-caption-inheritance.md), [native gesture review](docs/tool-caption-input-review.md), and [caption query review](docs/tool-caption-allocation-review.md) for contracts and validation boundaries.
+
+
+## Vertical tab constraints and allocation-free measurement
+
+Left/right tab strips reserve their physical width rather than horizontal tab height. Full-tree and frozen floating layouts share the same single-pass content/chrome measurement. Axis changes invalidate cached geometry; Top/Bottom and Left/Right retain equivalent envelopes. `DockLayoutEngine.MeasureGroup` exposes the measurement without creating application content, and `DockMetrics.Default` avoids allocating defaults on repeated cache queries.
+
+The tool-caption sample's **Instance policies > Tab layout and content minimums** submenu demonstrates constrained side-by-side/stacked tools and all four tab edges. Existing editor instances survive placement, undo, theme and live-resize transitions. See [vertical tab geometry](docs/vertical-tab-geometry.md) for tests, API scope and remaining sizing limitations.

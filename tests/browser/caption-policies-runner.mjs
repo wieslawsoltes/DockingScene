@@ -1,4 +1,5 @@
 import { runCaptionPolicyTests } from './caption-policies.mjs';
+import { runGroupGeometryTests } from './group-geometry.mjs';
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -40,6 +41,7 @@ try {
   await page.waitForFunction(() => globalThis.dockingScene?.ready || globalThis.dockingSceneStartup?.error, null, { timeout: 90000 });
   assert(!(await captureDiagnostics(page)).startup?.error); await page.locator('.uno-loader').waitFor({ state: 'hidden', timeout: 30000 }); await settle();
   await runCaptionPolicyTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
+  await runGroupGeometryTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {

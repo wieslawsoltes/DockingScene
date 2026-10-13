@@ -51,11 +51,11 @@ public partial class AdvancedTabControl
             {
                 var lane = _lanes[i]; var plan = _plan.Lanes[i]; lane.Layout = plan;
                 lane.Offset = OverflowBehavior == TabOverflowBehavior.None ? 0 : Math.Clamp(lane.Offset, 0, Math.Max(0, plan.Metrics.Length - plan.Extent));
-                var rect = vertical ? new DockRect(0, plan.Start, 155, plan.Extent) : new DockRect(plan.Start, 0, plan.Extent, Theme.TabHeight);
+                var rect = vertical ? new DockRect(0, plan.Start, DockMetrics.VerticalTabStripWidth, plan.Extent) : new DockRect(plan.Start, 0, plan.Extent, Theme.TabHeight);
                 DockChrome.Position(lane.View, rect); lane.View.Clip = new RectangleGeometry { Rect = new Rect(0, 0, rect.Width, rect.Height) };
             }
-            DockChrome.Position(_actions, vertical ? new(0, available, 155, actions) : new(available, 0, actions, Theme.TabHeight));
-            _header.Clip = new RectangleGeometry { Rect = vertical ? new Rect(0, 0, 155, total) : new Rect(0, 0, total, Theme.TabHeight) };
+            DockChrome.Position(_actions, vertical ? new(0, available, DockMetrics.VerticalTabStripWidth, actions) : new(available, 0, actions, Theme.TabHeight));
+            _header.Clip = new RectangleGeometry { Rect = vertical ? new Rect(0, 0, DockMetrics.VerticalTabStripWidth, total) : new Rect(0, 0, total, Theme.TabHeight) };
             if (reveal) RevealSelection(); RealizeHeaders();
         }
         finally { _arranging = false; }
@@ -101,7 +101,7 @@ public partial class AdvancedTabControl
                 var item = Items[plan.Indices[i]]; visible.Add(item.Id);
                 if (!_headers.TryGetValue(item.Id, out var header)) { header = CreateHeader(item); _headers.Add(item.Id, header); lane.View.Children.Add(header.Border); }
                 double start = plan.Metrics.Offsets[i] - lane.Offset, size = plan.Metrics.Offsets[i + 1] - plan.Metrics.Offsets[i];
-                var rect = vertical ? new DockRect(0, start, 155, size) : new DockRect(start, 0, size, Theme.TabHeight);
+                var rect = vertical ? new DockRect(0, start, DockMetrics.VerticalTabStripWidth, size) : new DockRect(start, 0, size, Theme.TabHeight);
                 DockChrome.Position(header.Border, rect);
                 header.Border.Clip = new RectangleGeometry { Rect = new Rect(0, 0, rect.Width, rect.Height) };
                 // Reserve a real label target when shrinking; actions that cannot fit
@@ -130,7 +130,7 @@ public partial class AdvancedTabControl
         bool vertical = Placement is TabPlacement.Left or TabPlacement.Right;
         var local = TransformToVisual(_header).TransformPoint(point);
         double axis = vertical ? local.Y : local.X, cross = vertical ? local.X : local.Y;
-        if (cross < 0 || cross >= (vertical ? 155 : Theme.TabHeight) || axis < 0 || axis >= _plan.Extent) return false;
+        if (cross < 0 || cross >= (vertical ? DockMetrics.VerticalTabStripWidth : Theme.TabHeight) || axis < 0 || axis >= _plan.Extent) return false;
         foreach (var lane in _lanes)
         {
             if (lane.Layout is not { } plan || axis < plan.Start || axis >= plan.Start + plan.Extent) continue;

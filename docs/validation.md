@@ -2,9 +2,9 @@
 
 ## Model and package gates
 
-Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **27 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
+Both workflows enumerate every `tests/*Specs/*.csproj` executable under shell `pipefail`; failures cannot be hidden by logging. There are **28 suites** covering the immutable model, transactions, invalid input, layout, MVVM/source binding, serialization, vectors, tab allocation, bulk operations, caching, keyboard/window geometry, contextual host scope, magnetism, floating-drag plans, live floating subtree layout and MDI scrolling. Seeded loops supplement named specifications; they are not additional browser scenarios.
 
-`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.18` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
+`Uno application` compiles desktop, publishes the actual WebAssembly application and packs all six libraries at `0.1.0-alpha.19` from one source revision. Isolated NuGet consumers restore into a fresh cache: a plain .NET executable runs the five UI-independent packages, and an Uno consumer compiles the controls API without source-project references. They include the magnetism engine, floating plans, retained feedback, and DockSite/StandardMdiHost settings. Compilation does not certify native desktop UI behavior.
 
 ## Browser gates
 
@@ -14,10 +14,10 @@ Five independent Chromium runners consume the same exact-revision artifact. Four
 | --- | ---: | --- |
 | Docking | 28 | Editing/caret, docking/floating, MDI, policies, history, persistence, auto-hide, switcher and themes |
 | Standalone tabs | 32 | Three lanes, six overflow modes, header geometry, close/pin/menus, factories, content lifetime and 2,002-tab workloads |
-| Caption policies | 11 | Instance/site inheritance, reclaimed native title/button space, capability checks, persistence and capture cancellation |
+| Caption policies and group geometry | 16 | Instance/site inheritance, physical title/button space, vertical constraints, content retention, persistence, themes and capture cancellation |
 | Host, Metro and MDI | 101 | Retained geometry/pixels, immediate focus, selectors, MDI state/commands, contextual titles, independent hosts, pointer magnetism and floating-drag review |
 
-The source defines **172 product scenarios**: the preceding 161 plus ten per-window caption behavior cases and their independent revision/error gate. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
+The source defines **177 product scenarios**: the preceding 172 plus five physical-input vertical group geometry cases. Counts describe test definitions; the exact revision's result files and exit codes establish whether they passed.
 
 The separate **100-cycle focus investigation** remains a required gate. It exercises native editor/body input through the packaged canvas boundary and is not counted as another 100 named product cases. Helper contracts cover trusted-pointer scoping, independent documents, idempotence, disposal and atomic clipped hit-target reads.
 
@@ -88,3 +88,25 @@ The allocator responsible for the earlier intermittent result was not identified
 source changes and test definitions are not substituted for exact-head execution.
 See [caption inheritance](tool-caption-inheritance.md) and the two caption input
 and allocation review documents for the source-level changes.
+
+
+## Vertical group geometry and default-query allocation
+
+Seventeen GroupMeasurementSpecs cover all four tab edges, correct cross-axis chrome,
+minimum-clamped splitters, opposite-edge cache reuse, inherited title envelopes,
+conflicting member maxima, invalid input and finite overflow. Five hundred seeded
+measurements are compared with an independent multi-pass oracle. Full and frozen
+floating geometry must agree at fractional DPI.
+
+Two strict allocation checks require zero managed bytes for 10,000 warmed
+omitted-metrics cache queries and 10,000 measurements of a 128-member group.
+Construction and native content/text costs are excluded. No hardware-GPU claim
+follows from these CPU-side tests. The package-only consumer calls the new API.
+
+Five added native-input scenarios check actual editor/group dimensions, left/right
+content movement, Top/Bottom and Left/Right cache reuse, stacked-height reclamation,
+undo and editable-content retention, dark PNG pixels and live resizing/Escape.
+They run inside the existing caption-policy runner before its revision/error gate,
+both before deployment and against the deployed app. No prior gate is removed.
+See [vertical tab geometry](vertical-tab-geometry.md). Definitions are not pass
+claims: exact-head CI results establish execution.
