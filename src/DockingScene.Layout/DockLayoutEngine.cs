@@ -5,6 +5,10 @@ namespace DockingScene.Layout;
 
 public sealed record DockMetrics
 {
+    /// <summary>Immutable defaults shared by allocation-free omitted-metrics calls.</summary>
+    public static DockMetrics Default { get; } = new();
+    /// <summary>Cross-axis extent used by the native vertical tab strip.</summary>
+    public const double VerticalTabStripWidth = 155;
     public double Splitter { get; init; } = 5;
     public double TabHeight { get; init; } = 26;
     public double TitleHeight { get; init; } = 24;
@@ -24,15 +28,14 @@ public sealed record DockGeometry(
     ImmutableArray<string> ConstraintWarnings);
 
 /// <summary>Linear-time two-pass layout. When the viewport cannot satisfy minimums it shrinks proportionally, never producing negative sizes.</summary>
-public static class DockLayoutEngine
+public static partial class DockLayoutEngine
 {
     public static DockGeometry Arrange(DockLayout layout, DockRect bounds, DockMetrics? metrics = null)
     {
-        metrics ??= new();
+        metrics ??= DockMetrics.Default;
         if (!double.IsFinite(bounds.X) || !double.IsFinite(bounds.Y) || !double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) || bounds.Width < 0 || bounds.Height < 0 || !double.IsFinite(bounds.Right) || !double.IsFinite(bounds.Bottom))
             throw new ArgumentException("Invalid viewport.", nameof(bounds));
-        if (metrics.DpiScale <= 0 || !double.IsFinite(metrics.DpiScale) || metrics.Splitter < 0 || metrics.TitleHeight < 0 || metrics.TabHeight < 0 || metrics.Border < 0 || metrics.AutoHideRail < 0 || !double.IsFinite(metrics.Splitter) || !double.IsFinite(metrics.TitleHeight) || !double.IsFinite(metrics.TabHeight) || !double.IsFinite(metrics.Border) || !double.IsFinite(metrics.AutoHideRail))
-            throw new ArgumentException("Invalid metrics.", nameof(metrics));
+        ValidateMetrics(metrics);
         var nodes = ImmutableDictionary.CreateBuilder<string, DockRect>();
         var splitters = ImmutableArray.CreateBuilder<SplitterGeometry>();
         var floats = ImmutableDictionary.CreateBuilder<string, DockRect>();
@@ -46,11 +49,7 @@ public static class DockLayoutEngine
             switch (node)
             {
                 case DockGroup g:
-                    var windows = g.Windows.Select(id => layout.Windows[id]).ToArray();
-                    double chrome = metrics.TabHeight + (g.Kind == GroupKind.Tools && windows.Any(w => w.HasTitleBar ?? metrics.ToolWindowsHaveTitleBars) ? metrics.TitleHeight : 0) + 2 * metrics.Border;
-                    double minW = windows.Max(w => w.MinimumSize.Width) + 2 * metrics.Border;
-                    double minH = windows.Max(w => w.MinimumSize.Height) + chrome;
-                    result = new(new(minW, minH), new(Math.Max(minW, windows.Min(w => w.MaximumSize.Width) + 2 * metrics.Border), Math.Max(minH, windows.Min(w => w.MaximumSize.Height) + chrome)));
+                    result = MeasureGroupCore(layout, g, metrics);
                     break;
                 case DockWorkspace w:
                     result = w.Content is null ? new(new(80, 60), DockSize.Maximum) : Measure(w.Content);

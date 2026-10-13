@@ -19,7 +19,7 @@ public sealed class DockGeometryCache
     public DockGeometry Arrange(DockLayout layout, DockRect bounds, DockMetrics? metrics = null)
     {
         ArgumentNullException.ThrowIfNull(layout);
-        metrics ??= new();
+        metrics ??= DockMetrics.Default;
         lock (_gate)
         {
             if (_geometry is not null && _bounds == bounds && _metrics == metrics && GeometryEqual(_source!, layout, metrics.ToolWindowsHaveTitleBars))
@@ -67,7 +67,8 @@ public sealed class DockGeometryCache
         if (a is null || b is null || a.Id != b.Id) return false;
         return (a, b) switch
         {
-            (DockGroup x, DockGroup y) => x.Kind == y.Kind && (x.Windows == y.Windows || x.Windows.SequenceEqual(y.Windows)),
+            (DockGroup x, DockGroup y) => x.Kind == y.Kind &&
+                (x.TabPlacement is TabPlacement.Left or TabPlacement.Right) == (y.TabPlacement is TabPlacement.Left or TabPlacement.Right) && (x.Windows == y.Windows || x.Windows.SequenceEqual(y.Windows)),
             (DockWorkspace x, DockWorkspace y) => SameNode(x.Content, y.Content, depth + 1),
             (DockSplit x, DockSplit y) => x.Axis == y.Axis && x.Ratio == y.Ratio &&
                 SameNode(x.First, y.First, depth + 1) && SameNode(x.Second, y.Second, depth + 1),

@@ -22,11 +22,8 @@ public sealed class FloatingLayoutPlan
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentException.ThrowIfNullOrWhiteSpace(hostId);
-        _metrics = metrics ?? new();
-        if (!double.IsFinite(_metrics.DpiScale) || _metrics.DpiScale <= 0 ||
-            !ValidMetric(_metrics.Border) || !ValidMetric(_metrics.TitleHeight) ||
-            !ValidMetric(_metrics.TabHeight) || !ValidMetric(_metrics.Splitter) ||
-            !ValidMetric(_metrics.AutoHideRail)) throw new ArgumentException("Invalid layout metrics.", nameof(metrics));
+        _metrics = metrics ?? DockMetrics.Default;
+        DockLayoutEngine.ValidateMetrics(_metrics);
         var host = snapshot.FloatingHosts.FirstOrDefault(h => h.Id == hostId)
             ?? throw new ArgumentException("The floating host is not registered.", nameof(hostId));
         HostId = hostId; Revision = snapshot.Revision;
@@ -51,24 +48,15 @@ public sealed class FloatingLayoutPlan
                 case DockGroup group:
                     if (!Enum.IsDefined(group.Kind) || group.Windows.IsDefaultOrEmpty)
                         throw new ArgumentException("Invalid floating group.", nameof(snapshot));
-                    double minW = 0, minH = 0, maxW = double.MaxValue, maxH = double.MaxValue;
-                    bool title = false;
+                    var groupMeasure = new DockGroupMeasurement();
                     foreach (string id in group.Windows)
                     {
                         if (members.Count >= MaximumNodes || string.IsNullOrWhiteSpace(id) || !members.Add(id) ||
                             !snapshot.Windows.TryGetValue(id, out var window))
                             throw new ArgumentException("Invalid or repeated floating group member.", nameof(snapshot));
-                        var min = window.MinimumSize; var max = window.MaximumSize;
-                        if (!min.IsFinite || !max.IsFinite || min.Width < 0 || min.Height < 0 ||
-                            max.Width <= 0 || max.Height <= 0 || max.Width < min.Width || max.Height < min.Height)
-                            throw new ArgumentException("Invalid floating content constraints.", nameof(snapshot));
-                        minW = Math.Max(minW, min.Width); minH = Math.Max(minH, min.Height);
-                        maxW = Math.Min(maxW, max.Width); maxH = Math.Min(maxH, max.Height);
-                        title |= window.HasTitleBar ?? _metrics.ToolWindowsHaveTitleBars;
+                        groupMeasure.Add(window, _metrics.ToolWindowsHaveTitleBars);
                     }
-                    double chrome = _metrics.TabHeight + (group.Kind == GroupKind.Tools && title ? _metrics.TitleHeight : 0) + 2 * _metrics.Border;
-                    minW += 2 * _metrics.Border; minH += chrome;
-                    measure = new(new(minW, minH), new(Math.Max(minW, maxW + 2 * _metrics.Border), Math.Max(minH, maxH + chrome)));
+                    measure = groupMeasure.Complete(group, _metrics);
                     break;
                 case DockWorkspace workspace:
                     first = workspace.Content is null ? -1 : Build(workspace.Content, depth + 1);
