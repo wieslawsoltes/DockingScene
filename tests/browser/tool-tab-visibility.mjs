@@ -69,5 +69,23 @@ export async function runToolTabVisibilityTests({page,state,test,reset,click,wai
     near(after.policies.geometry.frameWidth,before.policies.geometry.frameWidth,'Frame restored');
     near(group(after).width,122,'New visibility projects after cancellation'); retained(before,after);
   });
+  await test('Sample F4 works before a menu opens and remains single-scoped across repeated menus',async()=>{
+    await reset(); await menu('menubar:Window','mdi-context:tool-caption-sample');
+    await click('caption-sample:a'); await settle();
+    const before=await current(); assert.equal(before.policies.geometry.singleTabs,'Hide');
+    await page.keyboard.press('F4');
+    await wait(()=>globalThis.dockingScene.toolCaptions.policies.geometry.singleTabs==='Show');
+    const shown=await current(); retained(before,shown); assert.equal(shown.revision,before.revision);
+    for(let i=0;i<3;i++) {
+      await click('caption-sample:policies'); await settle();
+      await page.keyboard.press('Escape'); await settle();
+    }
+    await page.keyboard.press('F4');
+    await wait(()=>globalThis.dockingScene.toolCaptions.policies.geometry.singleTabs==='Hide');
+    const hidden=await current(); retained(shown,hidden); assert.equal(hidden.revision,before.revision);
+    await page.keyboard.press('F4');
+    await wait(()=>globalThis.dockingScene.toolCaptions.policies.geometry.singleTabs==='Show');
+    assert.equal((await current()).revision,before.revision);
+  });
   await reset();
 }

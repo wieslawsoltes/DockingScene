@@ -12,21 +12,22 @@ namespace DockingScene.App;
 
 public sealed partial class ToolCaptionSample
 {
-    private bool _visibilityShortcutConfigured;
+    private void ConfigureVisibilityShortcut()
+    {
+        // Keep this sample command on the normal routed input path. A toolbar
+        // button can retain keyboard focus while a floating border owns pointer
+        // capture. Register once at construction, not after opening a menu.
+        KeyDown += (_, e) =>
+        {
+            if (e.Handled || e.Key != Windows.System.VirtualKey.F4) return;
+            _site.ToolWindowsSingleTabLayoutBehavior = _site.ToolWindowsSingleTabLayoutBehavior == SingleTabLayoutBehavior.Show
+                ? SingleTabLayoutBehavior.Hide : SingleTabLayoutBehavior.Show;
+            e.Handled = true;
+        };
+    }
+
     private void AddGroupLayoutMenu(MenuFlyout menu)
     {
-        if (!_visibilityShortcutConfigured)
-        {
-            _visibilityShortcutConfigured = true;
-            var shortcut = new Microsoft.UI.Xaml.Input.KeyboardAccelerator { Key = Windows.System.VirtualKey.F4 };
-            shortcut.Invoked += (_, e) =>
-            {
-                _site.ToolWindowsSingleTabLayoutBehavior = _site.ToolWindowsSingleTabLayoutBehavior == SingleTabLayoutBehavior.Show
-                    ? SingleTabLayoutBehavior.Hide : SingleTabLayoutBehavior.Show;
-                e.Handled = true;
-            };
-            KeyboardAccelerators.Add(shortcut);
-        }
         var layout = DockChrome.Identify(new MenuFlyoutSubItem { Text = "Tab layout and content minimums", FontSize = 12 }, "caption-policy:layout");
         menu.Items.Add(layout);
         void Item(string title, string id, Action action)
