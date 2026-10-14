@@ -1,5 +1,6 @@
 import { runCaptionPolicyTests } from './caption-policies.mjs';
 import { runGroupGeometryTests } from './group-geometry.mjs';
+import { runToolTabVisibilityTests } from './tool-tab-visibility.mjs';
 import { chromium } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import assert from 'node:assert/strict';
@@ -42,6 +43,7 @@ try {
   assert(!(await captureDiagnostics(page)).startup?.error); await page.locator('.uno-loader').waitFor({ state: 'hidden', timeout: 30000 }); await settle();
   await runCaptionPolicyTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await runGroupGeometryTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
+  await runToolTabVisibilityTests({page,state,test,reset,click,wait,bounds,settle,menu,output});
   await test('No unhandled exceptions and exact deployed revision', async () => {
     assert.deepEqual(errors, []); assert.equal((await captureDiagnostics(page)).diagnosticError, null);
     if (process.env.EXPECTED_BUILD_COMMIT) {

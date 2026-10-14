@@ -29,7 +29,8 @@ public static partial class DockLayoutEngine
 
     internal static void ValidateMetrics(DockMetrics metrics)
     {
-        if (metrics.DpiScale <= 0 || !double.IsFinite(metrics.DpiScale) ||
+        if (metrics.ToolWindowsSingleTabLayoutBehavior is not (SingleTabLayoutBehavior.Show or SingleTabLayoutBehavior.Hide) ||
+            metrics.DpiScale <= 0 || !double.IsFinite(metrics.DpiScale) ||
             !Valid(metrics.Splitter) || !Valid(metrics.TitleHeight) || !Valid(metrics.TabHeight) ||
             !Valid(metrics.Border) || !Valid(metrics.AutoHideRail))
             throw new ArgumentException("Invalid layout metrics.", nameof(metrics));
@@ -66,8 +67,9 @@ internal struct DockGroupMeasurement
             group.TabPlacement is not (TabPlacement.Top or TabPlacement.Bottom or TabPlacement.Left or TabPlacement.Right))
             throw new ArgumentException("Invalid group presentation.", nameof(group));
         bool vertical = group.TabPlacement is TabPlacement.Left or TabPlacement.Right;
-        double widthChrome = 2 * metrics.Border + (vertical ? DockMetrics.VerticalTabStripWidth : 0);
-        double heightChrome = 2 * metrics.Border + (vertical ? 0 : metrics.TabHeight) +
+        bool tabs = metrics.HasTabStrip(group);
+        double widthChrome = 2 * metrics.Border + (tabs && vertical ? DockMetrics.VerticalTabStripWidth : 0);
+        double heightChrome = 2 * metrics.Border + (tabs && !vertical ? metrics.TabHeight : 0) +
             (group.Kind == GroupKind.Tools && _hasTitle ? metrics.TitleHeight : 0);
         double minWidth = _minWidth + widthChrome, minHeight = _minHeight + heightChrome;
         return new DockMeasure(new(minWidth, minHeight),

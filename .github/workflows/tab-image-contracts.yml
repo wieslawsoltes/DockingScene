@@ -1,0 +1,56 @@
+name: Native tab image contracts
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: image-contracts-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  images:
+    name: Native tab image contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Publish the isolated native control fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet workload install wasm-tools --skip-manifest-update
+          dotnet publish tests/TabImageContracts/TabImageContracts.csproj -c Release -o artifacts/images
+          mkdir -p artifacts/site/image-contracts
+          cp -a artifacts/images/wwwroot/. artifacts/site/image-contracts/
+          printf '{"commit":"%s"}\n' "$(git rev-parse HEAD)" > artifacts/site/image-contracts/build-info.json
+      - name: Install Chromium
+        run: |
+          npm install --prefix tests/browser --ignore-scripts --no-audit --no-fund
+          cd tests/browser && npx playwright install --with-deps chromium
+      - name: Test native image pixels, retention and virtualization
+        shell: bash
+        env:
+          BROWSER_URL: http://127.0.0.1:8765/image-contracts/
+          BROWSER_RESULTS: artifacts/image-results
+        run: |
+          set -euo pipefail
+          export EXPECTED_BUILD_COMMIT="$(git rev-parse HEAD)"
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory artifacts/site > artifacts/image-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          node tests/browser/tab-image-contracts.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-tab-image-results
+          path: |
+            artifacts/image-results
+            artifacts/image-server.log

@@ -9,6 +9,7 @@
   <Project Path="src/DockingScene.App/DockingScene.App.csproj" />
  </Folder>
  <Folder Name="/tests/">
+  <Project Path="tests/DockingScene.ToolTabVisibilitySpecs/DockingScene.ToolTabVisibilitySpecs.csproj" />
   <Project Path="tests/DockingScene.GroupMeasurementSpecs/DockingScene.GroupMeasurementSpecs.csproj" />
   <Project Path="tests/DockingScene.ToolCaptionSpecs/DockingScene.ToolCaptionSpecs.csproj" />
     <Project Path="tests/DockingScene.CaptionPolicySpecs/DockingScene.CaptionPolicySpecs.csproj" />
