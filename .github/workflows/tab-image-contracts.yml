@@ -27,7 +27,9 @@ jobs:
         run: |
           set -euo pipefail
           dotnet workload install wasm-tools --skip-manifest-update
-          dotnet publish tests/TabImageContracts/TabImageContracts.csproj -c Release -o artifacts/images
+          dotnet publish tests/TabImageContracts/TabImageContracts.csproj -f net10.0-browserwasm -c Release -o artifacts/images
+          test -f artifacts/images/wwwroot/index.html
+          test -d artifacts/images/wwwroot/_framework
           mkdir -p artifacts/site/image-contracts
           cp -a artifacts/images/wwwroot/. artifacts/site/image-contracts/
           printf '{"commit":"%s"}\n' "$(git rev-parse HEAD)" > artifacts/site/image-contracts/build-info.json
