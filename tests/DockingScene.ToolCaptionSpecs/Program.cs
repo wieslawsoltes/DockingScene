@@ -111,10 +111,10 @@ Test("An unknown host cannot reuse the previously queried host's caption",()=>{
 });
 Test("Warm primary-window resolution allocates no managed memory",()=>{
     var m=Create();string host=Host(m,"a");m.Activate("a").ThrowIfFailed();
-    DockWindow? result=null;for(int i=0;i<200;i++)result=FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
-    long bytes=GC.GetAllocatedBytesForCurrentThread();
-    for(int i=0;i<10000;i++)result=FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
-    bytes=GC.GetAllocatedBytesForCurrentThread()-bytes;
+    AllocationProbe.VerifyControls();
+    Func<DockWindow> query=()=>FloatingHostCaption.GetPrimaryWindow(m.Layout,host);
+    _=AllocationProbe.Measure(query,1000,out _);
+    long bytes=AllocationProbe.Measure(query,10000,out var result);
     if(bytes!=0 || result?.Id!="a") throw new Exception($"Expected 0 bytes and a; actual {bytes} bytes and {result?.Id}");
     Console.WriteLine($"ALLOCATION primary captions: 10000 warm resolutions, {bytes} bytes; membership/index construction excluded");
 });

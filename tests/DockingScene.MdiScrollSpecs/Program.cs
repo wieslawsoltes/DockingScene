@@ -90,10 +90,12 @@ Test("One thousand seeded layouts enclose all frames and preserve coordinate inv
 });
 Test("Warm measurement and reveal queries allocate no managed memory",()=>{
     var frames=Enumerable.Range(0,128).Select(i=>new DockRect(i*20-100,i*12-50,100,100)).ToArray();
-    MdiScrollLayout a=default;for(int i=0;i<100;i++)a=MdiScrollLayout.Measure(frames,new(600,400));
-    long bytes=GC.GetAllocatedBytesForCurrentThread();
-    for(int i=0;i<10000;i++)a=MdiScrollLayout.Measure(frames,new(600,400)).Reveal(frames[80]);
-    bytes=GC.GetAllocatedBytesForCurrentThread()-bytes;Check(bytes==0 && a.Viewport.IsValid);
+    AllocationProbe.VerifyControls();
+    Func<MdiScrollLayout> query=()=>MdiScrollLayout.Measure(frames,new(600,400)).Reveal(frames[80]);
+    // Warm exactly the same measurement-plus-reveal path that is measured below.
+    _=AllocationProbe.Measure(query,1000,out _);
+    long bytes=AllocationProbe.Measure(query,10000,out var a);
+    if(bytes!=0 || !a.Viewport.IsValid) throw new Exception($"Expected zero scroll-query bytes and a valid viewport; actual bytes={bytes}, viewport={a.Viewport}");
     Console.WriteLine($"ALLOCATION scroll geometry: 10000 measurements/reveals, 128 frames, {bytes} bytes");
 });
 Console.WriteLine($"{passed}/{passed+failed} MDI scroll specifications passed.");return failed==0?0:1;

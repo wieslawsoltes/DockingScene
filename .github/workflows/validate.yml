@@ -14,6 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Preserve exact source before validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/source
+          git archive --format=zip HEAD -o artifacts/source/DockingScene-source.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validation-source
+          path: artifacts/source/DockingScene-source.zip
+          if-no-files-found: error
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'

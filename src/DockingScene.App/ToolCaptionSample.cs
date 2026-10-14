@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 using DockingScene.Controls;
 using DockingScene.Core;
+using DockingScene.Layout;
 using DockingScene.Themes;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -92,6 +93,7 @@ public sealed partial class ToolCaptionSample : UserControl
         _savedPolicyLayout = null;
         _manager = m; _site.Manager = m; _site.Theme = _theme;
         _site.ToolWindowsHaveTitleBars = _site.ToolWindowsHaveCloseButtons = _site.ToolWindowsHaveOptionsButtons = _site.ToolWindowsHaveToggleAutoHideButtons = true;
+        _site.ToolWindowsSingleTabLayoutBehavior = SingleTabLayoutBehavior.Hide;
         _site.FloatingToolWindowContainerTitleBarDoubleClickMode = FloatingWindowTitleBarDoubleClickMode.ToggleMaximized;
         _site.FloatingWindowTitle = "DockingScene"; _site.FloatingWindowTitleDelimiter = " - "; _generation++;
     }

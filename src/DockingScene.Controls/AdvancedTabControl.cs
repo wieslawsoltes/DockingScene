@@ -175,7 +175,7 @@ public partial class AdvancedTabControl : UserControl
             _layoutSignature = layout;
             _root.RowDefinitions.Clear(); _root.ColumnDefinitions.Clear();
             Grid.SetRow(_header, 0); Grid.SetColumn(_header, 0); Grid.SetRow(_presenter, 0); Grid.SetColumn(_presenter, 0);
-            double size = IsTabStripVisible ? vertical ? 155 : Theme.TabHeight : 0;
+            double size = IsTabStripVisible ? vertical ? DockMetrics.VerticalTabStripWidth : Theme.TabHeight : 0;
             if (vertical)
             {
                 _root.ColumnDefinitions.Add(new() { Width = Placement == TabPlacement.Left ? new(size) : new(1, GridUnitType.Star) });

@@ -19,6 +19,7 @@ public sealed partial class ToolCaptionSample
         button.Click += (_, _) =>
         {
             var menu = new MenuFlyout();
+            AddGroupLayoutMenu(menu);
             void Item(string text, string id, Action action)
             {
                 var item = DockChrome.Identify(new MenuFlyoutItem { Text = text, FontSize = 12, MinHeight = 26 }, "caption-policy:" + id);
@@ -72,6 +73,6 @@ public sealed partial class ToolCaptionSample
             }
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++) stack.Push(VisualTreeHelper.GetChild(node, i));
         }
-        writer.WriteEndObject(); writer.WriteEndObject();
+        writer.WriteEndObject(); WriteGroupLayoutDiagnostics(writer); writer.WriteEndObject();
     }
 }
