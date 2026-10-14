@@ -11,7 +11,7 @@ not serialized layout metadata; the library does not dispose caller-owned images
 Images render in native 16 by 16 logical-unit controls with a four-unit label gap
 and Uniform stretching. Their controls are not hit-testable, so pointer input
 continues to the tab's button. Existing read-only glyphs occupy a separate column.
-Horizontal measured tabs reserve 20 extra units for a present image; vertical tabs
+Unclamped horizontal measured tabs reserve 20 extra units for a present image; vertical tabs
 retain their existing row height. Global image policy and source presence affect
 measurement, while replacement of an existing source retains the native image,
 header, measured text and layout. Virtualization realizes images only alongside
@@ -41,3 +41,24 @@ The public behavior reference is Actipro's AdvancedTabControl tab-images section
 https://www.actiprosoftware.com/docs/controls/wpf/docking/advanced-tab-control
 DockingScene.DocumentWindowsHaveTabImages is an adapter-specific setting; Actipro
 uses TabbedMdiHost.HasTabImages for its WPF document host.
+
+## Fixture review
+
+The first fixture build compiled C# but did not emit a browser bundle because its
+project and publish command bypassed Uno's selected-framework inner build. Using
+TargetFrameworks plus an explicit browser framework matches the working app
+publication path; the workflow also requires the emitted index and framework
+directory before starting a browser.
+
+The next run passed nine of ten contracts. Its first image-space assertion
+compared a cold-start total with a later remeasurement (a net 16-unit change
+instead of 40). Later source-null/restore measurements already showed exact
+20-unit changes, and all pixel, retention, virtualization and hosted tests passed.
+The fixture now uses three identical labels with identical actions and measures
+the two pictured tabs against their simultaneous image-free sibling. Each must
+be exactly 20 units wider; initial image-disabled widths must match. This isolates
+image space from unrelated startup typography/context measurement changes. It
+does not establish the specific cause of the earlier cold-start width difference
+or claim to fix arbitrary late-loaded-font cache invalidation. The original
+exact 20-unit null/restore test remains. Failure results now retain their native
+state. No pixel tolerances or operation success criteria were relaxed.

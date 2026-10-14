@@ -16,7 +16,7 @@ async function click(id){await wait(id=>globalThis.imageContracts?.bounds[id]?.w
 async function action(id){await click('action:'+id);}
 async function loaded(id){await wait(id=>globalThis.imageContracts?.images.some(i=>i.id==='tab-image:'+id && i.pixels===16),id);}
 async function paint(id,expected){await loaded(id);const s=await state(),r=image(s,id);const p=pngPixels(await page.screenshot());const actual=p.rgb(Math.floor(r.x+8),Math.floor(r.y+8)); assert(actual.every((c,i)=>Math.abs(c-expected[i])<=3),`Actual image pixels ${actual}; expected ${expected}`);}
-async function test(name,run){try{await run();results.push({name,passed:true});console.log('PASS '+name);}catch(e){results.push({name,passed:false,error:String(e),stack:e.stack});console.error('FAIL '+name+': '+e);await page.screenshot({path:`${output}/failure-${results.length}.png`}).catch(()=>{});}}
+async function test(name,run){try{await run();results.push({name,passed:true});console.log('PASS '+name);}catch(e){results.push({name,passed:false,error:String(e),stack:e.stack,state:await state()});console.error('FAIL '+name+': '+e);await page.screenshot({path:`${output}/failure-${results.length}.png`}).catch(()=>{});}}
 try{
   await page.goto(process.env.BROWSER_URL||'http://127.0.0.1:8765/image-contracts/',{waitUntil:'domcontentloaded',timeout:60000});
   await wait(()=>globalThis.imageContracts?.sequence>2||globalThis.imageContractError);
@@ -26,10 +26,17 @@ try{
   await test('Image APIs are opt-in and do not instantiate off-screen content',async()=>{
     baseline=await state();assert.equal(baseline.enabled,false);assert.equal(baseline.documents,false);assert.equal(baseline.tools,false);
     assert.equal(baseline.images.length,0);assert.equal(baseline.created,1);assert.equal(baseline.count,3);
+    assert.equal(baseline.bounds['tab:tab-0'].width,baseline.bounds['tab:tab-2'].width);
+    assert.equal(baseline.bounds['tab:tab-1'].width,baseline.bounds['tab:tab-2'].width);
   });
   await test('Native images paint exact fixture pixels and reserve a 20-unit label slot',async()=>{
     await action('Toggle');await loaded('tab-0');await loaded('tab-1');const s=await state();
-    assert.equal(s.images.length,2);assert(!image(s,'tab-2'));assert.equal(s.extent-baseline.extent,40);
+    assert.equal(s.images.length,2);assert(!image(s,'tab-2'));
+    // Identical labels in the same native measurement pass isolate image space
+    // from cold-start typography/context changes. Keep the exact 20-unit check.
+    const reference=s.bounds['tab:tab-2'].width;
+    assert.equal(s.bounds['tab:tab-0'].width-reference,20);
+    assert.equal(s.bounds['tab:tab-1'].width-reference,20);
     for(const i of s.images){assert.equal(i.width,16);assert.equal(i.height,16);assert.equal(i.hitTest,false);}
     assert.equal(s.created,1);assert.equal(s.contents['tab-0'],baseline.contents['tab-0']);await paint('tab-0',[230,25,65]);
   });

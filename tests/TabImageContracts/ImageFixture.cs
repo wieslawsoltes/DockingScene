@@ -84,7 +84,7 @@ public sealed class ImageFixture : UserControl
         for (int i = 0; i < count; i++)
         {
             string id = "tab-" + i;
-            items[i] = new() { Id = id, Header = "Item " + i, ImageSource = i == 2 && count == 3 ? null : _red,
+            items[i] = new() { Id = id, Header = count == 3 ? "Matched image label" : "Item " + i, ImageSource = i == 2 && count == 3 ? null : _red,
                 HorizontalContentAlignment = HorizontalAlignment.Stretch, VerticalContentAlignment = VerticalAlignment.Stretch,
                 ContentFactory = () => { _created++; return Editor(id); } };
         }
