@@ -12,8 +12,21 @@ namespace DockingScene.App;
 
 public sealed partial class ToolCaptionSample
 {
+    private bool _visibilityShortcutConfigured;
     private void AddGroupLayoutMenu(MenuFlyout menu)
     {
+        if (!_visibilityShortcutConfigured)
+        {
+            _visibilityShortcutConfigured = true;
+            var shortcut = new Microsoft.UI.Xaml.Input.KeyboardAccelerator { Key = Windows.System.VirtualKey.F4 };
+            shortcut.Invoked += (_, e) =>
+            {
+                _site.ToolWindowsSingleTabLayoutBehavior = _site.ToolWindowsSingleTabLayoutBehavior == SingleTabLayoutBehavior.Show
+                    ? SingleTabLayoutBehavior.Hide : SingleTabLayoutBehavior.Show;
+                e.Handled = true;
+            };
+            KeyboardAccelerators.Add(shortcut);
+        }
         var layout = DockChrome.Identify(new MenuFlyoutSubItem { Text = "Tab layout and content minimums", FontSize = 12 }, "caption-policy:layout");
         menu.Items.Add(layout);
         void Item(string title, string id, Action action)
@@ -23,6 +36,8 @@ public sealed partial class ToolCaptionSample
         }
         Item("Side-by-side constrained tools", "horizontal", () => PrepareGroupLayout(DockSide.Right));
         Item("Stacked constrained tools", "vertical", () => PrepareGroupLayout(DockSide.Bottom));
+        Item("Show single tool tabs", "show-single", () => _site.ToolWindowsSingleTabLayoutBehavior = SingleTabLayoutBehavior.Show);
+        Item("Hide single tool tabs (F4 toggles)", "hide-single", () => _site.ToolWindowsSingleTabLayoutBehavior = SingleTabLayoutBehavior.Hide);
         foreach (var placement in Enum.GetValues<TabPlacement>())
             Item("Explorer tabs: " + placement, placement.ToString(), () =>
             {
@@ -53,6 +68,8 @@ public sealed partial class ToolCaptionSample
         // warm caches here: browser assertions must observe application work only.
         writer.WriteStartObject("geometry");
         writer.WriteNumber("tabHeight", _theme.TabHeight);
+        writer.WriteNumber("metricsBuilds", _site.LayoutMetricsBuildCount);
+        writer.WriteString("singleTabs", _site.ToolWindowsSingleTabLayoutBehavior.ToString());
         writer.WriteNumber("plans", _site.ActiveFloatingLayoutPlanCount);
         writer.WriteNumber("planBuilds", _site.FloatingLayoutPlanBuildCount);
         writer.WriteNumber("arrangements", _site.FloatingLayoutArrangeCount);

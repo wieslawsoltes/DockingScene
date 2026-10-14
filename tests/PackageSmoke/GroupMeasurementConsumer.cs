@@ -18,6 +18,9 @@ internal static class GroupMeasurementConsumer
         if (vertical.Minimum.Width - horizontal.Minimum.Width != DockMetrics.VerticalTabStripWidth ||
             horizontal.Minimum.Height - vertical.Minimum.Height != DockMetrics.Default.TabHeight)
             throw new InvalidOperationException("Packaged vertical group measurement failed.");
+        var hidden = DockMetrics.Default with { ToolWindowsSingleTabLayoutBehavior = SingleTabLayoutBehavior.Hide };
+        if (DockLayoutEngine.MeasureGroup(manager.Layout, group, hidden).Minimum.Width != 122)
+            throw new InvalidOperationException("Packaged single-tool visibility measurement failed.");
         var cache = new DockGeometryCache(); var bounds = new DockRect(0, 0, 1000, 700);
         if (!ReferenceEquals(cache.Arrange(manager.Layout, bounds), cache.Arrange(manager.Layout, bounds)))
             throw new InvalidOperationException("Packaged omitted-metrics cache did not retain its result.");
