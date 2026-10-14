@@ -55,6 +55,7 @@ public sealed partial class ToolCaptionSample : UserControl
             menu.ShowAt(options);
         };
         AddPolicyOptions(toolbar);
+        ConfigureVisibilityShortcut();
         Button("Explorer", "a", () => Check(_manager.Activate("cap-a")));
         Button("Properties", "b", () => Check(_manager.Activate("cap-b")));
         Button("Document 1", "doc1", () => Check(_manager.Activate("cap-doc1")));

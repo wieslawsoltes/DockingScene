@@ -90,9 +90,7 @@ public partial class DockSite
         internal FloatingProjection(DockSite site, string hostId)
         {
             _manager = site.Manager; _snapshot = _manager.Layout;
-            _metrics = new() { TabHeight = site.Theme.TabHeight, TitleHeight = site.Theme.TitleHeight,
-                Splitter = site.Theme.SplitterSize, DpiScale = site.XamlRoot?.RasterizationScale ?? 1,
-                ToolWindowsHaveTitleBars = site.ToolWindowsHaveTitleBars };
+            _metrics = site.GetLayoutMetrics();
             _plan = new(_snapshot, hostId, _metrics);
             _nodes = new DockRect[_plan.NodeCount]; _splitters = new DockRect[_plan.SplitterCount];
             _views = new FrameworkElement?[_plan.NodeCount]; _splitterViews = new FrameworkElement?[_plan.SplitterCount];
@@ -107,9 +105,7 @@ public partial class DockSite
         }
         internal bool IsCurrent(DockSite site) => ReferenceEquals(_manager, site.Manager) &&
             ReferenceEquals(_snapshot, _manager.Layout) && site.IsLiveFloatingWindowLayoutEnabled &&
-            _metrics.ToolWindowsHaveTitleBars == site.ToolWindowsHaveTitleBars &&
-            _metrics.TabHeight == site.Theme.TabHeight && _metrics.TitleHeight == site.Theme.TitleHeight &&
-            _metrics.Splitter == site.Theme.SplitterSize && _metrics.DpiScale == (site.XamlRoot?.RasterizationScale ?? 1);
+            _metrics == site.GetLayoutMetrics();
         internal void Apply(DockRect frame)
         {
             _plan.Arrange(frame, _nodes, _splitters);

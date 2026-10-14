@@ -24,6 +24,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Validate aggregate gate contracts
+        run: node tests/ci/aggregate-gate.contract.mjs
       - name: Validate every model specification before distribution
         shell: bash
         run: |
@@ -155,9 +157,12 @@ jobs:
     # Preserve the original required check name: it certifies ALL browser jobs,
     # not merely compilation, after moving the suites onto independent runners.
     name: build
-    if: always()
+    # Failed dependencies still run the gate; superseded/cancelled runs do not
+    # keep a runner-only aggregate queued and hold the concurrency slot.
+    if: ${{ !cancelled() }}
     needs: [build, browser-tests]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Require successful build and every browser suite
         env:

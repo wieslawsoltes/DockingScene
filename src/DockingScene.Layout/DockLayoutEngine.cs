@@ -3,7 +3,7 @@ using DockingScene.Core;
 
 namespace DockingScene.Layout;
 
-public sealed record DockMetrics
+public sealed partial record DockMetrics
 {
     /// <summary>Immutable defaults shared by allocation-free omitted-metrics calls.</summary>
     public static DockMetrics Default { get; } = new();
