@@ -92,6 +92,7 @@ The toolbar switches tabbed/standard MDI and saves/loads layout. Browser persist
 | Tool captions | [Site action visibility, complete-host maximize/restore versus clicked-group docking, primary document titles and delimiters](docs/tool-caption-review.md); [native capture repair](docs/tool-caption-input-review.md); [primary-title caching](docs/tool-caption-allocation-review.md) |
 | Window overrides | [Nullable title/close/options/pin overrides, site inheritance, physical row/slot collapse, MVVM and JSON](docs/tool-caption-inheritance.md) |
 | Tab constraints | [Physical vertical-strip sizing and allocation-free `MeasureGroup`](docs/vertical-tab-geometry.md); [hidden single-tool strips, retained metrics and gesture cancellation](docs/hidden-tool-tabs.md) |
+| Optional tab images | [Native image sources, independent document/tool policies, retained source replacement and isolated browser contracts](docs/native-tab-images.md) |
 
 `DockWindow.HasTitleBar` is nullable in this alpha. Boolean assignments and explicit JSON booleans remain valid; resolve reads with `window.HasTitleBar ?? site.ToolWindowsHaveTitleBars` or `ToolCaptionSettings.Resolve`. The original three-argument `ToolCaptionOptions` constructor/deconstruction remains. Close/pin instance visibility is an independent DockingScene extension, not an identical vendor API claim.
 

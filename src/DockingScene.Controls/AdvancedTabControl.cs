@@ -36,8 +36,8 @@ public partial class AdvancedTabControl : UserControl
     public long HeaderCreationCount { get; private set; }
     public long RefreshCount { get; private set; }
     private HeaderStyle? _measuredStyle;
-    private readonly record struct HeaderStyle(DockTheme Theme, TabPlacement Placement, double Minimum, double Maximum, bool Close, bool Pin, bool Promote, bool Tools);
-    private readonly record struct HeaderKey(string Id, string Header, bool Pinned, bool Preview, bool Modified, bool ReadOnly, bool Close, string? Color);
+    private readonly record struct HeaderStyle(DockTheme Theme, TabPlacement Placement, double Minimum, double Maximum, bool Close, bool Pin, bool Promote, bool Tools, bool Images);
+    private readonly record struct HeaderKey(string Id, string Header, bool Pinned, bool Preview, bool Modified, bool ReadOnly, bool Close, string? Color, bool Image);
     private sealed record MeasuredHeader(HeaderKey Key, TabMeasurement Measurement);
     private TabMeasurement[] _measurements = [];
     private TabStripLayout? _plan;
@@ -72,7 +72,7 @@ public partial class AdvancedTabControl : UserControl
         public TabLaneLayout? Layout { get; set; }
         public double Offset { get; set; }
     }
-    private sealed record HeaderVisual(Border Border, Button Select, TextBlock Text, List<Button> Actions)
+    private sealed record HeaderVisual(Border Border, Button Select, TextBlock Text, List<Button> Actions, Image? Image = null)
     {
         public (string Background, string Foreground)? Paint { get; set; }
         public bool IsPointerOver { get; set; }
@@ -166,7 +166,7 @@ public partial class AdvancedTabControl : UserControl
         if (!_ready) return;
         RefreshCount++;
         bool vertical = Placement is TabPlacement.Left or TabPlacement.Right;
-        var style = new HeaderStyle(Theme, Placement, MinTabExtent, MaxTabExtent, HasTabCloseButtons, HasTabPinButtons, CanTabsPromote, IsToolGroup);
+        var style = new HeaderStyle(Theme, Placement, MinTabExtent, MaxTabExtent, HasTabCloseButtons, HasTabPinButtons, CanTabsPromote, IsToolGroup, HasTabImages);
         if (_itemsDirty || _measuredStyle != style) ReconcileMeasurements(style);
         _root.Background = DockChrome.Brush(Theme.Surface); _header.Background = DockChrome.Brush(Theme.InactiveTab);
         string layout = $"{Placement}:{Theme.TabHeight}:{IsTabStripVisible}";
@@ -208,7 +208,7 @@ public partial class AdvancedTabControl : UserControl
         {
             var item = Items[i];
             if (string.IsNullOrWhiteSpace(item.Id) || !_byId.TryAdd(item.Id, item)) throw new InvalidOperationException("Tab ids must be nonempty and unique.");
-            var key = new HeaderKey(item.Id, item.Header, item.IsPinned, item.IsPreview, item.IsModified, item.IsReadOnly, item.CanClose, item.TabColor);
+            var key = new HeaderKey(item.Id, item.Header, item.IsPinned, item.IsPreview, item.IsModified, item.IsReadOnly, item.CanClose, item.TabColor, ShowsImage(item));
             if (!_measured.TryGetValue(item, out var previous) || previous.Key != key)
             {
                 if (previous is not null) RemoveHeader(previous.Key.Id);
@@ -219,7 +219,7 @@ public partial class AdvancedTabControl : UserControl
                 var text = DockChrome.Text(item.Header + (item.IsModified ? " *" : ""), Theme);
                 if (item.IsPreview) text.FontStyle = Windows.UI.Text.FontStyle.Italic;
                 TextMeasurementCount++; text.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                double desired = vertical ? Theme.TabHeight : text.DesiredSize.Width + 16 + (item.IsReadOnly ? 16 : 0) + HeaderActionCount(item) * 23;
+                double desired = vertical ? Theme.TabHeight : text.DesiredSize.Width + 16 + ImageExtent(item) + (item.IsReadOnly ? 16 : 0) + HeaderActionCount(item) * 23;
                 previous = new(key, new(item.Id, Mode(item), desired, minimum, maximum));
                 _measured[item] = previous;
             }

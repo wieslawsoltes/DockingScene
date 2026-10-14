@@ -7,7 +7,7 @@ using Microsoft.UI.Xaml.Input;
 namespace DockingScene.Controls;
 
 /// <summary>Bindable standalone tab content. The factory is evaluated once and the resulting visual is retained.</summary>
-public class AdvancedTabItem : ContentControl
+public partial class AdvancedTabItem : ContentControl
 {
     private static DependencyProperty Property(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors | DynamicallyAccessedMemberTypes.NonPublicConstructors | DynamicallyAccessedMemberTypes.PublicFields | DynamicallyAccessedMemberTypes.PublicProperties)] Type type, object? value) => DependencyProperty.Register(name, type, typeof(AdvancedTabItem), new PropertyMetadata(value, Changed));
     private static void Changed(DependencyObject sender, DependencyPropertyChangedEventArgs args) => ((AdvancedTabItem)sender).MetadataChanged?.Invoke((AdvancedTabItem)sender);

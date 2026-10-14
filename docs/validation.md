@@ -5,7 +5,7 @@
 Both workflows enumerate every `tests/*Specs/*.csproj` under shell `pipefail`.
 There are **29 model suites**. `Uno application` repeats these contracts, builds
 desktop, publishes the real WebAssembly app, and packs all six libraries at
-`0.1.0-alpha.20`. Isolated NuGet consumers use a fresh package cache, execute the
+`0.1.0-alpha.21`. Isolated NuGet consumers use a fresh package cache, execute the
 five non-UI libraries and compile the Uno API without source-project references.
 Compilation does not certify native desktop UI behavior.
 
@@ -14,9 +14,9 @@ Compilation does not certify native desktop UI behavior.
 | Docking | 28 |
 | Standalone tabs | 32 |
 | Host, Metro and MDI | 101 |
-| Caption policies and group geometry | 20 |
+| Caption policies and group geometry | 21 |
 
-The source defines **181 product scenarios**, plus the separate **100-cycle
+The source defines **182 main-application product scenarios**, plus the separate **100-cycle
 focus runner**. Counts describe definitions; exact-revision result files and exit
 codes establish passing execution. The four product suites use actual pointer
 and keyboard input; diagnostics only observe state and performed work. The fifth
@@ -85,6 +85,22 @@ single-tool chrome, membership, title independence, hidden-edge cache identity,
 invalid policies, 500 more independent envelopes and frozen visibility. Four new
 native scenarios verify reclaimed width/height, multi-tool strips, metrics reuse
 and captured F4 visibility changes without stale commits.
+
+## Isolated native image contracts
+
+The additional `Native tab image contracts` workflow publishes a separate Uno
+control fixture referencing the actual Controls library. Its ten native-input
+contracts cover opt-in defaults, fixture pixels and measured slots, source
+replacement, null/restore, pointer input through images, four tab placements,
+theme and strip transitions, 2,002 shared sources, hosted document/tool policies,
+floating/undo ownership and the exact revision/error gate. These are additional
+to the 182 main-application scenarios and the 100-cycle focus runner.
+The historical blocked application sample is not part of the deliverable.
+See [native tab images](native-tab-images.md).
+
+The sample visibility shortcut also has a before-first-menu and repeated-menu
+physical-input regression; it supplements the unchanged captured-resize case.
+See [shortcut review](tool-tab-shortcut-review.md).
 
 ## Allocation and pixel evidence
 

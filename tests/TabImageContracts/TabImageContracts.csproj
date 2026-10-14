@@ -1,0 +1,19 @@
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-browserwasm</TargetFrameworks>
+    <OutputType>Exe</OutputType><UnoSingleProject>true</UnoSingleProject>
+    <UnoFeatures>Skia;SkiaRenderer</UnoFeatures><IsPackable>false</IsPackable>
+    <ApplicationTitle>DockingScene image contracts</ApplicationTitle>
+    <ApplicationId>org.dockingscene.imagecontracts</ApplicationId>
+    <ApplicationDisplayVersion>0.1.0</ApplicationDisplayVersion><ApplicationVersion>1</ApplicationVersion>
+    <ApplicationPublisher>DockingScene</ApplicationPublisher>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks><WasmShellILLinkerEnabled>false</WasmShellILLinkerEnabled>
+    <WasmShellWebAppBasePath>/image-contracts/</WasmShellWebAppBasePath>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/DockingScene.Controls/DockingScene.Controls.csproj" />
+    <PackageReference Include="Uno.Fonts.OpenSans" Version="2.4.0" />
+    <Content Include="Assets/Red.png" /><Content Include="Assets/Blue.png" />
+  </ItemGroup>
+</Project>
